@@ -107,12 +107,13 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Offline event-study backtest for Entry Model 1/2/3.")
+    parser = argparse.ArgumentParser(description="Legacy Entry Model 1/2/3 event-study runner. New defaults live in run_ict_models.")
     parser.add_argument("--data-dir", default="data/history", help="Directory with historical OHLCV CSV/JSON files.")
     parser.add_argument("--symbols", nargs="+", required=True, help="Symbols, e.g. BTCUSDT ETHUSDT.")
     parser.add_argument("--timeframes", nargs="+", required=True, choices=SUPPORTED_TIMEFRAMES, help="Primary timeframes, e.g. 15m 1h.")
     parser.add_argument("--models", nargs="+", help="Models to run: model1 model2 model3.")
     parser.add_argument("--model", action="append", help="Single model selector. Can be repeated.")
+    parser.add_argument("--include-legacy", action="store_true", help="Required to run archived model1/model2/model3.")
     parser.add_argument("--forward-bars", type=int, default=20, help="Number of future bars for outcome evaluation.")
     parser.add_argument("--warmup-bars", type=int, default=100, help="Bars to skip before replay starts.")
     parser.add_argument("--cooldown-bars", type=int, default=5, help="Dedup cooldown for same rounded setup zone.")
@@ -155,7 +156,9 @@ def _selected_models(args: argparse.Namespace) -> list[str]:
     if args.model:
         requested.extend(args.model)
     if not requested:
-        requested = ["model1", "model2", "model3"]
+        return []
+    if not args.include_legacy:
+        raise ValueError("model1/model2/model3 are archived. Use backtesting.run_ict_models for active defaults or pass --include-legacy.")
     normalized: list[str] = []
     for item in requested:
         model = normalize_model_key(item)

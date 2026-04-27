@@ -4,9 +4,7 @@ import unittest
 
 from backtesting.context import build_strategy_context_for_replay
 from market_primitives.common import StructureBreak, SwingPoint
-from strategies.entry_model_1 import detect_entry_model_1
-from strategies.entry_model_2 import detect_entry_model_2
-from strategies.entry_model_3 import detect_entry_model_3
+from strategies.legacy import detect_legacy_model_1, detect_legacy_model_2, detect_legacy_model_3
 from strategies.htf_context import HTFBias, HTFContext, HTFDealingRange, HTFObjective, HTFZone, build_htf_context
 from strategies.types import PrimitiveSnapshot, StrategyContext
 
@@ -90,7 +88,7 @@ class HTFContextTests(unittest.TestCase):
         snapshot = PrimitiveSnapshot("BTCUSDT", "5m", [candle(1_700_000_000_000, 100)])
         context = StrategyContext(primary=snapshot, htf_mode="strict")
 
-        self.assertEqual(detect_entry_model_1(context), [])
+        self.assertEqual(detect_legacy_model_1(context), [])
 
     def test_model2_blocks_opposite_htf_bias(self) -> None:
         snapshot = PrimitiveSnapshot("BTCUSDT", "5m", [candle(1_700_000_000_000, 100)])
@@ -109,13 +107,13 @@ class HTFContextTests(unittest.TestCase):
         )
         context = StrategyContext(primary=snapshot, htf_context=htf, htf_mode="strict")
 
-        self.assertEqual(detect_entry_model_2(context), [])
+        self.assertEqual(detect_legacy_model_2(context), [])
 
     def test_model3_requires_htf_and_ltf_context(self) -> None:
         snapshot = PrimitiveSnapshot("BTCUSDT", "5m", [candle(1_700_000_000_000, 100)])
         context = StrategyContext(primary=snapshot, htf_mode="strict")
 
-        self.assertEqual(detect_entry_model_3(context), [])
+        self.assertEqual(detect_legacy_model_3(context), [])
 
 
 if __name__ == "__main__":

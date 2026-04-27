@@ -22,13 +22,9 @@ from scanner.confluence import build_confluence_messages
 from scanner.dedup import should_skip_duplicate
 from scanner.scoring import score_primitive_bundle
 from scanner.snapshots import build_primitive_snapshot
-from strategies import (
-    StrategyContext,
-    detect_entry_model_1,
-    detect_entry_model_2,
-    detect_entry_model_3,
-)
+from strategies import StrategyContext
 from strategies.htf_context import build_htf_context
+from strategies.ict_models.registry import get_default_models
 from strategies.setup_utils import current_price
 from timeframes import EXECUTION_HTF_MAP, MODEL_3_HTF_MAP, MODEL_3_LTF_MAP, execution_htf_for
 from strategies.types import PrimitiveSnapshot
@@ -54,7 +50,7 @@ PRIMITIVE_PATTERNS = [
     "EQL",
     "SMT",
 ]
-STRATEGY_PATTERNS = ["Entry Model 1", "Entry Model 2", "Entry Model 3"]
+STRATEGY_PATTERNS = ["turtle_soup", "silver_bullet", "ifvg_retest"]
 ALL_PATTERNS = PRIMITIVE_PATTERNS + STRATEGY_PATTERNS
 
 SMT_TIMEFRAMES = {"1h", "4h", "1d"}
@@ -114,9 +110,8 @@ def _build_strategy_alerts(
         htf_mode=ENTRY_MODEL_HTF_MODE,
     )
     setups = []
-    setups.extend(detect_entry_model_1(context))
-    setups.extend(detect_entry_model_2(context))
-    setups.extend(detect_entry_model_3(context))
+    for model in get_default_models():
+        setups.extend(model.detector(primary.symbol, primary.timeframe, primary.candles, context, None))
 
     best_by_key: dict[tuple[str, str], AlertPayload] = {}
     for setup in setups:

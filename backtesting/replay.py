@@ -10,7 +10,7 @@ from backtesting import BacktestEvent, BacktestResult, Candle
 from backtesting.accumulator import ReplaySnapshotCache
 from backtesting.context import CandleStore, build_accumulated_strategy_context_for_replay
 from backtesting.outcome import evaluate_forward_outcome
-from strategies import detect_entry_model_1, detect_entry_model_2, detect_entry_model_3
+from strategies.legacy import detect_legacy_model_1, detect_legacy_model_2, detect_legacy_model_3
 from strategies.types import EntrySetup, StrategyContext
 
 logger = logging.getLogger(__name__)
@@ -18,9 +18,9 @@ logger = logging.getLogger(__name__)
 Detector = Callable[[StrategyContext], list[EntrySetup] | list[dict[str, Any]]]
 
 MODEL_DETECTORS: dict[str, Detector] = {
-    "model1": detect_entry_model_1,
-    "model2": detect_entry_model_2,
-    "model3": detect_entry_model_3,
+    "model1": detect_legacy_model_1,
+    "model2": detect_legacy_model_2,
+    "model3": detect_legacy_model_3,
 }
 
 MODEL_NAMES: dict[str, str] = {

@@ -1,3 +1,11 @@
+"""
+LEGACY MODEL.
+
+This model is archived and disabled by default.
+It is preserved only for baseline comparison.
+New active ICT models live in strategies/ict_models/.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -5,12 +13,12 @@ from dataclasses import dataclass
 from market_primitives.common import BreakerBlock, InvertedFVG, LiquiditySweep, zone_overlap
 
 from config import MAX_IFVG_RETEST_BARS, MAX_INVERSION_AGE_BARS, MAX_SWEEP_TO_IFVG_BARS, REQUIRE_HTF_CONTEXT_FOR_ENTRY_MODELS
-from .htf_context import htf_allows_side, htf_metadata, htf_score_modifier
-from .risk_policy import model2_risk_plan, risk_metadata
-from .scoring import score_model_2
-from .setup_quality import build_score_components, objective_quality, poi_quality, risk_quality
-from .setup_utils import classify_zone_status, is_recent_enough, primitive_direction, sweep_label
-from .types import EntrySetup, PrimitiveSnapshot, StrategyContext, default_components
+from strategies.htf_context import htf_allows_side, htf_metadata, htf_score_modifier
+from strategies.risk_policy import model2_risk_plan, risk_metadata
+from strategies.scoring import score_model_2
+from strategies.setup_quality import build_score_components, objective_quality, poi_quality, risk_quality
+from strategies.setup_utils import classify_zone_status, is_recent_enough, primitive_direction, sweep_label
+from strategies.types import EntrySetup, PrimitiveSnapshot, StrategyContext, default_components
 
 
 @dataclass(slots=True)

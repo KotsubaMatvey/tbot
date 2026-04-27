@@ -41,7 +41,7 @@ async def start(update, context):
         "Primitives:\n"
         "FVG | IFVG | OB | BOS | CHoCH | Sweeps | Liquidity\n\n"
         "Strategies:\n"
-        "Entry Model 1 | Entry Model 2 | Entry Model 3\n\n"
+        "Turtle Soup | Silver Bullet | IFVG Retest\n\n"
         "Market analysis tool. Not financial advice."
     )
     try:
@@ -147,8 +147,9 @@ async def help_cmd(update, context):
         "Primitive alerts\n"
         "FVG  IFVG  OB  BOS  CHoCH  Sweeps  Liquidity  Breaker\n"
         "Swings  Volume  VP  KL  PD  EQH  EQL  SMT\n\n"
-        "Entry models\n"
-        "Entry Model 1  Entry Model 2  Entry Model 3\n\n"
+        "ICT models\n"
+        "Turtle Soup  Silver Bullet  IFVG Retest\n"
+        "Research: ICT2022 MSS+FVG  Breaker Block  Reclaimed OB\n\n"
         "Not financial advice."
     )
 

@@ -72,6 +72,9 @@ class EntrySetup:
     reason: str
     components: SetupComponents
     timestamp: int
+    model_family: str = "legacy"
+    entry_price: float | None = None
+    stop_loss: float | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
 

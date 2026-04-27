@@ -31,9 +31,19 @@ strategies/
   types.py
   scoring.py
   formatter.py
-  entry_model_1.py
-  entry_model_2.py
-  entry_model_3.py
+  ict_models/
+    registry.py
+    turtle_soup.py
+    silver_bullet.py
+    ifvg_retest.py
+    ict2022_mss_fvg.py
+    breaker_block.py
+    reclaimed_ob.py
+    rejection_block.py
+  legacy/
+    entry_model_1_legacy.py
+    entry_model_2_legacy.py
+    entry_model_3_legacy.py
 
 scanner/
   __init__.py
@@ -54,7 +64,8 @@ presentation/
 ## Features
 
 - typed market primitives: swings, sweeps, BOS/CHOCH, FVG/IFVG, OB/breakers, EQH/EQL, PD, SMT, volume
-- typed entry setups: Entry Model 1, Entry Model 2, Entry Model 3
+- typed ICT setups: Turtle Soup, Silver Bullet, IFVG Retest, ICT2022 MSS+FVG, Breaker Block, Reclaimed OB
+- archived legacy baselines: Entry Model 1, Entry Model 2, Entry Model 3 under `strategies/legacy/`
 - Telegram alerts with optional chart overlays
 - onboarding with primitive/model/direction preferences
 - SQLite persistence for subscriptions and user settings

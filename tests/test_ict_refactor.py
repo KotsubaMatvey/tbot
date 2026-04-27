@@ -7,7 +7,7 @@ from market_primitives.common import FairValueGap, LiquiditySweep, StructureBrea
 from market_primitives.displacement import evaluate_displacement
 from market_primitives.fvg import detect_fvg
 from market_primitives.ifvg import detect_ifvg
-from strategies.entry_model_1 import detect_entry_model_1
+from strategies.legacy import detect_legacy_model_1
 from strategies.htf_context import HTFBias, HTFContext, HTFDealingRange, HTFObjective, HTFZone, build_htf_context
 from strategies.risk_policy import model1_risk_plan, model2_risk_plan, model3_risk_plan
 from strategies.types import PrimitiveSnapshot, StrategyContext
@@ -199,7 +199,7 @@ class ICTRefactorTests(unittest.TestCase):
         )
         context = StrategyContext(primary=snapshot, htf_context=bullish_htf(), htf_mode="strict", require_displacement=True)
 
-        self.assertEqual(detect_entry_model_1(context), [])
+        self.assertEqual(detect_legacy_model_1(context), [])
 
     def test_backtest_cli_risk_flags_parse(self) -> None:
         args = _build_parser().parse_args(

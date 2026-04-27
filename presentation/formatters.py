@@ -71,7 +71,7 @@ def build_payment_message(price: str | float, expired: bool = False) -> str:
         "Pay in any crypto - USDT | TON | BTC | ETH\n\n"
         "Includes:\n"
         "- Real-time ICT pattern detection\n"
-        "- Entry Model 1 / 2 / 3 alerts\n"
+        "- Turtle Soup / Silver Bullet / IFVG Retest alerts\n"
         "- Primitive FVG | IFVG | OB | BOS | CHoCH alerts\n"
         "- Multi-timeframe zone tracking\n"
         "After payment tap Check Payment below."
@@ -90,7 +90,7 @@ def build_dashboard_message(user: dict, zone_count: int, alerts_today: int, sub_
         f"Status: {status}\n"
         f"Pairs: {symbols}\n"
         f"Timeframes: {timeframes}\n"
-        f"Entry Models: {models}\n"
+        f"ICT Models: {models}\n"
         f"Directions: {direction_text}\n"
         f"Subscription: {sub_status}\n\n"
         f"Last scan: {utc_now()}\n"
@@ -108,7 +108,7 @@ def build_setup_summary(symbols, patterns, timeframes, entry_models, trade_direc
     direction_text = "Both" if directions == {"long", "short"} else ", ".join(sorted(item.upper() for item in directions))
     return (
         f"Preferences set: {symbols_text} - {patterns_text} - {timeframes_text}\n"
-        f"Entry models: {models_text}\n"
+        f"ICT models: {models_text}\n"
         f"Directions: {direction_text}\n\n"
         "Alerts will arrive automatically."
     )

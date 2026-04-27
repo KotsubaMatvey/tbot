@@ -1,3 +1,11 @@
+"""
+LEGACY MODEL.
+
+This model is archived and disabled by default.
+It is preserved only for baseline comparison.
+New active ICT models live in strategies/ict_models/.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -5,12 +13,12 @@ from dataclasses import dataclass
 from market_primitives.common import FairValueGap, OrderBlock, StructureBreak
 
 from config import MODEL3_FILL_THRESHOLD
-from .htf_context import htf_allows_side, htf_metadata, htf_score_modifier
-from .risk_policy import model3_risk_plan, risk_metadata
-from .scoring import score_model_3
-from .setup_quality import build_score_components, objective_quality, poi_quality, risk_quality
-from .setup_utils import classify_zone_status, current_price, primitive_direction
-from .types import EntrySetup, PrimitiveSnapshot, StrategyContext, default_components
+from strategies.htf_context import htf_allows_side, htf_metadata, htf_score_modifier
+from strategies.risk_policy import model3_risk_plan, risk_metadata
+from strategies.scoring import score_model_3
+from strategies.setup_quality import build_score_components, objective_quality, poi_quality, risk_quality
+from strategies.setup_utils import classify_zone_status, current_price, primitive_direction
+from strategies.types import EntrySetup, PrimitiveSnapshot, StrategyContext, default_components
 
 
 @dataclass(slots=True)
