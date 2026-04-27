@@ -84,11 +84,18 @@ def _bars_to_r(event: BacktestEvent, future_candles: list[Candle], multiple: flo
 def _bars_to_invalidation(event: BacktestEvent, future_candles: list[Candle]) -> int | None:
     if event.invalidation is None:
         return None
+    policy = (event.stop_hit_policy or "wick").lower()
     for index, candle in enumerate(future_candles, start=1):
-        if event.direction == "long" and float(candle["low"]) <= event.invalidation:
-            return index
-        if event.direction == "short" and float(candle["high"]) >= event.invalidation:
-            return index
+        if policy == "close":
+            if event.direction == "long" and float(candle["close"]) <= event.invalidation:
+                return index
+            if event.direction == "short" and float(candle["close"]) >= event.invalidation:
+                return index
+        else:
+            if event.direction == "long" and float(candle["low"]) <= event.invalidation:
+                return index
+            if event.direction == "short" and float(candle["high"]) >= event.invalidation:
+                return index
     return None
 
 

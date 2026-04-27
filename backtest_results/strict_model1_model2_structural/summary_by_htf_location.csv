@@ -1,0 +1,7 @@
+model,htf_location,count,valid_outcome_count,skipped_outcome_count,invalid_risk_count,long_count,short_count,avg_mfe_r,median_mfe_r,avg_mae_r,median_mae_r,hit_0_5r_rate,hit_1r_rate,hit_2r_rate,invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,avg_score,best_symbol,best_timeframe
+Entry Model 1,discount,22,22,0,0,10,12,1.084793,1.1204,1.389608,0.76207,0.818182,0.545455,0.090909,0.363636,0.545455,0.090909,4.681818,ETHUSDT,1h
+Entry Model 1,equilibrium,4,4,0,0,3,1,2.17189,1.898122,1.282156,0.554388,0.75,0.75,0.5,0.25,0.5,0.5,4.75,ETHUSDT,15m
+Entry Model 1,premium,23,23,0,0,20,3,2.56888,2.060475,0.606699,0.295912,0.782609,0.73913,0.521739,0.173913,0.652174,0.478261,4.478261,ETHUSDT,5m
+Entry Model 2,discount,85,85,0,0,69,16,12.687354,7.860633,9.600325,5.921204,0.917647,0.905882,0.835294,0.776471,0.741176,0.588235,4.952941,SOLUSDT,1h
+Entry Model 2,equilibrium,31,31,0,0,30,1,14.042125,6.731275,10.332478,4.267842,0.967742,0.935484,0.870968,0.806452,0.612903,0.548387,5.0,ETHUSDT,4h
+Entry Model 2,premium,99,99,0,0,91,8,16.101647,7.72194,10.248933,6.148717,0.949495,0.909091,0.838384,0.838384,0.707071,0.545455,5.0,SOLUSDT,1h

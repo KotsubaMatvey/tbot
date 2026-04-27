@@ -1,0 +1,4 @@
+model,range_expansion_bucket,count,valid_outcome_count,skipped_outcome_count,invalid_risk_count,long_count,short_count,avg_mfe_r,median_mfe_r,avg_mae_r,median_mae_r,hit_0_5r_rate,hit_1r_rate,hit_2r_rate,invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,avg_score,best_symbol,best_timeframe
+Entry Model 1,1_20_1_50,12,12,0,0,5,7,1.429107,1.693848,1.348372,0.408612,0.833333,0.666667,0.333333,0.333333,0.583333,0.333333,4.5,ETHUSDT,4h
+Entry Model 1,gte_1_50,37,37,0,0,28,9,2.013188,1.348599,0.904693,0.462621,0.783784,0.648649,0.324324,0.243243,0.594595,0.297297,4.621622,ETHUSDT,15m
+Entry Model 2,unknown,215,215,0,0,190,25,14.454856,7.72194,10.004553,5.921204,0.939535,0.911628,0.84186,0.809302,0.706977,0.562791,4.981395,SOLUSDT,1h

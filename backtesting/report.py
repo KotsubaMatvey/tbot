@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import csv
-from dataclasses import asdict
+from dataclasses import asdict, fields
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from backtesting import BacktestResult
+from backtesting import BacktestEvent, BacktestOutcome, BacktestResult
 from backtesting.metrics import SummaryRow
 from backtesting.replay import ReplayWarning
 
@@ -72,6 +72,13 @@ def _write_report_md(
         f"- htf_mode: {config.get('htf_mode', 'strict')}",
         f"- require_displacement: {config.get('require_displacement')}",
         f"- model3_fill_threshold: {config.get('model3_fill_threshold')}",
+        f"- stop_mode: {config.get('stop_mode')}",
+        f"- model3_stop_mode: {config.get('model3_stop_mode')}",
+        f"- stop_buffer_bps: {config.get('stop_buffer_bps')}",
+        f"- invalidation_confirmation: {config.get('invalidation_confirmation')}",
+        f"- model3_reaction_bars: {config.get('model3_reaction_bars')}",
+        f"- model3_min_rr_to_objective: {config.get('model3_min_rr_to_objective')}",
+        f"- model3_source_zone: {config.get('model3_source_zone')}",
         f"- execution_pairs: {config.get('execution_pairs')}",
         f"- model_3_htf_map: {config.get('model_3_htf_map')}",
         f"- model_3_ltf_map: {config.get('model_3_ltf_map')}",
@@ -115,6 +122,36 @@ def _write_report_md(
         "### Performance by FVG status",
         _markdown_table(summaries.get("summary_by_fvg_status", [])),
         "",
+        "### Risk / stop modes",
+        _markdown_table(summaries.get("summary_by_stop_mode", [])),
+        "",
+        _markdown_table(summaries.get("summary_by_invalidation_source", [])),
+        "",
+        "### Displacement grade",
+        _markdown_table(summaries.get("summary_by_displacement_grade", [])),
+        "",
+        "### IFVG quality",
+        _markdown_table(summaries.get("summary_by_ifvg_grade", [])),
+        "",
+        "### HTF objective and draw",
+        _markdown_table(summaries.get("summary_by_htf_alignment", [])),
+        "",
+        _markdown_table(summaries.get("summary_by_objective_unreached", [])),
+        "",
+        _markdown_table(summaries.get("summary_by_draw_direction", [])),
+        "",
+        "### Score components",
+        _markdown_table(summaries.get("summary_by_objective_quality", [])),
+        "",
+        _markdown_table(summaries.get("summary_by_poi_quality", [])),
+        "",
+        _markdown_table(summaries.get("summary_by_risk_quality", [])),
+        "",
+        "### Swing / liquidity quality",
+        _markdown_table(summaries.get("summary_by_sweep_swing_significance", [])),
+        "",
+        _markdown_table(summaries.get("summary_by_equal_liquidity", [])),
+        "",
         "### Model 3 fill variants",
         _markdown_table(summaries.get("summary_by_model3_fill_threshold", [])),
         "",
@@ -153,66 +190,9 @@ def _flatten_result(result: BacktestResult) -> dict[str, Any]:
 
 
 def _empty_event_fieldnames() -> list[str]:
-    return [
-        "event_id",
-        "model_name",
-        "symbol",
-        "timeframe",
-        "direction",
-        "detected_at",
-        "status",
-        "entry_low",
-        "entry_high",
-        "entry_price",
-        "invalidation",
-        "risk",
-        "score",
-        "reason",
-        "components_json",
-        "warning",
-        "skipped_reason",
-        "htf_bias",
-        "htf_confidence",
-        "htf_zone_type",
-        "htf_zone_low",
-        "htf_zone_high",
-        "htf_location",
-        "htf_allows_long",
-        "htf_allows_short",
-        "htf_objective_type",
-        "htf_objective_level",
-        "displacement_factor",
-        "has_displacement",
-        "swing_significance",
-        "fvg_status",
-        "fvg_fill_percent",
-        "source_fvg_direction",
-        "breach_time",
-        "breach_displacement_factor",
-        "ifvg_mean_threshold",
-        "source_zone_type",
-        "source_zone_time",
-        "fill_percent",
-        "fill_mode",
-        "ltf_mss_time",
-        "forward_bars",
-        "mfe",
-        "mae",
-        "mfe_r",
-        "mae_r",
-        "hit_0_5r",
-        "hit_1r",
-        "hit_2r",
-        "invalidated",
-        "bars_to_0_5r",
-        "bars_to_1r",
-        "bars_to_2r",
-        "bars_to_invalidation",
-        "future_high",
-        "future_low",
-        "hit_1r_before_invalidation",
-        "hit_2r_before_invalidation",
-    ]
+    event_fields = [item.name for item in fields(BacktestEvent)]
+    outcome_fields = [item.name for item in fields(BacktestOutcome) if item.name != "event_id"]
+    return event_fields + outcome_fields
 
 
 def _summary_fieldnames(name: str, rows: list[SummaryRow]) -> list[str]:

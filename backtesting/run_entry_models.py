@@ -60,6 +60,13 @@ def main(argv: list[str] | None = None) -> int:
             htf_mode=args.htf_mode,
             require_displacement=_parse_bool(args.require_displacement),
             model3_fill_threshold=args.model3_fill_threshold,
+            stop_mode=args.stop_mode,
+            model3_stop_mode=args.model3_stop_mode,
+            stop_buffer_bps=args.stop_buffer_bps,
+            invalidation_confirmation=args.invalidation_confirmation,
+            model3_reaction_bars=args.model3_reaction_bars,
+            model3_min_rr_to_objective=args.model3_min_rr_to_objective,
+            model3_source_zone=args.model3_source_zone,
         )
         all_results.extend(results)
         all_warnings.extend(replay_warnings)
@@ -82,6 +89,13 @@ def main(argv: list[str] | None = None) -> int:
             "htf_mode": args.htf_mode,
             "require_displacement": _parse_bool(args.require_displacement),
             "model3_fill_threshold": args.model3_fill_threshold,
+            "stop_mode": args.stop_mode,
+            "model3_stop_mode": args.model3_stop_mode,
+            "stop_buffer_bps": args.stop_buffer_bps,
+            "invalidation_confirmation": args.invalidation_confirmation,
+            "model3_reaction_bars": args.model3_reaction_bars,
+            "model3_min_rr_to_objective": args.model3_min_rr_to_objective,
+            "model3_source_zone": args.model3_source_zone,
             "execution_pairs": EXECUTION_HTF_MAP,
             "model_3_htf_map": MODEL_3_HTF_MAP,
             "model_3_ltf_map": MODEL_3_LTF_MAP,
@@ -119,6 +133,17 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=[0.25, 0.5, 1.0],
         help="Model 3 source FVG fill threshold.",
     )
+    parser.add_argument("--stop-mode", choices=["aggressive", "standard", "structural"], default="structural")
+    parser.add_argument(
+        "--model3-stop-mode",
+        choices=["ltf_mss", "source_zone_extreme", "htf_ob_extreme"],
+        default="source_zone_extreme",
+    )
+    parser.add_argument("--stop-buffer-bps", type=float, default=2.0)
+    parser.add_argument("--invalidation-confirmation", choices=["close", "wick"], default="close")
+    parser.add_argument("--model3-reaction-bars", type=int, default=10)
+    parser.add_argument("--model3-min-rr-to-objective", type=float, default=1.5)
+    parser.add_argument("--model3-source-zone", choices=["fvg_ce", "fvg_full", "ob", "any"], default="any")
     parser.add_argument("--out-dir", default="backtest_results", help="Output directory for CSV and markdown report.")
     return parser
 

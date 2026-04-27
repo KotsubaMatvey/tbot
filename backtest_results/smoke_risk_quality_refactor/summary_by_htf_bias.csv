@@ -1,0 +1,5 @@
+model,htf_bias,count,valid_outcome_count,skipped_outcome_count,invalid_risk_count,long_count,short_count,avg_mfe_r,median_mfe_r,avg_mae_r,median_mae_r,hit_0_5r_rate,hit_1r_rate,hit_2r_rate,invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,avg_score,best_symbol,best_timeframe
+Entry Model 1,bearish,8,8,0,0,0,8,1.119586,0.799319,2.083518,1.716722,0.75,0.375,0.125,0.5,0.375,0.125,5.0,BTCUSDT,5m
+Entry Model 1,bullish,1,1,0,0,1,0,0.31303,0.31303,0.25859,0.25859,0.0,0.0,0.0,0.0,0.0,0.0,5.0,BTCUSDT,15m
+Entry Model 2,bearish,5,5,0,0,0,5,3.278965,2.230356,8.166683,9.963306,0.6,0.6,0.6,0.8,0.4,0.4,5.0,BTCUSDT,5m
+Entry Model 2,bullish,35,35,0,0,35,0,8.136504,5.111446,8.342647,5.948339,0.971429,0.914286,0.8,0.771429,0.714286,0.6,5.0,BTCUSDT,15m

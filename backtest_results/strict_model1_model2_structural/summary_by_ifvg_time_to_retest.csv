@@ -1,0 +1,6 @@
+model,ifvg_time_to_retest,count,valid_outcome_count,skipped_outcome_count,invalid_risk_count,long_count,short_count,avg_mfe_r,median_mfe_r,avg_mae_r,median_mae_r,hit_0_5r_rate,hit_1r_rate,hit_2r_rate,invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,avg_score,best_symbol,best_timeframe
+Entry Model 1,unknown,49,49,0,0,33,16,1.870148,1.364265,1.013349,0.462621,0.795918,0.653061,0.326531,0.265306,0.591837,0.306122,4.591837,ETHUSDT,15m
+Entry Model 2,0_5,93,93,0,0,83,10,12.933853,5.853349,10.867939,6.267749,0.924731,0.892473,0.817204,0.827957,0.645161,0.505376,4.989247,SOLUSDT,4h
+Entry Model 2,16_40,3,3,0,0,1,2,33.909112,28.681427,37.311276,9.963306,0.666667,0.666667,0.666667,1.0,0.333333,0.333333,5.0,ETHUSDT,4h
+Entry Model 2,6_15,5,5,0,0,4,1,8.167809,9.353322,8.871407,9.406526,1.0,1.0,0.8,1.0,0.4,0.4,5.0,BTCUSDT,30m
+Entry Model 2,unknown,114,114,0,0,102,12,15.459467,8.943259,8.631312,5.404369,0.95614,0.929825,0.868421,0.780702,0.780702,0.622807,4.973684,SOLUSDT,1h

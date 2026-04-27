@@ -66,7 +66,25 @@ class HTFContextTests(unittest.TestCase):
         context = build_htf_context(snapshot, current_price_value=100)
 
         self.assertEqual(context.bias.direction, "bullish")
+        self.assertEqual(context.structure_bias, "bullish")
+        self.assertEqual(context.objective_unreached, True)
         self.assertIn(context.dealing_range.location, {"discount", "equilibrium"})
+
+    def test_objective_below_alone_does_not_create_bearish_bias(self) -> None:
+        snapshot = PrimitiveSnapshot(
+            symbol="BTCUSDT",
+            timeframe="1h",
+            candles=[candle(1_700_000_000_000, 100), candle(1_700_000_300_000, 100)],
+            swings=[
+                SwingPoint("BTCUSDT", "1h", "low", 1_700_000_000_000, 0, 80, 2, "intermediate", 0.7),
+                SwingPoint("BTCUSDT", "1h", "high", 1_700_000_300_000, 1, 95, 2, "intermediate", 0.7),
+            ],
+        )
+
+        context = build_htf_context(snapshot, current_price_value=100)
+
+        self.assertEqual(context.objective.direction, "down")
+        self.assertEqual(context.bias.direction, "neutral")
 
     def test_model1_strict_returns_no_setup_without_htf_context(self) -> None:
         snapshot = PrimitiveSnapshot("BTCUSDT", "5m", [candle(1_700_000_000_000, 100)])

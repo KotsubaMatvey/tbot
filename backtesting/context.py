@@ -27,6 +27,13 @@ def build_strategy_context_for_replay(
     htf_mode: str = "strict",
     require_displacement: bool = True,
     model3_fill_threshold: float = 0.5,
+    stop_mode: str = "structural",
+    model3_stop_mode: str = "source_zone_extreme",
+    stop_buffer_bps: float = 2.0,
+    invalidation_confirmation: str = "close",
+    model3_reaction_bars: int = 10,
+    model3_min_rr_to_objective: float = 1.5,
+    model3_source_zone: str = "any",
 ) -> StrategyContext:
     primary = build_primitive_snapshot(symbol, timeframe, primary_visible)
 
@@ -60,6 +67,13 @@ def build_strategy_context_for_replay(
         htf_mode=htf_mode,
         require_displacement=require_displacement,
         model3_fill_threshold=model3_fill_threshold,
+        stop_mode=stop_mode,
+        model3_stop_mode=model3_stop_mode,
+        stop_buffer_bps=stop_buffer_bps,
+        invalidation_confirmation=invalidation_confirmation,
+        model3_reaction_bars=model3_reaction_bars,
+        model3_min_rr_to_objective=model3_min_rr_to_objective,
+        model3_source_zone=model3_source_zone,
     )
 
 
@@ -74,6 +88,13 @@ def build_accumulated_strategy_context_for_replay(
     htf_mode: str = "strict",
     require_displacement: bool = True,
     model3_fill_threshold: float = 0.5,
+    stop_mode: str = "structural",
+    model3_stop_mode: str = "source_zone_extreme",
+    stop_buffer_bps: float = 2.0,
+    invalidation_confirmation: str = "close",
+    model3_reaction_bars: int = 10,
+    model3_min_rr_to_objective: float = 1.5,
+    model3_source_zone: str = "any",
 ) -> StrategyContext | None:
     primary = snapshot_cache.get_snapshot(symbol, timeframe, current_timestamp)
     if primary is None:
@@ -94,6 +115,13 @@ def build_accumulated_strategy_context_for_replay(
         htf_mode=htf_mode,
         require_displacement=require_displacement,
         model3_fill_threshold=model3_fill_threshold,
+        stop_mode=stop_mode,
+        model3_stop_mode=model3_stop_mode,
+        stop_buffer_bps=stop_buffer_bps,
+        invalidation_confirmation=invalidation_confirmation,
+        model3_reaction_bars=model3_reaction_bars,
+        model3_min_rr_to_objective=model3_min_rr_to_objective,
+        model3_source_zone=model3_source_zone,
     )
 
 

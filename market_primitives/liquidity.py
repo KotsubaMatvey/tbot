@@ -77,6 +77,10 @@ def _build_sweep(
         metadata={
             "swing_time": swing.timestamp,
             "source_swing_significance": swing.significance,
+            "sweep_swing_significance": swing.significance,
+            "sweep_liquidity_quality": swing.quality,
+            "liquidity_level": swing.liquidity_level or swing.level,
+            "body_level": swing.body_level,
             "wick_length": wick_length,
             "range_size": candle["high"] - candle["low"],
             "volume": candle["volume"],

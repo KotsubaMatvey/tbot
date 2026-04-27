@@ -1,0 +1,4 @@
+model,displacement_grade,count,valid_outcome_count,skipped_outcome_count,invalid_risk_count,long_count,short_count,avg_mfe_r,median_mfe_r,avg_mae_r,median_mae_r,hit_0_5r_rate,hit_1r_rate,hit_2r_rate,invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,avg_score,best_symbol,best_timeframe
+Entry Model 1,strong,26,26,0,0,21,5,2.111445,1.373053,1.111102,0.578373,0.730769,0.576923,0.307692,0.346154,0.5,0.269231,4.615385,ETHUSDT,15m
+Entry Model 1,valid,23,23,0,0,12,11,1.597377,1.348599,0.902845,0.293129,0.869565,0.73913,0.347826,0.173913,0.695652,0.347826,4.565217,BTCUSDT,5m
+Entry Model 2,unknown,215,215,0,0,190,25,14.454856,7.72194,10.004553,5.921204,0.939535,0.911628,0.84186,0.809302,0.706977,0.562791,4.981395,SOLUSDT,1h

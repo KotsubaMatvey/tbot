@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import unittest
 
+from backtesting.run_entry_models import _build_parser
 from market_primitives.common import FairValueGap, LiquiditySweep, StructureBreak, SwingPoint
 from market_primitives.displacement import evaluate_displacement
 from market_primitives.fvg import detect_fvg
 from market_primitives.ifvg import detect_ifvg
 from strategies.entry_model_1 import detect_entry_model_1
 from strategies.htf_context import HTFBias, HTFContext, HTFDealingRange, HTFObjective, HTFZone, build_htf_context
+from strategies.risk_policy import model1_risk_plan, model2_risk_plan, model3_risk_plan
 from strategies.types import PrimitiveSnapshot, StrategyContext
 
 
@@ -40,9 +42,10 @@ class ICTRefactorTests(unittest.TestCase):
             candle(4, 103, 120, 102, 118),
         ]
 
-        quality = evaluate_displacement(candles, 3, direction="bullish", structure_level=110)
+        quality = evaluate_displacement(candles, 3, direction="bullish", structure_level=110, created_fvg_after_break=True)
 
         self.assertTrue(quality.has_displacement)
+        self.assertEqual(quality.displacement_grade, "strong")
         self.assertGreaterEqual(quality.body_ratio, 0.55)
         self.assertGreaterEqual(quality.range_expansion, 1.2)
 
@@ -57,6 +60,22 @@ class ICTRefactorTests(unittest.TestCase):
         quality = evaluate_displacement(candles, 3, direction="bullish", structure_level=103.5)
 
         self.assertFalse(quality.has_displacement)
+        self.assertEqual(quality.displacement_grade, "weak")
+
+    def test_displacement_valid_requires_close_beyond_and_fvg(self) -> None:
+        candles = [
+            candle(1, 100, 102, 99, 101),
+            candle(2, 101, 103, 100, 102),
+            candle(3, 102, 104, 101, 103),
+            candle(4, 103, 112, 102, 109),
+        ]
+
+        no_fvg = evaluate_displacement(candles, 3, direction="bullish", structure_level=105, created_fvg_after_break=False)
+        valid = evaluate_displacement(candles, 3, direction="bullish", structure_level=105, created_fvg_after_break=True)
+
+        self.assertFalse(no_fvg.has_displacement)
+        self.assertTrue(valid.has_displacement)
+        self.assertEqual(valid.displacement_grade, "valid")
 
     def test_fvg_lifecycle_tracks_partial_fill(self) -> None:
         candles = [
@@ -99,7 +118,48 @@ class ICTRefactorTests(unittest.TestCase):
         self.assertEqual(len(ifvgs), 1)
         self.assertEqual(ifvgs[0].source_direction, "bearish")
         self.assertEqual(ifvgs[0].direction, "bullish")
+        self.assertIn(ifvgs[0].ifvg_grade, {"valid", "strong"})
         self.assertGreater(ifvgs[0].breach_displacement_factor, 0)
+
+    def test_risk_policy_model_stops_are_positive(self) -> None:
+        m1 = model1_risk_plan(
+            side="long",
+            entry_low=100,
+            entry_high=102,
+            sweep_extreme=98,
+            stop_mode="structural",
+            stop_buffer_bps=10,
+            invalidation_confirmation="close",
+        )
+        m2 = model2_risk_plan(
+            side="long",
+            zone_low=100,
+            zone_high=104,
+            sweep_extreme=98,
+            stop_mode="standard",
+            stop_buffer_bps=10,
+            invalidation_confirmation="close",
+        )
+        m3 = model3_risk_plan(
+            side="long",
+            entry_low=100,
+            entry_high=102,
+            ltf_protected_swing=99,
+            source_zone_low=98,
+            source_zone_high=103,
+            htf_ob_low=None,
+            htf_ob_high=None,
+            model3_stop_mode="source_zone_extreme",
+            stop_buffer_bps=2,
+            invalidation_confirmation="close",
+        )
+
+        self.assertLess(m1.stop_loss, 98)
+        self.assertLess(m2.stop_loss, 102)
+        self.assertLess(m3.stop_loss, 98)
+        self.assertTrue(m1.risk_valid)
+        self.assertTrue(m2.risk_valid)
+        self.assertTrue(m3.risk_valid)
 
     def test_htf_objective_alone_does_not_create_bias(self) -> None:
         snapshot = PrimitiveSnapshot(
@@ -140,6 +200,38 @@ class ICTRefactorTests(unittest.TestCase):
         context = StrategyContext(primary=snapshot, htf_context=bullish_htf(), htf_mode="strict", require_displacement=True)
 
         self.assertEqual(detect_entry_model_1(context), [])
+
+    def test_backtest_cli_risk_flags_parse(self) -> None:
+        args = _build_parser().parse_args(
+            [
+                "--symbols",
+                "BTCUSDT",
+                "--timeframes",
+                "5m",
+                "--stop-mode",
+                "standard",
+                "--model3-stop-mode",
+                "ltf_mss",
+                "--stop-buffer-bps",
+                "3.5",
+                "--invalidation-confirmation",
+                "wick",
+                "--model3-reaction-bars",
+                "12",
+                "--model3-min-rr-to-objective",
+                "2.0",
+                "--model3-source-zone",
+                "fvg_ce",
+            ]
+        )
+
+        self.assertEqual(args.stop_mode, "standard")
+        self.assertEqual(args.model3_stop_mode, "ltf_mss")
+        self.assertEqual(args.stop_buffer_bps, 3.5)
+        self.assertEqual(args.invalidation_confirmation, "wick")
+        self.assertEqual(args.model3_reaction_bars, 12)
+        self.assertEqual(args.model3_min_rr_to_objective, 2.0)
+        self.assertEqual(args.model3_source_zone, "fvg_ce")
 
 
 if __name__ == "__main__":

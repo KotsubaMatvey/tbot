@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from market_primitives.common import normalized_zone_width
 
+from .setup_quality import grade_points
 from .types import EntrySetup
 
 
@@ -22,6 +23,7 @@ def score_model_1(
     late_mitigation: bool = False,
     displacement_factor: float = 0.0,
     has_displacement: bool = False,
+    displacement_grade: str = "weak",
 ) -> int:
     score = 2.1
     if clean_sweep:
@@ -32,6 +34,7 @@ def score_model_1(
         score += 0.25
     else:
         score -= 0.35
+    score += grade_points(displacement_grade)
     zone_width = normalized_zone_width(entry_low, entry_high)
     if zone_width <= 0.002:
         score += 0.4
@@ -60,6 +63,8 @@ def score_model_2(
     messy_overlap: bool = False,
     breach_displacement_factor: float = 0.0,
     has_displacement: bool = False,
+    ifvg_grade: str = "weak",
+    displacement_grade: str = "weak",
 ) -> int:
     score = 2.0
     if clean_sweep:
@@ -70,6 +75,7 @@ def score_model_2(
         score += 0.25
     else:
         score -= 0.5
+    score += grade_points(displacement_grade) + max(0.0, grade_points(ifvg_grade))
     zone_width = normalized_zone_width(entry_low, entry_high)
     if zone_width <= 0.002:
         score += 0.3
@@ -94,6 +100,8 @@ def score_model_3(
     htf_modifier: float = 0.0,
     fill_quality: float = 0.0,
     has_displacement: bool = False,
+    displacement_grade: str = "weak",
+    rr_to_objective: float | None = None,
 ) -> int:
     score = 1.9 + min(0.75, htf_alignment) + min(0.55, ltf_strength) - missed_primary_penalty
     score += min(0.45, fill_quality * 0.45)
@@ -101,6 +109,12 @@ def score_model_3(
         score += 0.2
     else:
         score -= 0.35
+    score += grade_points(displacement_grade)
+    if rr_to_objective is not None:
+        if rr_to_objective >= 2:
+            score += 0.35
+        elif rr_to_objective < 1.5:
+            score -= 0.5
     zone_width = normalized_zone_width(entry_low, entry_high)
     if zone_width <= 0.0015:
         score += 0.4

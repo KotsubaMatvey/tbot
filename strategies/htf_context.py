@@ -34,6 +34,7 @@ class HTFDealingRange:
     range_high: float | None
     equilibrium: float | None
     location: HTFLocation
+    source: str = "unknown"
 
 
 @dataclass(slots=True)
@@ -42,6 +43,9 @@ class HTFObjective:
     target_level: float | None
     target_type: str
     reason: str
+    objective_reached: bool = False
+    objective_unreached: bool = False
+    quality: str = "unknown"
 
 
 @dataclass(slots=True)
@@ -57,6 +61,13 @@ class HTFContext:
     allows_short: bool
     score_modifier: float
     reason: str
+    structure_bias: HTFDirection = "neutral"
+    draw_direction: Literal["up", "down", "none"] = "none"
+    objective_reached: bool = False
+    objective_unreached: bool = False
+    location: HTFLocation = "unknown"
+    poi_direction: HTFDirection = "neutral"
+    context_alignment: Literal["aligned", "mixed", "opposed", "neutral"] = "neutral"
 
 
 def build_htf_context(snapshot: PrimitiveSnapshot, current_price_value: float | None = None) -> HTFContext:
@@ -83,11 +94,9 @@ def build_htf_context(snapshot: PrimitiveSnapshot, current_price_value: float | 
     short_poi = zone.direction == "bearish" and (inside_zone or approaching_zone)
     long_objective = objective.direction == "up"
     short_objective = objective.direction == "down"
-    allows_long = bias.direction == "bullish" and long_objective and (long_poi or long_location)
-    allows_short = bias.direction == "bearish" and short_objective and (short_poi or short_location)
-    if bias.direction == "neutral":
-        allows_long = strong_bullish_zone and long_objective
-        allows_short = strong_bearish_zone and short_objective
+    allows_long = bias.direction == "bullish" and long_objective and objective.objective_unreached and (long_poi or long_location)
+    allows_short = bias.direction == "bearish" and short_objective and objective.objective_unreached and (short_poi or short_location)
+    alignment = _context_alignment(bias.direction, zone.direction, objective.direction)
 
     score_modifier = 0.0
     if bias.direction == "neutral":
@@ -115,6 +124,13 @@ def build_htf_context(snapshot: PrimitiveSnapshot, current_price_value: float | 
         allows_short=allows_short,
         score_modifier=score_modifier,
         reason=reason,
+        structure_bias=bias.direction,
+        draw_direction=objective.direction,
+        objective_reached=objective.objective_reached,
+        objective_unreached=objective.objective_unreached,
+        location=dealing_range.location,
+        poi_direction=zone.direction,
+        context_alignment=alignment,
     )
 
 
@@ -158,7 +174,7 @@ def htf_score_modifier(context: HTFContext | None, side: str, htf_mode: str) -> 
         modifier += 0.15
     if side == "short" and context.dealing_range.location == "premium":
         modifier += 0.15
-    if _objective_aligns(context, side):
+    if _objective_aligns(context, side) and context.objective_unreached:
         modifier += 0.1
     elif context.objective.direction == "none":
         modifier -= 0.2
@@ -182,6 +198,13 @@ def htf_metadata(context: HTFContext | None) -> dict[str, object]:
             "htf_allows_short": False,
             "htf_objective_type": "none",
             "htf_objective_level": None,
+            "htf_structure_bias": "neutral",
+            "htf_draw_direction": "none",
+            "htf_objective_reached": False,
+            "htf_objective_unreached": False,
+            "htf_context_alignment": "neutral",
+            "htf_poi_direction": "neutral",
+            "dealing_range_source": "unknown",
             "htf_reason": "no HTF context",
         }
     return {
@@ -195,6 +218,18 @@ def htf_metadata(context: HTFContext | None) -> dict[str, object]:
         "htf_allows_short": context.allows_short,
         "htf_objective_type": context.objective.target_type,
         "htf_objective_level": context.objective.target_level,
+        "htf_objective_quality": context.objective.quality,
+        "objective_type": context.objective.target_type,
+        "objective_liquidity_quality": context.objective.quality,
+        "objective_is_equal_high_low": context.objective.target_type in {"equal_highs", "equal_lows"},
+        "htf_structure_bias": context.structure_bias,
+        "htf_draw_direction": context.draw_direction,
+        "htf_objective_reached": context.objective_reached,
+        "htf_objective_unreached": context.objective_unreached,
+        "objective_unreached": context.objective_unreached,
+        "htf_context_alignment": context.context_alignment,
+        "htf_poi_direction": context.poi_direction,
+        "dealing_range_source": context.dealing_range.source,
         "htf_reason": context.reason,
     }
 
@@ -205,11 +240,11 @@ def _build_dealing_range(snapshot: PrimitiveSnapshot, price: float | None) -> HT
     last_high = next((item for item in reversed(highs) if item.direction == "high"), None)
     last_low = next((item for item in reversed(highs) if item.direction == "low"), None)
     if last_high is None or last_low is None:
-        return HTFDealingRange(None, None, None, "unknown")
+        return HTFDealingRange(None, None, None, "unknown", "unknown")
     range_high = max(last_high.level, last_low.level)
     range_low = min(last_high.level, last_low.level)
     if range_high <= range_low:
-        return HTFDealingRange(range_low, range_high, None, "unknown")
+        return HTFDealingRange(range_low, range_high, None, "unknown", "invalid")
     equilibrium = (range_high + range_low) / 2
     if price is None:
         location: HTFLocation = "unknown"
@@ -221,7 +256,8 @@ def _build_dealing_range(snapshot: PrimitiveSnapshot, price: float | None) -> HT
             location = "premium"
         else:
             location = "equilibrium"
-    return HTFDealingRange(range_low, range_high, equilibrium, location)
+    source = "long_swing_pair" if any(item.significance == "long" for item in (last_high, last_low)) else "significant_swing_pair"
+    return HTFDealingRange(range_low, range_high, equilibrium, location, source)
 
 
 def _select_active_zone(snapshot: PrimitiveSnapshot, price: float | None) -> HTFZone:
@@ -263,7 +299,7 @@ def _select_active_zone(snapshot: PrimitiveSnapshot, price: float | None) -> HTF
 
 def _build_objective(snapshot: PrimitiveSnapshot, price: float | None) -> HTFObjective:
     if price is None:
-        return HTFObjective("none", None, "none", "no current price")
+        return HTFObjective("none", None, "none", "no current price", False, False, "unknown")
     swings = [item for item in snapshot.swings if item.significance in {"intermediate", "long"}] or snapshot.swings
     highs = [item for item in swings if item.direction == "high" and item.level > price]
     lows = [item for item in swings if item.direction == "low" and item.level < price]
@@ -271,17 +307,19 @@ def _build_objective(snapshot: PrimitiveSnapshot, price: float | None) -> HTFObj
     eql = [item for item in snapshot.equal_lows if item.level < price]
     if eqh:
         target = min(eqh, key=lambda item: item.level)
-        return HTFObjective("up", target.level, "equal_highs", "nearest equal highs above")
+        return HTFObjective("up", target.level, "equal_highs", "nearest equal highs above", False, True, "strong")
     if eql:
         target = max(eql, key=lambda item: item.level)
-        return HTFObjective("down", target.level, "equal_lows", "nearest equal lows below")
+        return HTFObjective("down", target.level, "equal_lows", "nearest equal lows below", False, True, "strong")
     if highs:
         target = min(highs, key=lambda item: item.level)
-        return HTFObjective("up", target.level, "swing_high", "nearest swing high above")
+        quality = "strong" if getattr(target, "significance", "short") in {"intermediate", "long"} else "medium"
+        return HTFObjective("up", target.level, "swing_high", "nearest swing high above", False, True, quality)
     if lows:
         target = max(lows, key=lambda item: item.level)
-        return HTFObjective("down", target.level, "swing_low", "nearest swing low below")
-    return HTFObjective("none", None, "none", "no clear external liquidity")
+        quality = "strong" if getattr(target, "significance", "short") in {"intermediate", "long"} else "medium"
+        return HTFObjective("down", target.level, "swing_low", "nearest swing low below", False, True, quality)
+    return HTFObjective("none", None, "none", "no clear external liquidity", False, False, "unknown")
 
 
 def _bias_score(
@@ -365,6 +403,19 @@ def _objective_aligns(context: HTFContext, side: str) -> bool:
     return (side == "long" and context.objective.direction == "up") or (
         side == "short" and context.objective.direction == "down"
     )
+
+
+def _context_alignment(bias: str, poi: str, draw: str) -> Literal["aligned", "mixed", "opposed", "neutral"]:
+    if bias == "neutral":
+        return "neutral"
+    expected_draw = "up" if bias == "bullish" else "down"
+    if draw == expected_draw and poi in {bias, "neutral"}:
+        return "aligned"
+    if draw == "none" or poi == "neutral":
+        return "mixed"
+    if draw != expected_draw:
+        return "opposed"
+    return "mixed"
 
 
 def _zone_is_stale(zone: HTFZone, timeframe: str, current_ts: int | None) -> bool:

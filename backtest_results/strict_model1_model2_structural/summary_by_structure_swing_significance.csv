@@ -1,0 +1,5 @@
+model,structure_swing_significance,count,valid_outcome_count,skipped_outcome_count,invalid_risk_count,long_count,short_count,avg_mfe_r,median_mfe_r,avg_mae_r,median_mae_r,hit_0_5r_rate,hit_1r_rate,hit_2r_rate,invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,avg_score,best_symbol,best_timeframe
+Entry Model 1,intermediate,14,14,0,0,9,5,1.85234,2.044248,0.392878,0.157282,0.857143,0.785714,0.5,0.142857,0.785714,0.5,4.357143,ETHUSDT,30m
+Entry Model 1,long,7,7,0,0,7,0,1.568312,1.575083,1.257925,1.365812,0.857143,0.571429,0.285714,0.571429,0.285714,0.142857,4.142857,ETHUSDT,30m
+Entry Model 1,short,28,28,0,0,17,11,1.954511,1.120831,1.26244,0.535811,0.75,0.607143,0.25,0.25,0.571429,0.25,4.821429,ETHUSDT,15m
+Entry Model 2,unknown,215,215,0,0,190,25,14.454856,7.72194,10.004553,5.921204,0.939535,0.911628,0.84186,0.809302,0.706977,0.562791,4.981395,SOLUSDT,1h

@@ -86,6 +86,13 @@ class StrategyContext:
     htf_mode: str = "strict"
     require_displacement: bool = True
     model3_fill_threshold: float = 0.5
+    stop_mode: str = "structural"
+    model3_stop_mode: str = "source_zone_extreme"
+    stop_buffer_bps: float = 2.0
+    invalidation_confirmation: str = "close"
+    model3_reaction_bars: int = 10
+    model3_min_rr_to_objective: float = 1.5
+    model3_source_zone: str = "any"
 
 
 def default_components() -> SetupComponents:

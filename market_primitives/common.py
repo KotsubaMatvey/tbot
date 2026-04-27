@@ -33,6 +33,15 @@ class SwingPoint:
     range_size: float
     significance: SwingSignificance = "short"
     strength: float = 0.0
+    liquidity_level: float | None = None
+    body_level: float | None = None
+    is_equal_level: bool = False
+    equal_group_id: str | None = None
+    age_bars: int = 0
+    swept: bool = False
+    swept_at: int | None = None
+    context_poi_type: str | None = None
+    quality: Literal["weak", "medium", "strong", "strongest"] = "weak"
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -68,6 +77,9 @@ class StructureBreak:
     body_ratio: float = 0.0
     range_expansion: float = 0.0
     created_fvg_after_break: bool = False
+    displacement_grade: Literal["weak", "valid", "strong"] = "weak"
+    close_beyond_structure: bool = False
+    bars_in_displacement: int = 1
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -106,6 +118,11 @@ class InvertedFVG:
     invalidated: bool = False
     breach_displacement_factor: float = 0.0
     mean_threshold: float | None = None
+    ifvg_grade: Literal["weak", "valid", "strong"] = "weak"
+    ifvg_ce_level: float | None = None
+    ifvg_retest_depth: float | None = None
+    ifvg_time_to_retest_bars: int | None = None
+    breach_displacement_grade: Literal["weak", "valid", "strong"] = "weak"
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -304,6 +321,10 @@ def collect_swings(
                     range_size=candle_range(mid),
                     significance=significance,
                     strength=strength,
+                    liquidity_level=mid["high"],
+                    body_level=max(mid["open"], mid["close"]),
+                    age_bars=len(candles) - index - 1,
+                    quality=_liquidity_quality(significance, len(candles) - index - 1),
                     metadata={"age_bars": len(candles) - index - 1},
                 )
             )
@@ -325,9 +346,15 @@ def collect_swings(
                     range_size=candle_range(mid),
                     significance=significance,
                     strength=strength,
+                    liquidity_level=mid["low"],
+                    body_level=min(mid["open"], mid["close"]),
+                    age_bars=len(candles) - index - 1,
+                    quality=_liquidity_quality(significance, len(candles) - index - 1),
                     metadata={"age_bars": len(candles) - index - 1},
                 )
             )
+    _promote_hierarchy(highs, higher_is_better=True)
+    _promote_hierarchy(lows, higher_is_better=False)
     return highs, lows
 
 
@@ -352,6 +379,38 @@ def _swing_significance(
     if range_mult >= SWING_INTERMEDIATE_RANGE_MULT or age_bars >= max(5, SWING_LONG_MIN_AGE_BARS // 2):
         return "intermediate", strength
     return "short", strength
+
+
+def _promote_hierarchy(swings: list[SwingPoint], *, higher_is_better: bool) -> None:
+    if len(swings) < 3:
+        return
+    for idx in range(1, len(swings) - 1):
+        prev_level = swings[idx - 1].level
+        level = swings[idx].level
+        next_level = swings[idx + 1].level
+        surrounded = level > prev_level and level > next_level if higher_is_better else level < prev_level and level < next_level
+        if surrounded and swings[idx].significance == "short":
+            swings[idx].significance = "intermediate"
+            swings[idx].quality = _liquidity_quality("intermediate", swings[idx].age_bars)
+    intermediate = [item for item in swings if item.significance == "intermediate"]
+    if len(intermediate) < 3:
+        return
+    for idx in range(1, len(intermediate) - 1):
+        prev_level = intermediate[idx - 1].level
+        level = intermediate[idx].level
+        next_level = intermediate[idx + 1].level
+        surrounded = level > prev_level and level > next_level if higher_is_better else level < prev_level and level < next_level
+        if surrounded:
+            intermediate[idx].significance = "long"
+            intermediate[idx].quality = _liquidity_quality("long", intermediate[idx].age_bars)
+
+
+def _liquidity_quality(significance: SwingSignificance, age_bars: int) -> Literal["weak", "medium", "strong", "strongest"]:
+    if significance == "long":
+        return "strong"
+    if significance == "intermediate":
+        return "medium" if age_bars < 20 else "strong"
+    return "weak"
 
 
 def cluster_levels(levels: list[float], tolerance: float = 0.0025) -> list[list[float]]:

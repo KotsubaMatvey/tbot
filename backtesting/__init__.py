@@ -19,9 +19,19 @@ class BacktestEvent:
     entry_price: float | None
     invalidation: float | None
     risk: float | None
-    score: int | None
-    reason: str
-    components_json: str
+    stop_loss: float | None = None
+    structural_invalidation: float | None = None
+    invalidation_source: str | None = None
+    stop_mode: str | None = None
+    model3_stop_mode: str | None = None
+    risk_bps: float | None = None
+    risk_valid: bool | None = None
+    stop_buffer_bps: float | None = None
+    invalidation_confirmation: str | None = None
+    stop_hit_policy: str | None = None
+    score: int | None = None
+    reason: str = ""
+    components_json: str = ""
     warning: str | None = None
     skipped_reason: str | None = None
     htf_bias: str | None = None
@@ -34,20 +44,68 @@ class BacktestEvent:
     htf_allows_short: bool | None = None
     htf_objective_type: str | None = None
     htf_objective_level: float | None = None
+    htf_structure_bias: str | None = None
+    htf_draw_direction: str | None = None
+    htf_objective_reached: bool | None = None
+    htf_objective_unreached: bool | None = None
+    htf_context_alignment: str | None = None
+    htf_poi_direction: str | None = None
     displacement_factor: float | None = None
     has_displacement: bool | None = None
+    displacement_grade: str | None = None
+    body_ratio: float | None = None
+    range_expansion: float | None = None
+    close_beyond_structure: bool | None = None
+    created_fvg_after_break: bool | None = None
+    bars_in_displacement: int | None = None
     swing_significance: str | None = None
+    sweep_swing_significance: str | None = None
+    sweep_liquidity_quality: str | None = None
+    structure_swing_significance: str | None = None
+    objective_liquidity_quality: str | None = None
+    objective_type: str | None = None
+    objective_age_bars: int | None = None
+    objective_is_equal_high_low: bool | None = None
+    dealing_range_source: str | None = None
     fvg_status: str | None = None
     fvg_fill_percent: float | None = None
+    fvg_quality: str | None = None
     source_fvg_direction: str | None = None
+    source_fvg_time: int | None = None
     breach_time: int | None = None
     breach_displacement_factor: float | None = None
+    breach_displacement_grade: str | None = None
     ifvg_mean_threshold: float | None = None
+    ifvg_grade: str | None = None
+    ifvg_quality: str | None = None
+    ifvg_ce_level: float | None = None
+    ifvg_retest_depth: float | None = None
+    ifvg_breach_time: int | None = None
+    ifvg_retest_time: int | None = None
+    ifvg_time_to_retest_bars: int | None = None
+    bars_sweep_to_breach: int | None = None
+    rr_to_objective: float | None = None
     source_zone_type: str | None = None
     source_zone_time: int | None = None
+    source_zone_low: float | None = None
+    source_zone_high: float | None = None
+    source_zone_valid: bool | None = None
+    source_zone_invalidation_level: float | None = None
+    missed_entry_distance: float | None = None
+    original_entry_zone_low: float | None = None
+    original_entry_zone_high: float | None = None
+    objective_reached_before_entry: bool | None = None
+    distance_to_objective: float | None = None
     fill_percent: float | None = None
     fill_mode: str | None = None
+    time_to_fill: int | None = None
+    reaction_speed: int | None = None
     ltf_mss_time: int | None = None
+    ltf_reaction_bars: int | None = None
+    ltf_reaction_displacement_grade: str | None = None
+    objective_quality: str | None = None
+    poi_quality: str | None = None
+    risk_quality: str | None = None
 
 
 @dataclass(slots=True)

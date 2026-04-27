@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+import json
 from statistics import median
 from typing import Any, Callable
 
@@ -68,6 +69,131 @@ def build_all_summaries(results: list[BacktestResult]) -> dict[str, list[Summary
             lambda row: (row.event.model_name, _displacement_bucket(row)),
             ("model", "displacement"),
         ),
+        "summary_by_displacement_grade": summarize(
+            results,
+            lambda row: (row.event.model_name, row.event.displacement_grade or "unknown"),
+            ("model", "displacement_grade"),
+        ),
+        "summary_by_body_ratio_bucket": summarize(
+            results,
+            lambda row: (row.event.model_name, _number_bucket(row.event.body_ratio, (0.5, 0.7), ("lt_0_50", "0_50_0_70", "gte_0_70"))),
+            ("model", "body_ratio_bucket"),
+        ),
+        "summary_by_range_expansion_bucket": summarize(
+            results,
+            lambda row: (row.event.model_name, _number_bucket(row.event.range_expansion, (1.2, 1.5), ("lt_1_20", "1_20_1_50", "gte_1_50"))),
+            ("model", "range_expansion_bucket"),
+        ),
+        "summary_by_created_fvg_after_break": summarize(
+            results,
+            lambda row: (row.event.model_name, row.event.created_fvg_after_break),
+            ("model", "created_fvg_after_break"),
+        ),
+        "summary_by_stop_mode": summarize(
+            results,
+            lambda row: (row.event.model_name, row.event.stop_mode or "none"),
+            ("model", "stop_mode"),
+        ),
+        "summary_by_model3_stop_mode": summarize(
+            results,
+            lambda row: (row.event.model_name, row.event.model3_stop_mode or "none"),
+            ("model", "model3_stop_mode"),
+        ),
+        "summary_by_invalidation_source": summarize(
+            results,
+            lambda row: (row.event.model_name, row.event.invalidation_source or "unknown"),
+            ("model", "invalidation_source"),
+        ),
+        "summary_by_risk_bps_bucket": summarize(
+            results,
+            lambda row: (row.event.model_name, _risk_bps_bucket(row.event.risk_bps)),
+            ("model", "risk_bps_bucket"),
+        ),
+        "summary_by_htf_alignment": summarize(
+            results,
+            lambda row: (row.event.model_name, row.event.htf_context_alignment or _htf_alignment(row)),
+            ("model", "htf_alignment"),
+        ),
+        "summary_by_objective_reached": summarize(
+            results,
+            lambda row: (row.event.model_name, row.event.htf_objective_reached),
+            ("model", "objective_reached"),
+        ),
+        "summary_by_objective_unreached": summarize(
+            results,
+            lambda row: (row.event.model_name, row.event.htf_objective_unreached),
+            ("model", "objective_unreached"),
+        ),
+        "summary_by_draw_direction": summarize(
+            results,
+            lambda row: (row.event.model_name, row.event.htf_draw_direction or "none"),
+            ("model", "draw_direction"),
+        ),
+        "summary_by_ifvg_grade": summarize(
+            results,
+            lambda row: (row.event.model_name, row.event.ifvg_grade or "none"),
+            ("model", "ifvg_grade"),
+        ),
+        "summary_by_ifvg_retest_depth": summarize(
+            results,
+            lambda row: (row.event.model_name, _number_bucket(row.event.ifvg_retest_depth, (0.5, 1.0), ("lt_ce", "ce_to_full", "full_plus"))),
+            ("model", "ifvg_retest_depth"),
+        ),
+        "summary_by_ifvg_time_to_retest": summarize(
+            results,
+            lambda row: (row.event.model_name, _bar_bucket(row.event.ifvg_time_to_retest_bars)),
+            ("model", "ifvg_time_to_retest"),
+        ),
+        "summary_by_bars_sweep_to_breach": summarize(
+            results,
+            lambda row: (row.event.model_name, _bar_bucket(row.event.bars_sweep_to_breach)),
+            ("model", "bars_sweep_to_breach"),
+        ),
+        "summary_by_rr_to_objective": summarize(
+            results,
+            lambda row: (row.event.model_name, _number_bucket(row.event.rr_to_objective, (1.5, 2.0), ("lt_1_5", "1_5_2_0", "gte_2_0"))),
+            ("model", "rr_to_objective"),
+        ),
+        "summary_by_objective_quality": summarize(
+            results,
+            lambda row: (row.event.model_name, row.event.objective_quality or row.event.objective_liquidity_quality or "unknown"),
+            ("model", "objective_quality"),
+        ),
+        "summary_by_poi_quality": summarize(
+            results,
+            lambda row: (row.event.model_name, row.event.poi_quality or "unknown"),
+            ("model", "poi_quality"),
+        ),
+        "summary_by_risk_quality": summarize(
+            results,
+            lambda row: (row.event.model_name, row.event.risk_quality or "unknown"),
+            ("model", "risk_quality"),
+        ),
+        "summary_by_score_component": summarize(
+            results,
+            lambda row: (row.event.model_name, _score_component_bucket(row)),
+            ("model", "score_component"),
+        ),
+        "summary_by_sweep_swing_significance": summarize(
+            results,
+            lambda row: (row.event.model_name, row.event.sweep_swing_significance or "unknown"),
+            ("model", "sweep_swing_significance"),
+        ),
+        "summary_by_structure_swing_significance": summarize(
+            results,
+            lambda row: (row.event.model_name, row.event.structure_swing_significance or "unknown"),
+            ("model", "structure_swing_significance"),
+        ),
+        "summary_by_equal_liquidity": summarize(
+            results,
+            lambda row: (row.event.model_name, row.event.objective_is_equal_high_low),
+            ("model", "objective_is_equal_high_low"),
+        ),
+        "summary_by_dealing_range_source": summarize(
+            results,
+            lambda row: (row.event.model_name, row.event.dealing_range_source or "unknown"),
+            ("model", "dealing_range_source"),
+        ),
         "summary_by_model3_fill_threshold": summarize(
             results,
             lambda row: (row.event.model_name, row.event.fill_mode or "none"),
@@ -106,6 +232,7 @@ def _metrics_for(group: list[BacktestResult]) -> SummaryRow:
         "count": count,
         "valid_outcome_count": len(valid_r),
         "skipped_outcome_count": len(skipped_outcomes),
+        "invalid_risk_count": sum(1 for item in group if item.event.skipped_reason == "invalid risk" or item.event.risk_valid is False),
         "long_count": sum(1 for item in group if item.event.direction == "long"),
         "short_count": sum(1 for item in group if item.event.direction == "short"),
         "avg_mfe_r": _avg(mfe_r),
@@ -173,6 +300,47 @@ def _displacement_bucket(result: BacktestResult) -> str:
     if result.event.has_displacement is False:
         return "weak_or_none"
     return "unknown"
+
+
+def _risk_bps_bucket(value: float | None) -> str:
+    return _number_bucket(value, (10, 25, 50), ("lt_10", "10_25", "25_50", "gte_50"))
+
+
+def _number_bucket(value: float | None, thresholds: tuple[float, ...], labels: tuple[str, ...]) -> str:
+    if value is None:
+        return "unknown"
+    for threshold, label in zip(thresholds, labels):
+        if value < threshold:
+            return label
+    return labels[-1]
+
+
+def _bar_bucket(value: int | None) -> str:
+    if value is None:
+        return "unknown"
+    if value <= 5:
+        return "0_5"
+    if value <= 15:
+        return "6_15"
+    if value <= 40:
+        return "16_40"
+    return "gt_40"
+
+
+def _score_component_bucket(result: BacktestResult) -> str:
+    try:
+        payload = json.loads(result.event.components_json)
+    except (TypeError, json.JSONDecodeError):
+        return "unknown"
+    metadata = payload.get("metadata") or {}
+    components = metadata.get("score_components") or {}
+    gates = components.get("gates") or {}
+    if gates and not all(bool(value) for value in gates.values()):
+        failed = [key for key, value in gates.items() if not value]
+        return f"failed_{failed[0]}" if failed else "failed_gate"
+    risk = components.get("risk") or {}
+    quality = components.get("quality") or {}
+    return str(risk.get("risk_quality") or quality.get("displacement_grade") or "unknown")
 
 
 __all__ = ["SummaryRow", "build_all_summaries", "score_bucket", "summarize"]

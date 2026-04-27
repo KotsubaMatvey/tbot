@@ -44,6 +44,13 @@ class ReplayConfig:
     htf_mode: str = "strict"
     require_displacement: bool = True
     model3_fill_threshold: float = 0.5
+    stop_mode: str = "structural"
+    model3_stop_mode: str = "source_zone_extreme"
+    stop_buffer_bps: float = 2.0
+    invalidation_confirmation: str = "close"
+    model3_reaction_bars: int = 10
+    model3_min_rr_to_objective: float = 1.5
+    model3_source_zone: str = "any"
 
 
 @dataclass(slots=True)
@@ -103,6 +110,13 @@ def replay_entry_models(
             htf_mode=config.htf_mode,
             require_displacement=config.require_displacement,
             model3_fill_threshold=config.model3_fill_threshold,
+            stop_mode=config.stop_mode,
+            model3_stop_mode=config.model3_stop_mode,
+            stop_buffer_bps=config.stop_buffer_bps,
+            invalidation_confirmation=config.invalidation_confirmation,
+            model3_reaction_bars=config.model3_reaction_bars,
+            model3_min_rr_to_objective=config.model3_min_rr_to_objective,
+            model3_source_zone=config.model3_source_zone,
         )
         if context is None:
             continue
@@ -178,6 +192,13 @@ def replay_entry_models_multi_timeframe(
     htf_mode: str = "strict",
     require_displacement: bool = True,
     model3_fill_threshold: float = 0.5,
+    stop_mode: str = "structural",
+    model3_stop_mode: str = "source_zone_extreme",
+    stop_buffer_bps: float = 2.0,
+    invalidation_confirmation: str = "close",
+    model3_reaction_bars: int = 10,
+    model3_min_rr_to_objective: float = 1.5,
+    model3_source_zone: str = "any",
 ) -> tuple[list[BacktestResult], list[ReplayWarning]]:
     results: list[BacktestResult] = []
     warnings: list[ReplayWarning] = []
@@ -208,6 +229,13 @@ def replay_entry_models_multi_timeframe(
             htf_mode=htf_mode,
             require_displacement=require_displacement,
             model3_fill_threshold=model3_fill_threshold,
+            stop_mode=stop_mode,
+            model3_stop_mode=model3_stop_mode,
+            stop_buffer_bps=stop_buffer_bps,
+            invalidation_confirmation=invalidation_confirmation,
+            model3_reaction_bars=model3_reaction_bars,
+            model3_min_rr_to_objective=model3_min_rr_to_objective,
+            model3_source_zone=model3_source_zone,
         )
         if context is None:
             continue
@@ -293,7 +321,9 @@ def _setup_to_event(
     if entry_low is None and entry_high is None and level is not None:
         entry_low = level
     entry_price = _entry_price(entry_low, entry_high)
-    invalidation = _optional_float(setup.get("invalidation"))
+    metadata = setup.get("metadata") or {}
+    stop_loss = _optional_float(metadata.get("stop_loss")) or _optional_float(setup.get("stop_loss"))
+    invalidation = stop_loss or _optional_float(setup.get("invalidation"))
     warning = None
     skipped_reason = None
 
@@ -318,7 +348,6 @@ def _setup_to_event(
         "raw_timeframe": setup.get("timeframe"),
         "raw_timestamp": setup.get("timestamp"),
     }
-    metadata = setup.get("metadata") or {}
     event_id = _event_id(
         model_name=model_name,
         symbol=symbol,
@@ -343,6 +372,16 @@ def _setup_to_event(
         entry_price=entry_price,
         invalidation=invalidation,
         risk=risk,
+        stop_loss=stop_loss or invalidation,
+        structural_invalidation=_optional_float(metadata.get("structural_invalidation")),
+        invalidation_source=_optional_str(metadata.get("invalidation_source")),
+        stop_mode=_optional_str(metadata.get("stop_mode")),
+        model3_stop_mode=_optional_str(metadata.get("model3_stop_mode")),
+        risk_bps=_optional_float(metadata.get("risk_bps")),
+        risk_valid=_optional_bool(metadata.get("risk_valid")),
+        stop_buffer_bps=_optional_float(metadata.get("stop_buffer_bps")),
+        invalidation_confirmation=_optional_str(metadata.get("invalidation_confirmation")),
+        stop_hit_policy=_optional_str(metadata.get("stop_hit_policy")),
         score=_optional_int(setup.get("score")),
         reason=str(setup.get("reason") or ""),
         components_json=json.dumps(components, ensure_ascii=True, sort_keys=True, default=str),
@@ -358,20 +397,68 @@ def _setup_to_event(
         htf_allows_short=_optional_bool(metadata.get("htf_allows_short")),
         htf_objective_type=_optional_str(metadata.get("htf_objective_type")),
         htf_objective_level=_optional_float(metadata.get("htf_objective_level")),
+        htf_structure_bias=_optional_str(metadata.get("htf_structure_bias")),
+        htf_draw_direction=_optional_str(metadata.get("htf_draw_direction")),
+        htf_objective_reached=_optional_bool(metadata.get("htf_objective_reached")),
+        htf_objective_unreached=_optional_bool(metadata.get("htf_objective_unreached")),
+        htf_context_alignment=_optional_str(metadata.get("htf_context_alignment") or metadata.get("htf_alignment")),
+        htf_poi_direction=_optional_str(metadata.get("htf_poi_direction")),
         displacement_factor=_optional_float(metadata.get("displacement_factor")),
         has_displacement=_optional_bool(metadata.get("has_displacement")),
+        displacement_grade=_optional_str(metadata.get("displacement_grade")),
+        body_ratio=_optional_float(metadata.get("body_ratio")),
+        range_expansion=_optional_float(metadata.get("range_expansion")),
+        close_beyond_structure=_optional_bool(metadata.get("close_beyond_structure")),
+        created_fvg_after_break=_optional_bool(metadata.get("created_fvg_after_break")),
+        bars_in_displacement=_optional_int(metadata.get("bars_in_displacement")),
         swing_significance=_optional_str(metadata.get("swing_significance")),
+        sweep_swing_significance=_optional_str(metadata.get("sweep_swing_significance") or metadata.get("swing_significance")),
+        sweep_liquidity_quality=_optional_str(metadata.get("sweep_liquidity_quality")),
+        structure_swing_significance=_optional_str(metadata.get("structure_swing_significance")),
+        objective_liquidity_quality=_optional_str(metadata.get("objective_liquidity_quality") or metadata.get("objective_quality")),
+        objective_type=_optional_str(metadata.get("objective_type") or metadata.get("htf_objective_type")),
+        objective_age_bars=_optional_int(metadata.get("objective_age_bars")),
+        objective_is_equal_high_low=_optional_bool(metadata.get("objective_is_equal_high_low")),
+        dealing_range_source=_optional_str(metadata.get("dealing_range_source")),
         fvg_status=_optional_str(metadata.get("fvg_status") or metadata.get("source_fvg_status")),
         fvg_fill_percent=_optional_float(metadata.get("fvg_fill_percent") or metadata.get("source_fvg_fill_percent")),
+        fvg_quality=_optional_str(metadata.get("fvg_quality")),
         source_fvg_direction=_optional_str(metadata.get("source_fvg_direction")),
+        source_fvg_time=_optional_int(metadata.get("source_fvg_time")),
         breach_time=_optional_int(metadata.get("breach_time")),
         breach_displacement_factor=_optional_float(metadata.get("breach_displacement_factor")),
+        breach_displacement_grade=_optional_str(metadata.get("breach_displacement_grade")),
         ifvg_mean_threshold=_optional_float(metadata.get("ifvg_mean_threshold")),
+        ifvg_grade=_optional_str(metadata.get("ifvg_grade")),
+        ifvg_quality=_optional_str(metadata.get("ifvg_quality")),
+        ifvg_ce_level=_optional_float(metadata.get("ifvg_ce_level")),
+        ifvg_retest_depth=_optional_float(metadata.get("ifvg_retest_depth")),
+        ifvg_breach_time=_optional_int(metadata.get("ifvg_breach_time")),
+        ifvg_retest_time=_optional_int(metadata.get("ifvg_retest_time")),
+        ifvg_time_to_retest_bars=_optional_int(metadata.get("ifvg_time_to_retest_bars")),
+        bars_sweep_to_breach=_optional_int(metadata.get("bars_sweep_to_breach")),
+        rr_to_objective=_optional_float(metadata.get("rr_to_objective")),
         source_zone_type=_optional_str(metadata.get("source_zone_type")),
         source_zone_time=_optional_int(metadata.get("source_zone_time")),
+        source_zone_low=_optional_float(metadata.get("source_zone_low")),
+        source_zone_high=_optional_float(metadata.get("source_zone_high")),
+        source_zone_valid=_optional_bool(metadata.get("source_zone_valid")),
+        source_zone_invalidation_level=_optional_float(metadata.get("source_zone_invalidation_level")),
+        missed_entry_distance=_optional_float(metadata.get("missed_entry_distance")),
+        original_entry_zone_low=_optional_float(metadata.get("original_entry_zone_low")),
+        original_entry_zone_high=_optional_float(metadata.get("original_entry_zone_high")),
+        objective_reached_before_entry=_optional_bool(metadata.get("objective_reached_before_entry")),
+        distance_to_objective=_optional_float(metadata.get("distance_to_objective")),
         fill_percent=_optional_float(metadata.get("fill_percent")),
         fill_mode=_optional_str(metadata.get("fill_mode")),
+        time_to_fill=_optional_int(metadata.get("time_to_fill")),
+        reaction_speed=_optional_int(metadata.get("reaction_speed")),
         ltf_mss_time=_optional_int(metadata.get("ltf_mss_time")),
+        ltf_reaction_bars=_optional_int(metadata.get("ltf_reaction_bars")),
+        ltf_reaction_displacement_grade=_optional_str(metadata.get("ltf_reaction_displacement_grade")),
+        objective_quality=_optional_str(metadata.get("objective_quality")),
+        poi_quality=_optional_str(metadata.get("poi_quality")),
+        risk_quality=_optional_str(metadata.get("risk_quality")),
     )
 
 

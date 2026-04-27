@@ -4,9 +4,11 @@ from dataclasses import dataclass
 
 from market_primitives.common import BreakerBlock, InvertedFVG, LiquiditySweep, zone_overlap
 
-from config import MAX_INVERSION_AGE_BARS, MIN_RISK_BPS, REQUIRE_HTF_CONTEXT_FOR_ENTRY_MODELS
+from config import MAX_IFVG_RETEST_BARS, MAX_INVERSION_AGE_BARS, MAX_SWEEP_TO_IFVG_BARS, REQUIRE_HTF_CONTEXT_FOR_ENTRY_MODELS
 from .htf_context import htf_allows_side, htf_metadata, htf_score_modifier
+from .risk_policy import model2_risk_plan, risk_metadata
 from .scoring import score_model_2
+from .setup_quality import build_score_components, objective_quality, poi_quality, risk_quality
 from .setup_utils import classify_zone_status, is_recent_enough, primitive_direction, sweep_label
 from .types import EntrySetup, PrimitiveSnapshot, StrategyContext, default_components
 
@@ -92,6 +94,16 @@ def _from_ifvg(inversion: InvertedFVG) -> _InversionCandidate:
             "breach_displacement_factor": inversion.breach_displacement_factor,
             "has_displacement": inversion.breach_displacement_factor > 0,
             "ifvg_mean_threshold": inversion.mean_threshold,
+            "ifvg_grade": inversion.ifvg_grade,
+            "ifvg_quality": inversion.ifvg_grade,
+            "ifvg_ce_level": inversion.ifvg_ce_level,
+            "ifvg_retest_depth": inversion.ifvg_retest_depth,
+            "ifvg_retest_touched_ce": inversion.metadata.get("ifvg_retest_touched_ce"),
+            "ifvg_retest_breached_ce_by_close": inversion.metadata.get("ifvg_retest_breached_ce_by_close"),
+            "ifvg_breach_time": inversion.invalidated_at,
+            "ifvg_retest_time": inversion.retest_at,
+            "ifvg_time_to_retest_bars": inversion.ifvg_time_to_retest_bars,
+            "breach_displacement_grade": inversion.breach_displacement_grade,
         },
     )
 
@@ -135,12 +147,27 @@ def _build_setup(
         return None
     if context.require_displacement and candidate.metadata.get("has_displacement") is False:
         return None
-
-    entry_mid = (candidate.zone_low + candidate.zone_high) / 2
-    risk = abs(entry_mid - sweep.wick_extreme)
-    risk_floor = entry_mid * (MIN_RISK_BPS / 10_000)
-    if risk <= 0 or risk < risk_floor:
+    if candidate.metadata.get("ifvg_grade") == "weak":
         return None
+    time_to_retest = candidate.metadata.get("ifvg_time_to_retest_bars")
+    if isinstance(time_to_retest, int) and time_to_retest > MAX_IFVG_RETEST_BARS:
+        return None
+    bars_sweep_to_breach = _bars_between(snapshot, sweep.timestamp, int(candidate.armed_time))
+    if bars_sweep_to_breach is not None and bars_sweep_to_breach > MAX_SWEEP_TO_IFVG_BARS:
+        return None
+
+    risk_plan = model2_risk_plan(
+        side=side,
+        zone_low=candidate.zone_low,
+        zone_high=candidate.zone_high,
+        sweep_extreme=sweep.wick_extreme,
+        stop_mode=context.stop_mode,
+        stop_buffer_bps=context.stop_buffer_bps,
+        invalidation_confirmation=context.invalidation_confirmation,
+    )
+    if not risk_plan.risk_valid:
+        return None
+    direction = primitive_direction(side)  # type: ignore[arg-type]
 
     messy_overlap = any(
         zone_overlap(candidate.zone_low, candidate.zone_high, block.zone_low, block.zone_high) > 0.9
@@ -151,11 +178,32 @@ def _build_setup(
         inversion_confidence=candidate.confidence,
         entry_low=candidate.zone_low,
         entry_high=candidate.zone_high,
-        invalidation=sweep.wick_extreme,
+        invalidation=risk_plan.stop_loss,
         htf_modifier=htf_score_modifier(context.htf_context, side, htf_mode),
         messy_overlap=messy_overlap,
         breach_displacement_factor=float(candidate.metadata.get("breach_displacement_factor") or 0.0),
         has_displacement=bool(candidate.metadata.get("has_displacement")),
+        ifvg_grade=str(candidate.metadata.get("ifvg_grade") or "weak"),
+        displacement_grade=str(candidate.metadata.get("breach_displacement_grade") or "weak"),
+    )
+    htf_meta = htf_metadata(context.htf_context)
+    rr_to_objective = _rr_to_objective(context, side, (candidate.zone_low + candidate.zone_high) / 2, risk_plan.stop_loss)
+    quality_meta = {
+        **htf_meta,
+        "objective_unreached": htf_meta.get("htf_objective_unreached"),
+        "risk_bps": risk_plan.risk_bps,
+    }
+    score_components = build_score_components(
+        htf_aligned=bool(htf_meta.get("htf_context_alignment") == "aligned" or htf_meta.get("htf_bias") == direction),
+        objective_unreached=bool(htf_meta.get("htf_objective_unreached")),
+        risk_valid=risk_plan.risk_valid,
+        displacement_grade=str(candidate.metadata.get("breach_displacement_grade") or "weak"),
+        ifvg_grade=str(candidate.metadata.get("ifvg_grade") or "weak"),
+        sweep_quality="high" if sweep.clean else "medium",
+        risk_bps=risk_plan.risk_bps,
+        rr_to_objective=rr_to_objective,
+        poi_quality_value=poi_quality(quality_meta),
+        objective_quality_value=objective_quality(quality_meta),
     )
 
     components = default_components()
@@ -170,7 +218,7 @@ def _build_setup(
         status=status,
         entry_low=candidate.zone_low,
         entry_high=candidate.zone_high,
-        invalidation=sweep.wick_extreme,
+        invalidation=risk_plan.stop_loss,
         target_hint=_target_hint(side, candidate.zone_low, candidate.zone_high, sweep.wick_extreme),
         sweep_level=sweep.liquidity_level,
         structure_level=None,
@@ -182,9 +230,25 @@ def _build_setup(
         metadata={
             "candidate_kind": candidate.kind,
             "sweep_time": sweep.timestamp,
+            "preceding_sweep": True,
             "swing_significance": sweep.source_swing_significance,
+            "sweep_swing_significance": sweep.source_swing_significance,
+            "sweep_liquidity_quality": sweep.metadata.get("sweep_liquidity_quality"),
+            "sweep_level": sweep.liquidity_level,
+            "bars_sweep_to_breach": bars_sweep_to_breach,
+            "rr_to_objective": rr_to_objective,
+            "has_htf_confluence": htf_meta.get("htf_context_alignment") == "aligned",
+            "htf_alignment": htf_meta.get("htf_context_alignment"),
+            "objective_unreached": htf_meta.get("htf_objective_unreached"),
+            "objective_quality": objective_quality(quality_meta),
+            "poi_quality": poi_quality(quality_meta),
+            "ifvg_quality": candidate.metadata.get("ifvg_grade"),
+            "sweep_quality": "high" if sweep.clean else "medium",
+            "risk_quality": risk_quality(risk_plan.risk_bps),
+            "score_components": score_components,
             **candidate.metadata,
-            **htf_metadata(context.htf_context),
+            **risk_metadata(risk_plan),
+            **htf_meta,
         },
     )
 
@@ -205,6 +269,27 @@ def _target_hint(side: str, entry_low: float, entry_high: float, invalidation: f
     if side == "long":
         return entry_high + risk * 2.5
     return entry_low - risk * 2.5
+
+
+def _bars_between(snapshot: PrimitiveSnapshot, start_time: int, end_time: int) -> int | None:
+    ordered = [int(candle["time"]) for candle in snapshot.candles]
+    try:
+        start_idx = next(idx for idx, value in enumerate(ordered) if value >= start_time)
+        end_idx = next(idx for idx, value in enumerate(ordered) if value >= end_time)
+    except StopIteration:
+        return None
+    return max(0, end_idx - start_idx)
+
+
+def _rr_to_objective(context: StrategyContext, side: str, entry_mid: float, stop_loss: float) -> float | None:
+    if context.htf_context is None or context.htf_context.objective.target_level is None:
+        return None
+    target = float(context.htf_context.objective.target_level)
+    distance = max(0.0, target - entry_mid) if side == "long" else max(0.0, entry_mid - target)
+    risk = abs(entry_mid - stop_loss)
+    if risk <= 0:
+        return None
+    return round(distance / risk, 6)
 
 
 __all__ = ["detect_entry_model_2"]

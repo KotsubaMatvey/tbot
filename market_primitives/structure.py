@@ -44,10 +44,16 @@ def detect_structure_breaks(candles: list[Candle], symbol: str, timeframe: str) 
                 body_ratio=displacement.body_ratio,
                 range_expansion=displacement.range_expansion,
                 created_fvg_after_break=created_fvg,
+                displacement_grade=displacement.displacement_grade,
+                close_beyond_structure=displacement.close_beyond_structure,
+                bars_in_displacement=displacement.bars_count,
                 metadata={
                     "swing_time": last_high.timestamp,
                     "swing_significance": last_high.significance,
                     "created_fvg_after_break": created_fvg,
+                    "displacement_grade": displacement.displacement_grade,
+                    "close_beyond_structure": displacement.close_beyond_structure,
+                    "bars_in_displacement": displacement.bars_count,
                 },
             )
         )
@@ -79,10 +85,16 @@ def detect_structure_breaks(candles: list[Candle], symbol: str, timeframe: str) 
                 body_ratio=displacement.body_ratio,
                 range_expansion=displacement.range_expansion,
                 created_fvg_after_break=created_fvg,
+                displacement_grade=displacement.displacement_grade,
+                close_beyond_structure=displacement.close_beyond_structure,
+                bars_in_displacement=displacement.bars_count,
                 metadata={
                     "swing_time": last_low.timestamp,
                     "swing_significance": last_low.significance,
                     "created_fvg_after_break": created_fvg,
+                    "displacement_grade": displacement.displacement_grade,
+                    "close_beyond_structure": displacement.close_beyond_structure,
+                    "bars_in_displacement": displacement.bars_count,
                 },
             )
         )
@@ -120,12 +132,18 @@ def detect_structure_breaks(candles: list[Candle], symbol: str, timeframe: str) 
                     body_ratio=displacement.body_ratio,
                     range_expansion=displacement.range_expansion,
                     created_fvg_after_break=created_fvg,
+                    displacement_grade=displacement.displacement_grade,
+                    close_beyond_structure=displacement.close_beyond_structure,
+                    bars_in_displacement=displacement.bars_count,
                     metadata={
                         "trend": "uptrend",
                         "previous_high": swing_highs[-2].level,
                         "swing_time": choch_low.timestamp,
                         "swing_significance": choch_low.significance,
                         "created_fvg_after_break": created_fvg,
+                        "displacement_grade": displacement.displacement_grade,
+                        "close_beyond_structure": displacement.close_beyond_structure,
+                        "bars_in_displacement": displacement.bars_count,
                     },
                 )
             )
@@ -155,12 +173,18 @@ def detect_structure_breaks(candles: list[Candle], symbol: str, timeframe: str) 
                     body_ratio=displacement.body_ratio,
                     range_expansion=displacement.range_expansion,
                     created_fvg_after_break=created_fvg,
+                    displacement_grade=displacement.displacement_grade,
+                    close_beyond_structure=displacement.close_beyond_structure,
+                    bars_in_displacement=displacement.bars_count,
                     metadata={
                         "trend": "downtrend",
                         "previous_low": swing_lows[-2].level,
                         "swing_time": choch_high.timestamp,
                         "swing_significance": choch_high.significance,
                         "created_fvg_after_break": created_fvg,
+                        "displacement_grade": displacement.displacement_grade,
+                        "close_beyond_structure": displacement.close_beyond_structure,
+                        "bars_in_displacement": displacement.bars_count,
                     },
                 )
             )

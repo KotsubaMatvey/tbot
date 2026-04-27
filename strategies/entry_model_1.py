@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from market_primitives.common import FairValueGap, LiquiditySweep, StructureBreak, zone_overlap
 
-from config import MIN_RISK_BPS, REQUIRE_HTF_CONTEXT_FOR_ENTRY_MODELS
+from config import REQUIRE_HTF_CONTEXT_FOR_ENTRY_MODELS
 from .htf_context import htf_allows_side, htf_metadata, htf_score_modifier
+from .risk_policy import model1_risk_plan, risk_metadata
 from .scoring import score_model_1
+from .setup_quality import build_score_components, objective_quality, poi_quality, risk_quality
 from .setup_utils import classify_zone_status, primitive_direction, sweep_label
 from .types import EntrySetup, PrimitiveSnapshot, StrategyContext, default_components
 
@@ -48,7 +50,7 @@ def _detect_direction(context: StrategyContext, side: str) -> list[EntrySetup]:
         )
         if structure is None:
             continue
-        if context.require_displacement and not (structure.has_displacement or structure.created_fvg_after_break):
+        if context.require_displacement and structure.displacement_grade not in {"valid", "strong"}:
             continue
 
         post_bos_fvg = next(
@@ -88,11 +90,18 @@ def _build_setup(
     if status != "watching" and status_time <= fvg.created_at:
         return None
 
-    entry_mid = (entry_low + entry_high) / 2
-    risk = abs(entry_mid - sweep.wick_extreme)
-    risk_floor = entry_mid * (MIN_RISK_BPS / 10_000)
-    if risk <= 0 or risk < risk_floor:
+    risk_plan = model1_risk_plan(
+        side=side,
+        entry_low=entry_low,
+        entry_high=entry_high,
+        sweep_extreme=sweep.wick_extreme,
+        stop_mode=context.stop_mode,
+        stop_buffer_bps=context.stop_buffer_bps,
+        invalidation_confirmation=context.invalidation_confirmation,
+    )
+    if not risk_plan.risk_valid:
         return None
+    direction = primitive_direction(side)  # type: ignore[arg-type]
 
     htf_alignment = 0.0
     if higher_snapshot is not None:
@@ -107,13 +116,31 @@ def _build_setup(
         structure_strength=structure.strength,
         entry_low=entry_low,
         entry_high=entry_high,
-        invalidation=sweep.wick_extreme,
+        invalidation=risk_plan.stop_loss,
         context_alignment=htf_alignment,
         htf_modifier=htf_score_modifier(context.htf_context, side, htf_mode),
         messy_overlap=messy_overlap,
         late_mitigation=late_mitigation,
         displacement_factor=structure.displacement_factor,
         has_displacement=structure.has_displacement,
+        displacement_grade=structure.displacement_grade,
+    )
+    htf_meta = htf_metadata(context.htf_context)
+    quality_meta = {
+        **htf_meta,
+        "objective_unreached": htf_meta.get("htf_objective_unreached"),
+        "risk_bps": risk_plan.risk_bps,
+    }
+    score_components = build_score_components(
+        htf_aligned=bool(htf_meta.get("htf_context_alignment") == "aligned" or htf_meta.get("htf_bias") == direction),
+        objective_unreached=bool(htf_meta.get("htf_objective_unreached")),
+        risk_valid=risk_plan.risk_valid,
+        displacement_grade=structure.displacement_grade,
+        fvg_quality="medium" if not fvg.invalidated else "low",
+        sweep_quality="high" if sweep.clean else "medium",
+        risk_bps=risk_plan.risk_bps,
+        poi_quality_value=poi_quality(quality_meta),
+        objective_quality_value=objective_quality(quality_meta),
     )
 
     components = default_components()
@@ -129,7 +156,7 @@ def _build_setup(
         status=status,
         entry_low=entry_low,
         entry_high=entry_high,
-        invalidation=sweep.wick_extreme,
+        invalidation=risk_plan.stop_loss,
         target_hint=_target_hint(side, sweep.liquidity_level, structure.broken_level, entry_low, entry_high),
         sweep_level=sweep.liquidity_level,
         structure_level=structure.broken_level,
@@ -142,18 +169,34 @@ def _build_setup(
             "sweep_time": sweep.timestamp,
             "sweep_timestamp": sweep.timestamp,
             "swing_significance": sweep.source_swing_significance,
+            "sweep_swing_significance": sweep.source_swing_significance,
+            "sweep_liquidity_quality": sweep.metadata.get("sweep_liquidity_quality"),
             "structure_time": structure.timestamp,
             "structure_type": structure.break_type,
+            "structure_swing_significance": structure.metadata.get("swing_significance"),
             "displacement_factor": round(structure.displacement_factor, 6),
             "has_displacement": structure.has_displacement,
+            "displacement_grade": structure.displacement_grade,
             "body_ratio": round(structure.body_ratio, 6),
             "range_expansion": round(structure.range_expansion, 6),
+            "close_beyond_structure": structure.close_beyond_structure,
+            "created_fvg_after_break": structure.created_fvg_after_break,
+            "bars_in_displacement": structure.bars_in_displacement,
             "fvg_created_at": fvg.created_at,
             "fvg_time": fvg.created_at,
             "fvg_status": fvg.status,
             "fvg_fill_percent": fvg.fill_percent,
             "fvg_mitigated_at": fvg.mitigated_at,
-            **htf_metadata(context.htf_context),
+            "htf_alignment": htf_meta.get("htf_context_alignment"),
+            "objective_unreached": htf_meta.get("htf_objective_unreached"),
+            "objective_quality": objective_quality(quality_meta),
+            "poi_quality": poi_quality(quality_meta),
+            "fvg_quality": "medium" if not fvg.invalidated else "low",
+            "sweep_quality": "high" if sweep.clean else "medium",
+            "risk_quality": risk_quality(risk_plan.risk_bps),
+            "score_components": score_components,
+            **risk_metadata(risk_plan),
+            **htf_meta,
         },
     )
 
