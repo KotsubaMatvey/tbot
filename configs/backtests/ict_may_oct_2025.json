@@ -29,7 +29,7 @@
     "ifvg_retest": {
       "min_target_distance_r": 3.0,
       "allowed_displacement_grades": ["valid", "strong"],
-      "exclude_no_trade_reasons": ["target_rr_below_2"]
+      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"]
     },
     "ict2022_mss_fvg": {
       "min_target_distance_r": 2.0,
