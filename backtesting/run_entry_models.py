@@ -14,7 +14,7 @@ from timeframes import EXECUTION_HTF_MAP, MODEL_3_HTF_MAP, MODEL_3_LTF_MAP, SUPP
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_DATA_DIR = "data/history_2025-05-01_2025-06-30"
+DEFAULT_DATA_DIR = "data/history_2025-05-01_2025-10-31"
 
 
 def main(argv: list[str] | None = None) -> int:

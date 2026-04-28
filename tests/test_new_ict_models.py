@@ -251,10 +251,43 @@ class NewICTModelTests(unittest.TestCase):
         self.assertEqual(all_rows[1]["count"], 1)
         self.assertEqual(all_rows[1]["expectancy"], 2.5)
 
+    def test_score_threshold_report_applies_model_filters(self) -> None:
+        report = summarize_thresholds(
+            [
+                {
+                    "model": "turtle_soup",
+                    "decision_score": "60",
+                    "target_distance_r": "3",
+                    "activated_trade": "True",
+                    "target_before_invalidation": "True",
+                    "invalidated": "False",
+                    "mfe_r": "3",
+                    "no_trade_reasons": "",
+                },
+                {
+                    "model": "turtle_soup",
+                    "decision_score": "60",
+                    "target_distance_r": "1",
+                    "activated_trade": "True",
+                    "target_before_invalidation": "False",
+                    "invalidated": "True",
+                    "mfe_r": "0.5",
+                    "no_trade_reasons": "target_rr_below_2",
+                },
+            ],
+            [50],
+            model_filters={"turtle_soup": {"min_target_distance_r": 2.0}},
+        )
+
+        filtered = next(row for row in report if row["scope"] == "filtered_model")
+        self.assertEqual(filtered["count"], 1)
+        self.assertEqual(filtered["filtered_out"], 1)
+        self.assertEqual(filtered["expectancy"], 3.0)
+
     def test_ict_batch_builds_repeatable_run_args(self) -> None:
         args = build_run_args(
             {
-                "data_dir": "data/history_2025-05-01_2025-06-30",
+                "data_dir": "data/history_2025-05-01_2025-10-31",
                 "symbols": ["BTCUSDT", "ETHUSDT"],
                 "models": ["turtle_soup", "ifvg_retest"],
                 "context_mode": "aligned_only",
@@ -269,7 +302,7 @@ class NewICTModelTests(unittest.TestCase):
         )
 
         self.assertIn("--data-dir", args)
-        self.assertIn("data/history_2025-05-01_2025-06-30", args)
+        self.assertIn("data/history_2025-05-01_2025-10-31", args)
         self.assertIn("--symbols", args)
         self.assertIn("BTCUSDT", args)
         self.assertNotIn("ETHUSDT", args[args.index("--symbols") + 1 : args.index("--timeframes")])

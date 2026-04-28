@@ -23,7 +23,7 @@ from strategies.ict_models.registry import (
 from strategies.types import EntrySetup
 from timeframes import SUPPORTED_TIMEFRAMES, execution_htf_for
 
-DEFAULT_DATA_DIR = "data/history_2025-05-01_2025-06-30"
+DEFAULT_DATA_DIR = "data/history_2025-05-01_2025-10-31"
 
 EVENT_FIELDS = [
     "model",

@@ -16,6 +16,42 @@
   "context_mode": "aligned_only",
   "forward_bars": 20,
   "warmup_bars": 100,
+  "model_filters": {
+    "turtle_soup": {
+      "min_target_distance_r": 2.0,
+      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"]
+    },
+    "silver_bullet": {
+      "min_target_distance_r": 2.0,
+      "require_session_window": true
+    },
+    "ifvg_retest": {
+      "min_target_distance_r": 3.0,
+      "allowed_displacement_grades": ["valid", "strong"],
+      "exclude_no_trade_reasons": ["target_rr_below_2"]
+    },
+    "ict2022_mss_fvg": {
+      "min_target_distance_r": 2.0,
+      "require_session_window": true,
+      "allowed_displacement_grades": ["valid", "strong"]
+    },
+    "breaker_block": {
+      "min_target_distance_r": 2.0,
+      "exclude_no_trade_reasons": ["target_rr_below_2"]
+    },
+    "reclaimed_ob": {
+      "min_target_distance_r": 2.0,
+      "exclude_no_trade_reasons": ["target_rr_below_2"]
+    },
+    "rejection_block": {
+      "min_target_distance_r": 2.0,
+      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"]
+    },
+    "mitigation_block": {
+      "min_target_distance_r": 2.0,
+      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"]
+    }
+  },
   "runs": [
     {
       "name": "1h_aligned",

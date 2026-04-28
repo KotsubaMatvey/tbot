@@ -102,8 +102,8 @@ python bot.py
 
 ## ICT Backtest Batch
 
-The current research baseline uses the May-June 2025 dataset:
+The current research baseline uses the May-October 2025 dataset:
 
 ```bash
-python -m backtesting.run_ict_batch --config configs/backtests/ict_may_jun_2025.json
+python -m backtesting.run_ict_batch --config configs/backtests/ict_may_oct_2025.json
 ```

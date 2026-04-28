@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 from collections import Counter, defaultdict
 from pathlib import Path
 from statistics import median
@@ -11,6 +12,8 @@ REPORT_FIELDS = [
     "scope",
     "model",
     "threshold",
+    "filter_name",
+    "filtered_out",
     "count",
     "activated_trades",
     "invalidated_before_entry",
@@ -34,11 +37,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--events", required=True, help="Path to events.csv from backtesting.run_ict_models.")
     parser.add_argument("--out-dir", default=None, help="Output directory. Defaults to the events file directory.")
     parser.add_argument("--thresholds", nargs="+", type=float, default=[0.0, 50.0, 70.0])
+    parser.add_argument("--model-filters", default=None, help="JSON file with a model_filters object.")
     args = parser.parse_args(argv)
 
     events_path = Path(args.events)
     rows = _read_csv(events_path)
-    report = summarize_thresholds(rows, args.thresholds)
+    model_filters = _read_model_filters(Path(args.model_filters)) if args.model_filters else {}
+    report = summarize_thresholds(rows, args.thresholds, model_filters=model_filters)
     out_dir = Path(args.out_dir) if args.out_dir else events_path.parent
     out_dir.mkdir(parents=True, exist_ok=True)
     _write_csv(out_dir / "score_threshold_report.csv", report, REPORT_FIELDS)
@@ -47,7 +52,12 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def summarize_thresholds(events: list[dict[str, Any]], thresholds: list[float]) -> list[dict[str, Any]]:
+def summarize_thresholds(
+    events: list[dict[str, Any]],
+    thresholds: list[float],
+    *,
+    model_filters: dict[str, dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for threshold in thresholds:
         filtered = [
@@ -55,16 +65,115 @@ def summarize_thresholds(events: list[dict[str, Any]], thresholds: list[float]) 
             for event in events
             if threshold <= 0 or (_float_or_none(event.get("decision_score")) is not None and _float_or_none(event.get("decision_score")) >= threshold)
         ]
-        rows.append(_summary_row(filtered, scope="all", model="ALL", threshold=threshold))
+        rows.append(_summary_row(filtered, scope="all", model="ALL", threshold=threshold, filter_name="none"))
         by_model: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for event in filtered:
             by_model[str(event.get("model") or "unknown")].append(event)
         for model in sorted(by_model):
-            rows.append(_summary_row(by_model[model], scope="model", model=model, threshold=threshold))
+            rows.append(_summary_row(by_model[model], scope="model", model=model, threshold=threshold, filter_name="none"))
+        if model_filters:
+            _add_filtered_rows(rows, filtered, threshold, model_filters)
     return rows
 
 
-def _summary_row(group: list[dict[str, Any]], *, scope: str, model: str, threshold: float) -> dict[str, Any]:
+def _add_filtered_rows(
+    rows: list[dict[str, Any]],
+    events: list[dict[str, Any]],
+    threshold: float,
+    model_filters: dict[str, dict[str, Any]],
+) -> None:
+    by_model: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for event in events:
+        by_model[str(event.get("model") or "unknown")].append(event)
+
+    filtered_all: list[dict[str, Any]] = []
+    filtered_out = 0
+    for model, group in sorted(by_model.items()):
+        rules = model_filters.get(model, {})
+        accepted = [event for event in group if _passes_model_filter(event, rules)]
+        filtered_all.extend(accepted)
+        filtered_out += len(group) - len(accepted)
+        rows.append(
+            _summary_row(
+                accepted,
+                scope="filtered_model",
+                model=model,
+                threshold=threshold,
+                filter_name="model_rules",
+                filtered_out=len(group) - len(accepted),
+            )
+        )
+    rows.append(
+        _summary_row(
+            filtered_all,
+            scope="filtered_all",
+            model="ALL",
+            threshold=threshold,
+            filter_name="model_rules",
+            filtered_out=filtered_out,
+        )
+    )
+
+
+def _passes_model_filter(event: dict[str, Any], rules: dict[str, Any]) -> bool:
+    if not rules:
+        return True
+    min_rr = _float_or_none(rules.get("min_target_distance_r"))
+    if min_rr is not None:
+        rr = _float_or_none(event.get("target_distance_r"))
+        if rr is None or rr < min_rr:
+            return False
+    max_rr = _float_or_none(rules.get("max_target_distance_r"))
+    if max_rr is not None:
+        rr = _float_or_none(event.get("target_distance_r"))
+        if rr is None or rr > max_rr:
+            return False
+    min_score = _float_or_none(rules.get("min_decision_score"))
+    if min_score is not None:
+        score = _float_or_none(event.get("decision_score"))
+        if score is None or score < min_score:
+            return False
+    if rules.get("require_smt") and not _bool(event.get("has_smt_confirmation")):
+        return False
+    if rules.get("require_session_window") and not (event.get("session_window") or event.get("ny_time")):
+        return False
+    if not _field_allowed(event, rules, "htf_location", "allowed_htf_locations"):
+        return False
+    if not _displacement_allowed(event, rules):
+        return False
+    excluded = set(rules.get("exclude_no_trade_reasons") or [])
+    if excluded:
+        reasons = {reason.strip() for reason in str(event.get("no_trade_reasons") or "").split(";") if reason.strip()}
+        if reasons & excluded:
+            return False
+    return True
+
+
+def _field_allowed(event: dict[str, Any], rules: dict[str, Any], field: str, rule_name: str) -> bool:
+    allowed = rules.get(rule_name)
+    if not allowed:
+        return True
+    return str(event.get(field) or "none") in {str(item) for item in allowed}
+
+
+def _displacement_allowed(event: dict[str, Any], rules: dict[str, Any]) -> bool:
+    allowed = rules.get("allowed_displacement_grades")
+    if not allowed:
+        return True
+    values = {str(item) for item in allowed}
+    grade = event.get("displacement_grade") or event.get("breach_displacement_grade")
+    return str(grade or "none") in values
+
+
+def _summary_row(
+    group: list[dict[str, Any]],
+    *,
+    scope: str,
+    model: str,
+    threshold: float,
+    filter_name: str,
+    filtered_out: int = 0,
+) -> dict[str, Any]:
     mfes = [_float_or_none(event.get("mfe_r")) for event in group]
     mfes = [value for value in mfes if value is not None]
     reasons = _reason_counter(group)
@@ -72,6 +181,8 @@ def _summary_row(group: list[dict[str, Any]], *, scope: str, model: str, thresho
         "scope": scope,
         "model": model,
         "threshold": _format_threshold(threshold),
+        "filter_name": filter_name,
+        "filtered_out": filtered_out,
         "count": len(group),
         "activated_trades": sum(1 for event in group if _bool(event.get("activated_trade"))),
         "invalidated_before_entry": sum(1 for event in group if _bool(event.get("invalidated_before_entry"))),
@@ -150,6 +261,11 @@ def _read_csv(path: Path) -> list[dict[str, Any]]:
         return list(csv.DictReader(handle))
 
 
+def _read_model_filters(path: Path) -> dict[str, dict[str, Any]]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return payload.get("model_filters", payload)
+
+
 def _write_csv(path: Path, rows: list[dict[str, Any]], fieldnames: list[str]) -> None:
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -166,10 +282,10 @@ def _write_markdown(path: Path, rows: list[dict[str, Any]], events_path: Path, t
         f"- thresholds: {', '.join(_format_threshold(item) for item in thresholds)}",
         "",
         "## All Models",
-        _markdown_table([row for row in rows if row["scope"] == "all"]),
+        _markdown_table([row for row in rows if row["scope"] in {"all", "filtered_all"}]),
         "",
         "## By Model",
-        _markdown_table([row for row in rows if row["scope"] == "model"]),
+        _markdown_table([row for row in rows if row["scope"] in {"model", "filtered_model"}]),
     ]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 

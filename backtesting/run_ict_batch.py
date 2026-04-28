@@ -23,6 +23,8 @@ def main(argv: list[str] | None = None) -> int:
             return result
         out_dir = Path(run["out_dir"])
         report_args = ["--events", str(out_dir / "events.csv"), "--thresholds", *thresholds]
+        if config.get("model_filters"):
+            report_args.extend(["--model-filters", str(config_path)])
         result = score_threshold_report.main(report_args)
         if result != 0:
             return result
