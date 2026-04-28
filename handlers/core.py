@@ -30,7 +30,7 @@ async def start(update, context):
     if user_id in OWNER_IDS or is_subscribed(user_id):
         onboarding.init(user_id)
         await update.message.reply_text(
-            "Setup Preferences\n\nSelect symbols, primitive alerts, timeframes, entry models and directions."
+            "Setup Preferences\n\nSelect symbols, zones of interest and timeframes."
         )
         await onboarding.send_step_symbols(user_id, context)
         return
@@ -58,7 +58,7 @@ async def reset(update, context):
         await payment_flow.send_payment_screen(user_id, context, update)
         return
     onboarding.init(user_id)
-    await update.message.reply_text("Reset Preferences\n\nSetting up from scratch.")
+    await update.message.reply_text("Settings\n\nSelect symbols, zones of interest and timeframes.")
     await onboarding.send_step_symbols(user_id, context)
 
 
@@ -140,7 +140,7 @@ async def help_cmd(update, context):
         "/zones       Active zones now\n"
         "TRADING     Change strategy alerts\n"
         "/status      Subscription overview\n"
-        "/reset       Change preferences\n"
+        "/reset       Change symbols, zones and timeframes\n"
         "/stop        Pause alerts\n"
         "/resume      Resume alerts\n"
         "/session     Current session\n"

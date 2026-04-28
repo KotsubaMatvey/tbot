@@ -7,6 +7,7 @@ from backtesting.run_ict_models import _decision_score, _evaluate
 from backtesting.run_ict_batch import build_run_args
 from backtesting.score_threshold_report import summarize_thresholds
 from keyboards import MENU_ACTIONS, main_menu
+from formatters import build_setup_summary
 from handlers.trading import trading_keyboard
 from market_primitives.smt import detect_smt
 from scanner.engine import STRATEGY_PATTERNS
@@ -49,6 +50,13 @@ class NewICTModelTests(unittest.TestCase):
         self.assertEqual(buttons[0].callback_data, "trade_model_turtle_soup")
         self.assertIn("OK", buttons[0].text)
         self.assertEqual(buttons[-1].callback_data, "trade_model_CONFIRM")
+
+    def test_settings_summary_excludes_trading_choices(self) -> None:
+        summary = build_setup_summary({"BTCUSDT"}, {"FVG"}, {"5m"})
+
+        self.assertIn("BTCUSDT", summary)
+        self.assertNotIn("ICT models", summary)
+        self.assertNotIn("Directions", summary)
 
     def test_turtle_soup_long_sweep_close_back(self) -> None:
         candles = [

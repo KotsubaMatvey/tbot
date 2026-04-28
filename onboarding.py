@@ -2,20 +2,17 @@
 onboarding.py — multi-step setup flow state machine
 """
 import logging
-from telegram import Update
-from telegram.ext import ContextTypes
 
-from database import save_preferences
+from database import get_user, save_preferences
 from keyboards import build_toggle_keyboard
 from formatters import build_setup_summary
 from config import SYMBOLS, TIMEFRAMES
-from scanner import PRIMITIVE_PATTERNS, STRATEGY_PATTERNS
+from scanner import PRIMITIVE_PATTERNS
 
 logger = logging.getLogger(__name__)
 
-# In-memory state: {user_id: {symbols, patterns, timeframes, entry_models, trade_directions}}
+# In-memory state: {user_id: {symbols, patterns, timeframes}}
 _state: dict = {}
-TRADE_DIRECTIONS = ["long", "short"]
 
 
 def init(user_id: int):
@@ -23,8 +20,6 @@ def init(user_id: int):
         "symbols": set(),
         "patterns": set(),
         "timeframes": set(),
-        "entry_models": set(),
-        "trade_directions": set(),
     }
 
 
@@ -49,7 +44,7 @@ async def send_step_symbols(chat_id, context, msg=None):
 async def send_step_indicators(chat_id, context, msg=None):
     sel  = _state.get(chat_id, {}).get("patterns", set())
     kb   = build_toggle_keyboard(PRIMITIVE_PATTERNS, sel, "pat")
-    text = "Select primitive alerts:"
+    text = "Select zones of interest:"
     if msg:
         await msg.edit_text(text, reply_markup=kb)
     else:
@@ -60,26 +55,6 @@ async def send_step_timeframes(chat_id, context, msg=None):
     sel  = _state.get(chat_id, {}).get("timeframes", set())
     kb   = build_toggle_keyboard(TIMEFRAMES, sel, "tf")
     text = "Select timeframes:"
-    if msg:
-        await msg.edit_text(text, reply_markup=kb)
-    else:
-        await context.bot.send_message(chat_id, text, reply_markup=kb)
-
-
-async def send_step_models(chat_id, context, msg=None):
-    sel = _state.get(chat_id, {}).get("entry_models", set())
-    kb = build_toggle_keyboard(STRATEGY_PATTERNS, sel, "model")
-    text = "Select entry models:"
-    if msg:
-        await msg.edit_text(text, reply_markup=kb)
-    else:
-        await context.bot.send_message(chat_id, text, reply_markup=kb)
-
-
-async def send_step_directions(chat_id, context, msg=None):
-    sel = _state.get(chat_id, {}).get("trade_directions", set())
-    kb = build_toggle_keyboard(TRADE_DIRECTIONS, sel, "dir")
-    text = "Select strategy directions:"
     if msg:
         await msg.edit_text(text, reply_markup=kb)
     else:
@@ -116,7 +91,7 @@ async def handle_callback(user_id: int, data: str, query, context) -> bool:
         item = data[4:]
         if item == "CONFIRM":
             if not ob["patterns"]:
-                await query.answer("Select at least one indicator!", show_alert=True)
+                await query.answer("Select at least one zone of interest!", show_alert=True)
             else:
                 await query.answer()
                 await send_step_timeframes(user_id, context)
@@ -134,61 +109,24 @@ async def handle_callback(user_id: int, data: str, query, context) -> bool:
             if not ob["timeframes"]:
                 await query.answer("Select at least one timeframe!", show_alert=True)
             else:
-                await query.answer()
-                await send_step_models(user_id, context)
-        else:
-            await query.answer()
-            ob["timeframes"].discard(item) if item in ob["timeframes"] else ob["timeframes"].add(item)
-            await query.edit_message_reply_markup(
-                build_toggle_keyboard(TIMEFRAMES, ob["timeframes"], "tf")
-            )
-        return True
-
-    if data.startswith("model_"):
-        item = data[6:]
-        if item == "CONFIRM":
-            if not ob["entry_models"]:
-                await query.answer("Select at least one entry model!", show_alert=True)
-            else:
-                await query.answer()
-                await send_step_directions(user_id, context)
-        else:
-            await query.answer()
-            ob["entry_models"].discard(item) if item in ob["entry_models"] else ob["entry_models"].add(item)
-            await query.edit_message_reply_markup(
-                build_toggle_keyboard(STRATEGY_PATTERNS, ob["entry_models"], "model")
-            )
-        return True
-
-    if data.startswith("dir_"):
-        item = data[4:]
-        if item == "CONFIRM":
-            if not ob["trade_directions"]:
-                await query.answer("Select at least one direction!", show_alert=True)
-            else:
+                user = get_user(user_id) or {}
                 save_preferences(
                     user_id,
                     ob["symbols"],
                     ob["patterns"],
                     ob["timeframes"],
-                    entry_models=ob["entry_models"],
-                    trade_directions=ob["trade_directions"],
+                    entry_models=user.get("entry_models"),
+                    trade_directions=user.get("trade_directions"),
                 )
-                summary = build_setup_summary(
-                    ob["symbols"],
-                    ob["patterns"],
-                    ob["timeframes"],
-                    ob["entry_models"],
-                    ob["trade_directions"],
-                )
+                summary = build_setup_summary(ob["symbols"], ob["patterns"], ob["timeframes"])
                 await query.answer()
                 await context.bot.send_message(user_id, summary, parse_mode="Markdown")
                 clear(user_id)
         else:
             await query.answer()
-            ob["trade_directions"].discard(item) if item in ob["trade_directions"] else ob["trade_directions"].add(item)
+            ob["timeframes"].discard(item) if item in ob["timeframes"] else ob["timeframes"].add(item)
             await query.edit_message_reply_markup(
-                build_toggle_keyboard(TRADE_DIRECTIONS, ob["trade_directions"], "dir")
+                build_toggle_keyboard(TIMEFRAMES, ob["timeframes"], "tf")
             )
         return True
 

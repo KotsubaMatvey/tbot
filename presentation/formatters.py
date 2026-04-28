@@ -99,19 +99,19 @@ def build_dashboard_message(user: dict, zone_count: int, alerts_today: int, sub_
     )
 
 
-def build_setup_summary(symbols, patterns, timeframes, entry_models, trade_directions) -> str:
+def build_setup_summary(symbols, patterns, timeframes, entry_models=None, trade_directions=None) -> str:
     symbols_text = ", ".join(sorted(symbols))
     patterns_text = ", ".join(sorted(patterns))
     timeframes_text = ", ".join(sorted(timeframes))
-    models_text = ", ".join(sorted(entry_models))
-    directions = set(trade_directions)
-    direction_text = "Both" if directions == {"long", "short"} else ", ".join(sorted(item.upper() for item in directions))
-    return (
-        f"Preferences set: {symbols_text} - {patterns_text} - {timeframes_text}\n"
-        f"ICT models: {models_text}\n"
-        f"Directions: {direction_text}\n\n"
-        "Alerts will arrive automatically."
-    )
+    lines = [f"Preferences set: {symbols_text} - {patterns_text} - {timeframes_text}"]
+    if entry_models is not None:
+        lines.append(f"ICT models: {', '.join(sorted(entry_models))}")
+    if trade_directions is not None:
+        directions = set(trade_directions)
+        direction_text = "Both" if directions == {"long", "short"} else ", ".join(sorted(item.upper() for item in directions))
+        lines.append(f"Directions: {direction_text}")
+    lines += ["", "Alerts will arrive automatically."]
+    return "\n".join(lines)
 
 
 __all__ = [
