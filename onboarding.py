@@ -44,7 +44,7 @@ async def send_step_symbols(chat_id, context, msg=None):
 async def send_step_indicators(chat_id, context, msg=None):
     sel  = _state.get(chat_id, {}).get("patterns", set())
     kb   = build_toggle_keyboard(PRIMITIVE_PATTERNS, sel, "pat")
-    text = "Select zones of interest:"
+    text = "Select zones of interest (optional; leave empty for strategy-only alerts):"
     if msg:
         await msg.edit_text(text, reply_markup=kb)
     else:
@@ -90,11 +90,8 @@ async def handle_callback(user_id: int, data: str, query, context) -> bool:
     if data.startswith("pat_"):
         item = data[4:]
         if item == "CONFIRM":
-            if not ob["patterns"]:
-                await query.answer("Select at least one zone of interest!", show_alert=True)
-            else:
-                await query.answer()
-                await send_step_timeframes(user_id, context)
+            await query.answer()
+            await send_step_timeframes(user_id, context)
         else:
             await query.answer()
             ob["patterns"].discard(item) if item in ob["patterns"] else ob["patterns"].add(item)

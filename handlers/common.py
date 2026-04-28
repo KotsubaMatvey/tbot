@@ -11,7 +11,6 @@ def user_ready(user: dict | None) -> bool:
     return bool(
         user.get("setup_done")
         and user.get("symbols")
-        and user.get("patterns")
         and user.get("timeframes")
         and user.get("entry_models")
         and user.get("trade_directions")

@@ -83,7 +83,7 @@ _STYLE = mpf.make_mpf_style(
     },
 )
 
-_CANDLE_COUNT = {"1m": 90, "3m": 84, "5m": 72, "15m": 64, "30m": 56, "1h": 48, "4h": 42, "1d": 30}
+_CANDLE_COUNT = {"1m": 150, "3m": 140, "5m": 120, "15m": 96, "30m": 84, "1h": 72, "4h": 60, "1d": 45}
 
 
 def _to_df(candles: list[dict], timeframe: str) -> pd.DataFrame:
@@ -93,6 +93,14 @@ def _to_df(candles: list[dict], timeframe: str) -> pd.DataFrame:
     frame = frame.set_index("time")
     frame.columns = [name.capitalize() for name in frame.columns]
     return frame[["Open", "High", "Low", "Close", "Volume"]].astype(float)
+
+
+def _datetime_format(timeframe: str) -> str:
+    if timeframe == "1d":
+        return "%Y-%m-%d"
+    if timeframe in {"30m", "1h", "4h"}:
+        return "%m-%d %H:%M"
+    return "%H:%M"
 
 
 def _direction_is_bullish(alert: AlertPayload) -> bool:
@@ -236,10 +244,10 @@ def _render(frame: pd.DataFrame, patterns: list[AlertPayload], symbol: str, time
         volume_panel=1,
         panel_ratios=(5, 1),
         returnfig=True,
-        figsize=(10.4, 5.8),
+        figsize=(12.4, 6.1),
         tight_layout=True,
         xrotation=0,
-        datetime_format="%H:%M",
+        datetime_format=_datetime_format(timeframe),
         scale_padding={"left": 0.08, "right": 1.1, "top": 0.22, "bottom": 0.35},
     )
     price_ax = axes[0]

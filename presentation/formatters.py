@@ -101,7 +101,7 @@ def build_dashboard_message(user: dict, zone_count: int, alerts_today: int, sub_
 
 def build_setup_summary(symbols, patterns, timeframes, entry_models=None, trade_directions=None) -> str:
     symbols_text = ", ".join(sorted(symbols))
-    patterns_text = ", ".join(sorted(patterns))
+    patterns_text = ", ".join(sorted(patterns)) if patterns else "No zone alerts"
     timeframes_text = ", ".join(sorted(timeframes))
     lines = [f"Preferences set: {symbols_text} - {patterns_text} - {timeframes_text}"]
     if entry_models is not None:

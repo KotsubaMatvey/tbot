@@ -8,6 +8,7 @@ from backtesting.run_ict_batch import build_run_args
 from backtesting.score_threshold_report import summarize_thresholds
 from keyboards import MENU_ACTIONS, main_menu
 from formatters import build_setup_summary
+from handlers.common import user_ready
 from handlers.trading import trading_keyboard
 from market_primitives.smt import detect_smt
 from scanner.engine import STRATEGY_PATTERNS
@@ -18,6 +19,7 @@ from strategies.ict_models.model_filters import passes_model_filter, setup_filte
 from strategies.ict_models.silver_bullet import detect_setups as detect_silver_bullet
 from strategies.ict_models.turtle_soup import detect_setups as detect_turtle_soup
 from strategies.types import EntrySetup, default_components
+from visuals import _CANDLE_COUNT, _datetime_format
 
 
 def candle(ts: int, open_: float, high: float, low: float, close: float) -> dict[str, float | int]:
@@ -57,6 +59,25 @@ class NewICTModelTests(unittest.TestCase):
         self.assertIn("BTCUSDT", summary)
         self.assertNotIn("ICT models", summary)
         self.assertNotIn("Directions", summary)
+
+    def test_user_can_run_strategy_only_without_zone_alerts(self) -> None:
+        user = {
+            "setup_done": True,
+            "symbols": {"BTCUSDT"},
+            "patterns": set(),
+            "timeframes": {"5m"},
+            "entry_models": {"turtle_soup"},
+            "trade_directions": {"long"},
+        }
+        summary = build_setup_summary(user["symbols"], user["patterns"], user["timeframes"])
+
+        self.assertTrue(user_ready(user))
+        self.assertIn("No zone alerts", summary)
+
+    def test_chart_window_uses_more_context_with_readable_dates(self) -> None:
+        self.assertGreaterEqual(_CANDLE_COUNT["5m"], 120)
+        self.assertEqual(_datetime_format("1h"), "%m-%d %H:%M")
+        self.assertEqual(_datetime_format("1d"), "%Y-%m-%d")
 
     def test_turtle_soup_long_sweep_close_back(self) -> None:
         candles = [
