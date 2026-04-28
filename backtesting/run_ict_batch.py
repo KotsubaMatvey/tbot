@@ -63,6 +63,9 @@ def build_run_args(config: dict[str, Any], run: dict[str, Any]) -> list[str]:
     pre_model_filter = run.get("pre_model_filter", config.get("pre_model_filter"))
     if pre_model_filter is False:
         args.append("--no-pre-model-filter")
+    require_htf_poi = run.get("pre_model_require_htf_poi", config.get("pre_model_require_htf_poi"))
+    if require_htf_poi is False:
+        args.append("--no-pre-model-require-htf-poi")
     windows = run.get("pre_model_killzone_windows", config.get("pre_model_killzone_windows"))
     if windows:
         args.extend(["--pre-model-killzone-windows", str(windows)])

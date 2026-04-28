@@ -41,6 +41,8 @@ def evaluate_pre_model_filter(context: object | None, config: dict[str, Any] | N
         reasons.append("missing_draw")
     elif not objective_unreached:
         reasons.append("draw_already_reached")
+    if cfg.get("pre_model_require_htf_poi", True) and not (htf.inside_zone or htf.approaching_zone):
+        reasons.append("not_in_htf_poi")
 
     allowed = _allowed_by_context(htf, objective_unreached)
     if cfg.get("pre_model_require_smt"):
@@ -62,6 +64,8 @@ def evaluate_pre_model_filter(context: object | None, config: dict[str, Any] | N
         htf_bias=bias,
         htf_location=location,
         htf_objective=objective,
+        htf_inside_poi=htf.inside_zone,
+        htf_approaching_poi=htf.approaching_zone,
     )
 
 

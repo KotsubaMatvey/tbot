@@ -78,6 +78,8 @@ EVENT_FIELDS = [
     "pre_model_filter_pass",
     "pre_model_allowed_directions",
     "pre_model_reasons",
+    "htf_inside_poi",
+    "htf_approaching_poi",
     "swept_level",
     "sweep_extreme",
     "sweep_liquidity_quality",
@@ -174,6 +176,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pre-model-allow-equilibrium", action="store_true")
     parser.add_argument("--pre-model-require-smt", action="store_true")
     parser.add_argument("--pre-model-require-killzone", action="store_true")
+    parser.add_argument("--pre-model-require-htf-poi", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--pre-model-killzone-windows", default=None)
     parser.add_argument("--out-dir", default="backtest_results/new_ict_models")
     return parser

@@ -14,6 +14,7 @@
   "smt_pairs": ["BTCUSDT:ETHUSDT", "ETHUSDT:SOLUSDT"],
   "thresholds": [0, 50, 70],
   "context_mode": "aligned_only",
+  "pre_model_require_htf_poi": true,
   "forward_bars": 20,
   "warmup_bars": 100,
   "model_filters": {

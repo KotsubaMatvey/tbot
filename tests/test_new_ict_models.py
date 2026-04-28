@@ -130,6 +130,31 @@ class NewICTModelTests(unittest.TestCase):
         self.assertIn("neutral_htf_bias", decision.reasons)
         self.assertIn("equilibrium", decision.reasons)
 
+    def test_pre_model_filter_requires_htf_poi_by_default(self) -> None:
+        context = StrategyContext(
+            primary=PrimitiveSnapshot("BTCUSDT", "5m", [candle(1, 100, 101, 99, 100)]),
+            htf_context=HTFContext(
+                timeframe="1h",
+                bias=HTFBias("bullish", 0.8, "test"),
+                zone=HTFZone("OB", "bullish", 80, 85, 1, 0.8, "test"),
+                dealing_range=HTFDealingRange(70, 110, 90, "discount"),
+                objective=HTFObjective("up", 120, "swing_high", "test", objective_unreached=True),
+                inside_zone=False,
+                approaching_zone=False,
+                allows_long=True,
+                allows_short=False,
+                score_modifier=0,
+                reason="test",
+            ),
+        )
+
+        blocked = evaluate_pre_model_filter(context, {"context_mode": "strict"})
+        allowed = evaluate_pre_model_filter(context, {"context_mode": "strict", "pre_model_require_htf_poi": False})
+
+        self.assertFalse(blocked.passed)
+        self.assertIn("not_in_htf_poi", blocked.reasons)
+        self.assertTrue(allowed.passed)
+
     def test_turtle_soup_long_sweep_close_back(self) -> None:
         candles = [
             candle(1, 101, 102, 100, 101),
@@ -496,6 +521,7 @@ class NewICTModelTests(unittest.TestCase):
                 "forward_bars": 20,
                 "pre_model_require_smt": True,
                 "pre_model_filter": False,
+                "pre_model_require_htf_poi": False,
             },
             {
                 "symbols": ["BTCUSDT"],
@@ -513,6 +539,7 @@ class NewICTModelTests(unittest.TestCase):
         self.assertIn("BTCUSDT:ETHUSDT", args)
         self.assertIn("--pre-model-require-smt", args)
         self.assertIn("--no-pre-model-filter", args)
+        self.assertIn("--no-pre-model-require-htf-poi", args)
 
     def test_r_hits_are_measured_from_entry_time(self) -> None:
         future = [
