@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .common import buffered_stop, closed_candles, nearest_liquidity_target, setup
+from .common import buffered_stop, closed_candles, context_metadata, nearest_liquidity_target, setup
 
 RECLAIMED_OB_MIN_PRIOR_REACTION_R = 0.5
 RECLAIMED_OB_ENTRY_MODE = "body_edge"
@@ -18,6 +18,7 @@ def detect_setups(
 ) -> list:
     cfg = config or {}
     stop_mode = str(cfg.get("stop_mode") or RECLAIMED_OB_STOP_MODE)
+    htf_mode = str(cfg.get("context_mode") or cfg.get("htf_mode") or "off")
     stop_bps = float(cfg.get("stop_buffer_bps") or 2)
     snapshot = getattr(context, "primary", None) if context is not None else None
     if snapshot is None:
@@ -34,6 +35,7 @@ def detect_setups(
         stop_ref = mean if stop_mode == "mean_threshold" else block.zone_low if side == "long" else block.zone_high
         stop = buffered_stop(side, stop_ref, entry, stop_bps)
         target = nearest_liquidity_target(closed_candles(candles), side, entry, stop)
+        metadata = context_metadata(context, side, htf_mode, cfg)
         item = setup(
             model_name="reclaimed_ob",
             direction=side,
@@ -48,6 +50,7 @@ def detect_setups(
             score=3,
             reason="Validated order block reclaimed for continuation retest",
             metadata={
+                **metadata,
                 "entry_mode": RECLAIMED_OB_ENTRY_MODE,
                 "stop_mode": stop_mode,
                 "target_mode": "nearest_liquidity",

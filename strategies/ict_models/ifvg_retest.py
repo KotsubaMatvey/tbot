@@ -2,15 +2,16 @@ from __future__ import annotations
 
 from typing import Any
 
+from config import DISPLACEMENT_STRONG_BODY_RATIO, DISPLACEMENT_STRONG_RANGE_EXPANSION, DISPLACEMENT_VALID_BODY_RATIO, DISPLACEMENT_VALID_RANGE_EXPANSION
 from market_primitives.displacement import evaluate_displacement
 from market_primitives.fvg import detect_fvg
 
-from .common import buffered_stop, closed_candles, fixed_r_target, nearest_liquidity_target, setup
+from .common import buffered_stop, closed_candles, context_metadata, fixed_r_target, nearest_liquidity_target, setup
 
 IFVG_ENTRY_MODE = "edge"
 IFVG_STOP_MODE = "ce"
 MAX_IFVG_RETEST_BARS = 40
-IFVG_REQUIRE_DISPLACEMENT = False
+IFVG_REQUIRE_DISPLACEMENT = True
 
 
 def detect_setups(
@@ -30,9 +31,10 @@ def detect_setups(
     stop_mode = str(cfg.get("stop_mode") or cfg.get("ifvg_stop_mode") or IFVG_STOP_MODE)
     if stop_mode not in {"ce", "opposite_boundary"}:
         stop_mode = IFVG_STOP_MODE
-    target_mode = str(cfg.get("target_mode") or "fixed_r")
+    target_mode = str(cfg.get("target_mode") or "nearest_liquidity")
     max_retest = int(cfg.get("max_ifvg_retest_bars") or MAX_IFVG_RETEST_BARS)
     require_displacement = bool(cfg.get("ifvg_require_displacement", IFVG_REQUIRE_DISPLACEMENT))
+    htf_mode = str(cfg.get("context_mode") or cfg.get("htf_mode") or "off")
     stop_bps = float(cfg.get("stop_buffer_bps") or 2)
     gaps = detect_fvg(candles, symbol, timeframe, scan_back=60)
     results = []
@@ -50,7 +52,8 @@ def detect_setups(
             structure_level=gap.gap_high if side == "long" else gap.gap_low,
             created_fvg_after_break=False,
         )
-        if require_displacement and not disp.has_displacement:
+        displacement_grade = _ifvg_displacement_grade(disp)
+        if require_displacement and displacement_grade == "weak":
             continue
         retest_idx = _retest_index(closed, breach_idx, gap.gap_low, gap.gap_high, max_retest)
         if retest_idx is None:
@@ -61,6 +64,7 @@ def detect_setups(
         stop = buffered_stop(side, stop_ref, entry, stop_bps)
         target = fixed_r_target(side, entry, stop) if target_mode == "fixed_r" else nearest_liquidity_target(closed, side, entry, stop)
         retest = closed[retest_idx]
+        metadata = context_metadata(context, side, htf_mode, cfg)
         item = setup(
             model_name="ifvg_retest",
             direction=side,
@@ -72,12 +76,14 @@ def detect_setups(
             stop_loss=stop,
             target_hint=target,
             timestamp=int(closed[breach_idx]["time"]),
-            score=3 if disp.displacement_grade == "weak" else 4,
+            score=3 if displacement_grade == "weak" else 4,
             reason="Pure IFVG first retest without mandatory sweep",
             metadata={
+                **metadata,
                 "entry_mode": entry_mode,
                 "stop_mode": stop_mode,
                 "target_mode": target_mode,
+                "source_fvg_time": gap.created_at,
                 "source_fvg_direction": gap.direction,
                 "breach_time": closed[breach_idx]["time"],
                 "breach_close": closed[breach_idx]["close"],
@@ -88,13 +94,29 @@ def detect_setups(
                 "ifvg_ce": ce,
                 "time_to_retest_bars": retest_idx - breach_idx,
                 "retest_depth": _retest_depth(retest, gap.gap_low, gap.gap_high, side),
-                "breach_displacement_grade": disp.displacement_grade,
+                "displacement_grade": displacement_grade,
+                "breach_displacement_factor": disp.displacement_factor,
+                "breach_displacement_grade": displacement_grade,
             },
         )
         if item:
             results.append(item)
             break
     return results
+
+
+def _ifvg_displacement_grade(disp: object) -> str:
+    if getattr(disp, "displacement_grade", "weak") in {"valid", "strong"}:
+        return str(getattr(disp, "displacement_grade"))
+    if not getattr(disp, "close_beyond_structure", False):
+        return "weak"
+    body_ratio = float(getattr(disp, "body_ratio", 0.0))
+    range_expansion = float(getattr(disp, "range_expansion", 0.0))
+    if body_ratio >= DISPLACEMENT_STRONG_BODY_RATIO and range_expansion >= DISPLACEMENT_STRONG_RANGE_EXPANSION:
+        return "strong"
+    if body_ratio >= DISPLACEMENT_VALID_BODY_RATIO and range_expansion >= DISPLACEMENT_VALID_RANGE_EXPANSION:
+        return "valid"
+    return "weak"
 
 
 def _breach_index(candles: list[dict[str, float | int]], gap: object) -> int | None:

@@ -1,0 +1,37 @@
+{
+  "data_dir": "data/history_2025-05-01_2025-06-30",
+  "symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT"],
+  "models": [
+    "turtle_soup",
+    "silver_bullet",
+    "ifvg_retest",
+    "ict2022_mss_fvg",
+    "breaker_block",
+    "reclaimed_ob",
+    "rejection_block",
+    "mitigation_block"
+  ],
+  "smt_pairs": ["BTCUSDT:ETHUSDT", "ETHUSDT:SOLUSDT"],
+  "thresholds": [0, 50, 70],
+  "context_mode": "aligned_only",
+  "forward_bars": 20,
+  "warmup_bars": 100,
+  "runs": [
+    {
+      "name": "1h_aligned",
+      "timeframes": ["1h"],
+      "out_dir": "backtest_results/batch_score_may_jun_2025_1h_aligned"
+    },
+    {
+      "name": "4h_aligned",
+      "timeframes": ["4h"],
+      "out_dir": "backtest_results/batch_score_may_jun_2025_4h_aligned"
+    },
+    {
+      "name": "30m_btc_aligned",
+      "symbols": ["BTCUSDT"],
+      "timeframes": ["30m"],
+      "out_dir": "backtest_results/batch_score_may_jun_2025_30m_btc_aligned"
+    }
+  ]
+}

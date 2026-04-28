@@ -5,7 +5,7 @@ from typing import Any
 from strategies.legacy import detect_legacy_model_1, detect_legacy_model_2, detect_legacy_model_3
 from strategies.types import StrategyContext
 
-from . import breaker_block, ict2022_mss_fvg, ifvg_retest, reclaimed_ob, rejection_block, silver_bullet, turtle_soup
+from . import breaker_block, ict2022_mss_fvg, ifvg_retest, mitigation_block, reclaimed_ob, rejection_block, silver_bullet, turtle_soup
 from .types import ICTDetector, ICTModelSpec
 
 
@@ -40,6 +40,12 @@ RESEARCH_ONLY_MODELS: dict[str, ICTModelSpec] = {
         "rejection_block",
         "Rejection Block",
         rejection_block.detect_setups,
+        research_only=True,
+    ),
+    "mitigation_block": ICTModelSpec(
+        "mitigation_block",
+        "Mitigation Block",
+        mitigation_block.detect_setups,
         research_only=True,
     ),
 }

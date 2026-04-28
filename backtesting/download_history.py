@@ -22,6 +22,7 @@ async def main_async(argv: list[str] | None = None) -> int:
     parser.add_argument("--limit", type=int, default=1000, help="Candles per symbol/timeframe, max 1500 per request.")
     parser.add_argument("--start", help="UTC start datetime/date, e.g. 2024-11-06 or 2024-11-06T00:00:00Z.")
     parser.add_argument("--end", help="UTC end datetime/date, e.g. 2026-04-20 or 2026-04-20T23:59:59Z.")
+    parser.add_argument("--timeout", type=float, default=120.0, help="HTTP session timeout in seconds.")
     args = parser.parse_args(argv)
 
     limit = min(max(args.limit, 1), MAX_BINANCE_LIMIT)
@@ -30,7 +31,7 @@ async def main_async(argv: list[str] | None = None) -> int:
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=20)) as session:
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=args.timeout)) as session:
         for symbol in args.symbols:
             for timeframe in args.timeframes:
                 candles = await fetch_history(session, symbol, timeframe, limit, start_ms, end_ms)

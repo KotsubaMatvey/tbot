@@ -40,6 +40,7 @@ strategies/
     breaker_block.py
     reclaimed_ob.py
     rejection_block.py
+    mitigation_block.py
   legacy/
     entry_model_1_legacy.py
     entry_model_2_legacy.py
@@ -64,7 +65,7 @@ presentation/
 ## Features
 
 - typed market primitives: swings, sweeps, BOS/CHOCH, FVG/IFVG, OB/breakers, EQH/EQL, PD, SMT, volume
-- typed ICT setups: Turtle Soup, Silver Bullet, IFVG Retest, ICT2022 MSS+FVG, Breaker Block, Reclaimed OB
+- typed ICT setups: Turtle Soup, Silver Bullet, IFVG Retest, ICT2022 MSS+FVG, Breaker Block, Reclaimed OB, Rejection Block, Mitigation Block
 - archived legacy baselines: Entry Model 1, Entry Model 2, Entry Model 3 under `strategies/legacy/`
 - Telegram alerts with optional chart overlays
 - onboarding with primitive/model/direction preferences
@@ -98,3 +99,11 @@ python bot.py
 - `python -m compileall .`
 - `python offline_smoke_test.py`
 - `python offline_backtest.py`
+
+## ICT Backtest Batch
+
+The current research baseline uses the May-June 2025 dataset:
+
+```bash
+python -m backtesting.run_ict_batch --config configs/backtests/ict_may_jun_2025.json
+```

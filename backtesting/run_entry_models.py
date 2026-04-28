@@ -14,6 +14,8 @@ from timeframes import EXECUTION_HTF_MAP, MODEL_3_HTF_MAP, MODEL_3_LTF_MAP, SUPP
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_DATA_DIR = "data/history_2025-05-01_2025-06-30"
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
@@ -108,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Legacy Entry Model 1/2/3 event-study runner. New defaults live in run_ict_models.")
-    parser.add_argument("--data-dir", default="data/history", help="Directory with historical OHLCV CSV/JSON files.")
+    parser.add_argument("--data-dir", default=DEFAULT_DATA_DIR, help="Directory with historical OHLCV CSV/JSON files.")
     parser.add_argument("--symbols", nargs="+", required=True, help="Symbols, e.g. BTCUSDT ETHUSDT.")
     parser.add_argument("--timeframes", nargs="+", required=True, choices=SUPPORTED_TIMEFRAMES, help="Primary timeframes, e.g. 15m 1h.")
     parser.add_argument("--models", nargs="+", help="Models to run: model1 model2 model3.")

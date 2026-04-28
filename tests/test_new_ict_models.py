@@ -3,7 +3,10 @@ from __future__ import annotations
 import unittest
 from datetime import datetime, timezone
 
-from backtesting.run_ict_models import _evaluate
+from backtesting.run_ict_models import _decision_score, _evaluate
+from backtesting.run_ict_batch import build_run_args
+from backtesting.score_threshold_report import summarize_thresholds
+from market_primitives.smt import detect_smt
 from strategies.ict_models import registry
 from strategies.ict_models.ifvg_retest import detect_setups as detect_ifvg_retest
 from strategies.ict_models.silver_bullet import detect_setups as detect_silver_bullet
@@ -132,11 +135,27 @@ class NewICTModelTests(unittest.TestCase):
             candle(6, 105, 106, 104, 105),
         ]
 
-        self.assertTrue(detect_ifvg_retest("BTCUSDT", "5m", body))
+        self.assertTrue(detect_ifvg_retest("BTCUSDT", "5m", body, config={"ifvg_require_displacement": False}))
         self.assertEqual(detect_ifvg_retest("BTCUSDT", "5m", wick_only), [])
-        self.assertEqual(detect_ifvg_retest("BTCUSDT", "5m", body)[0].metadata["entry_mode"], "edge")
-        self.assertEqual(detect_ifvg_retest("BTCUSDT", "5m", body)[0].timestamp, 4)
-        self.assertEqual(detect_ifvg_retest("BTCUSDT", "5m", body)[0].metadata["entry_time"], 5)
+        setup = detect_ifvg_retest("BTCUSDT", "5m", body, config={"ifvg_require_displacement": False})[0]
+        self.assertEqual(setup.metadata["entry_mode"], "edge")
+        self.assertEqual(setup.timestamp, 4)
+        self.assertEqual(setup.metadata["entry_time"], 5)
+
+    def test_ifvg_retest_default_requires_displacement(self) -> None:
+        candles = [
+            candle(1, 105, 106, 104, 105),
+            candle(2, 104, 105, 101, 103),
+            candle(3, 98, 99, 94, 95),
+            candle(4, 100, 116, 100, 115),
+            candle(5, 106, 107, 103, 105),
+            candle(6, 105, 106, 104, 105),
+        ]
+
+        setups = detect_ifvg_retest("BTCUSDT", "5m", candles)
+
+        self.assertTrue(setups)
+        self.assertIn(setups[0].metadata["breach_displacement_grade"], {"valid", "strong"})
 
     def test_same_bar_policies(self) -> None:
         future = [candle(1, 100, 103, 97, 101)]
@@ -149,6 +168,113 @@ class NewICTModelTests(unittest.TestCase):
         self.assertTrue(optimistic["target_before_invalidation"])
         self.assertTrue(neutral["same_bar_ambiguous"])
         self.assertFalse(conservative["hit_1r_before_invalidation"])
+
+    def test_crypto_smt_detects_primary_lower_low_vs_secondary_higher_low(self) -> None:
+        btc = [
+            candle(1, 102, 103, 101, 102),
+            candle(2, 102, 103, 100, 101),
+            candle(3, 101, 102, 99, 101),
+            candle(4, 101, 104, 100, 103),
+            candle(5, 103, 104, 101, 102),
+            candle(6, 102, 103, 99, 100),
+            candle(7, 100, 101, 97, 99),
+            candle(8, 99, 103, 98, 102),
+            candle(9, 102, 104, 101, 103),
+            candle(10, 103, 104, 102, 103),
+        ]
+        eth = [
+            candle(1, 52, 53, 51, 52),
+            candle(2, 52, 53, 50, 51),
+            candle(3, 51, 52, 49, 51),
+            candle(4, 51, 54, 50, 53),
+            candle(5, 53, 54, 52, 53),
+            candle(6, 53, 54, 51, 52),
+            candle(7, 52, 53, 50, 52),
+            candle(8, 52, 54, 51, 53),
+            candle(9, 53, 55, 52, 54),
+            candle(10, 54, 55, 53, 54),
+        ]
+
+        divergences = detect_smt(btc, eth, "BTCUSDT", "ETHUSDT", "5m", min_correlation=-1)
+
+        self.assertTrue(any(item.direction == "bullish" for item in divergences))
+
+    def test_decision_score_records_penalties_without_blocking(self) -> None:
+        score = _decision_score(
+            "long",
+            "ict2022_mss_fvg",
+            {
+                "htf_mode": "strict",
+                "htf_bias": "bearish",
+                "htf_location": "equilibrium",
+                "displacement_grade": "weak",
+                "has_smt_confirmation": False,
+                "session_filter": "off",
+            },
+            1.5,
+        )
+
+        self.assertEqual(score["score_bucket"], "low")
+        self.assertIn("against_htf_flow", score["no_trade_reasons"])
+        self.assertIn("equilibrium", score["no_trade_reasons"])
+        self.assertIn("target_rr_below_2", score["no_trade_reasons"])
+
+    def test_score_threshold_report_filters_by_decision_score(self) -> None:
+        report = summarize_thresholds(
+            [
+                {
+                    "model": "ifvg_retest",
+                    "decision_score": "75",
+                    "activated_trade": "True",
+                    "target_before_invalidation": "True",
+                    "target_distance_r": "2.5",
+                    "invalidated": "False",
+                    "mfe_r": "3",
+                    "no_trade_reasons": "",
+                },
+                {
+                    "model": "ifvg_retest",
+                    "decision_score": "45",
+                    "activated_trade": "True",
+                    "target_before_invalidation": "False",
+                    "target_distance_r": "1.5",
+                    "invalidated": "True",
+                    "mfe_r": "0.5",
+                    "no_trade_reasons": "target_rr_below_2",
+                },
+            ],
+            [0, 70],
+        )
+
+        all_rows = [row for row in report if row["scope"] == "all"]
+        self.assertEqual(all_rows[0]["count"], 2)
+        self.assertEqual(all_rows[1]["count"], 1)
+        self.assertEqual(all_rows[1]["expectancy"], 2.5)
+
+    def test_ict_batch_builds_repeatable_run_args(self) -> None:
+        args = build_run_args(
+            {
+                "data_dir": "data/history_2025-05-01_2025-06-30",
+                "symbols": ["BTCUSDT", "ETHUSDT"],
+                "models": ["turtle_soup", "ifvg_retest"],
+                "context_mode": "aligned_only",
+                "smt_pairs": ["BTCUSDT:ETHUSDT"],
+                "forward_bars": 20,
+            },
+            {
+                "symbols": ["BTCUSDT"],
+                "timeframes": ["30m"],
+                "out_dir": "backtest_results/example",
+            },
+        )
+
+        self.assertIn("--data-dir", args)
+        self.assertIn("data/history_2025-05-01_2025-06-30", args)
+        self.assertIn("--symbols", args)
+        self.assertIn("BTCUSDT", args)
+        self.assertNotIn("ETHUSDT", args[args.index("--symbols") + 1 : args.index("--timeframes")])
+        self.assertIn("--smt-pairs", args)
+        self.assertIn("BTCUSDT:ETHUSDT", args)
 
     def test_r_hits_are_measured_from_entry_time(self) -> None:
         future = [

@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 from market_primitives.fvg import detect_fvg
 
 from .common import buffered_stop, closed_candles, fixed_r_target, nearest_liquidity_target, setup
+from .sessions import SILVER_BULLET_AM, SILVER_BULLET_PM
 
 SILVER_BULLET_TZ = "America/New_York"
 SILVER_BULLET_START = "10:00"
@@ -106,9 +107,11 @@ def _parse_time(value: str) -> time:
 
 def _windows(raw: object, cfg: dict[str, Any]) -> list[tuple[time, time]]:
     if raw is None:
-        start = _parse_time(str(cfg.get("silver_bullet_start") or SILVER_BULLET_START))
-        end = _parse_time(str(cfg.get("silver_bullet_end") or SILVER_BULLET_END))
-        return [(start, end)]
+        if cfg.get("silver_bullet_start") or cfg.get("silver_bullet_end"):
+            start = _parse_time(str(cfg.get("silver_bullet_start") or SILVER_BULLET_START))
+            end = _parse_time(str(cfg.get("silver_bullet_end") or SILVER_BULLET_END))
+            return [(start, end)]
+        raw = f"{SILVER_BULLET_AM},{SILVER_BULLET_PM}"
     if isinstance(raw, str):
         chunks = [item.strip() for item in raw.split(",") if item.strip()]
     else:
@@ -121,7 +124,7 @@ def _windows(raw: object, cfg: dict[str, Any]) -> list[tuple[time, time]]:
 
 
 def _in_window(value: time, start: time, end: time) -> bool:
-    return start <= value < end
+    return start <= value <= end
 
 
 def _matching_window(value: time, windows: list[tuple[time, time]]) -> tuple[time, time] | None:

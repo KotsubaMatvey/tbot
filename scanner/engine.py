@@ -53,8 +53,8 @@ PRIMITIVE_PATTERNS = [
 STRATEGY_PATTERNS = ["turtle_soup", "silver_bullet", "ifvg_retest"]
 ALL_PATTERNS = PRIMITIVE_PATTERNS + STRATEGY_PATTERNS
 
-SMT_TIMEFRAMES = {"1h", "4h", "1d"}
-SMT_PAIRS = [("BTCUSDT", "ETHUSDT")]
+SMT_TIMEFRAMES = {"1m", "5m", "15m", "1h", "4h"}
+SMT_PAIRS = [("BTCUSDT", "ETHUSDT"), ("ETHUSDT", "SOLUSDT")]
 
 _sem = asyncio.Semaphore(5)
 

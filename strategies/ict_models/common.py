@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from market_primitives.common import Candle, average_range, collect_swings
+from strategies.htf_context import htf_metadata, htf_score_modifier
 from strategies.risk_policy import price_buffer
 from strategies.types import EntrySetup, default_components
 
@@ -98,10 +99,34 @@ def avg_range(candles: list[Candle], lookback: int = 20) -> float:
     return average_range(closed_candles(candles)[-lookback:])
 
 
+def context_metadata(context: object | None, side: str, htf_mode: str, config: dict[str, Any] | None = None) -> dict[str, object]:
+    htf = getattr(context, "htf_context", None) if context is not None else None
+    metadata = htf_metadata(htf)
+    metadata["htf_mode"] = htf_mode
+    metadata["htf_score_modifier"] = round(htf_score_modifier(htf, side, htf_mode), 4)
+    smt = _smt_for_side(config or {}, side)
+    metadata["has_smt_confirmation"] = smt is not None
+    if smt is not None:
+        metadata["smt_direction"] = smt.direction
+        metadata["smt_pair"] = smt.metadata.get("smt_pair")
+        metadata["smt_primary_symbol"] = smt.symbol
+        metadata["smt_secondary_symbol"] = smt.secondary_symbol
+        metadata["smt_strength"] = round(float(smt.strength), 6)
+        metadata["smt_timestamp"] = smt.timestamp
+    return metadata
+
+
+def _smt_for_side(config: dict[str, Any], side: str) -> Any | None:
+    expected = "bullish" if side == "long" else "bearish"
+    divergences = config.get("smt_divergences") or []
+    return next((item for item in reversed(divergences) if getattr(item, "direction", None) == expected), None)
+
+
 __all__ = [
     "avg_range",
     "buffered_stop",
     "closed_candles",
+    "context_metadata",
     "fixed_r_target",
     "nearest_liquidity_target",
     "opposite_range_target",

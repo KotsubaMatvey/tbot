@@ -5,6 +5,7 @@ from typing import Any
 from market_primitives.common import collect_swings
 
 from .common import avg_range, buffered_stop, closed_candles, opposite_range_target, setup, wick_extension_bps
+from .sessions import LONDON_OPEN, NY_OPEN, SILVER_BULLET_AM, SILVER_BULLET_PM, in_ny_windows
 
 TURTLE_LOOKBACK_BARS = 50
 TURTLE_MIN_SWING_AGE = 5
@@ -51,7 +52,7 @@ def detect_setups(
             return []
         if require_killzone and not _in_default_killzone(int(sweep["time"])):
             return []
-        if require_smt and not bool(getattr(context, "has_smt_confirmation", False)):
+        if require_smt and not _has_smt_confirmation(cfg):
             return []
 
     average_true_range = avg_range(scan[:-1])
@@ -178,11 +179,11 @@ def _quality(
 
 
 def _in_default_killzone(timestamp: int) -> bool:
-    from datetime import datetime
-    from zoneinfo import ZoneInfo
+    return in_ny_windows(timestamp, [LONDON_OPEN, NY_OPEN, SILVER_BULLET_AM, SILVER_BULLET_PM])
 
-    value = datetime.fromtimestamp(timestamp / 1000, tz=ZoneInfo("UTC")).astimezone(ZoneInfo("America/New_York")).time()
-    return (8 <= value.hour < 11) or (13 <= value.hour < 16)
+
+def _has_smt_confirmation(cfg: dict[str, Any]) -> bool:
+    return bool(cfg.get("has_smt_confirmation") or cfg.get("smt_divergences"))
 
 
 __all__ = ["detect_setups"]
