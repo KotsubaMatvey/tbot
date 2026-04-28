@@ -121,10 +121,10 @@ def _zone_colors(alert: AlertPayload) -> tuple[str, str, float]:
     return _BEAR_ZONE_FILL, _BEAR_ZONE_LINE, 0.16 if alert.alert_kind == "strategy" else 0.11
 
 
-def _draw_patterns(ax, patterns: list[AlertPayload], n: int) -> None:
+def _draw_patterns(ax, frame: pd.DataFrame, patterns: list[AlertPayload], n: int) -> None:
     for pattern in patterns:
         if pattern.alert_kind == "strategy":
-            _draw_setup(ax, pattern, n)
+            _draw_setup(ax, frame, pattern, n)
             continue
 
         if pattern.pattern in {"FVG", "IFVG"} and pattern.gap_low is not None and pattern.gap_high is not None:
@@ -150,7 +150,7 @@ def _draw_patterns(ax, patterns: list[AlertPayload], n: int) -> None:
         _zone_tag(ax, n, pattern.level, pattern.pattern, line_color, va="bottom")
 
 
-def _draw_setup(ax, pattern: AlertPayload, n: int) -> None:
+def _draw_setup(ax, frame: pd.DataFrame, pattern: AlertPayload, n: int) -> None:
     if pattern.entry_low is None or pattern.entry_high is None:
         return
 
@@ -159,7 +159,7 @@ def _draw_setup(ax, pattern: AlertPayload, n: int) -> None:
     ax.axhspan(pattern.entry_low, pattern.entry_high, color=fill_color, alpha=alpha, zorder=1, linewidth=0)
     ax.axhline(pattern.entry_low, color=line_color, linestyle=":", linewidth=0.9, alpha=0.95)
     ax.axhline(pattern.entry_high, color=line_color, linestyle=":", linewidth=0.9, alpha=0.95)
-    _zone_tag(ax, n, (pattern.entry_low + pattern.entry_high) / 2, pattern.pattern, line_color)
+    _draw_entry_marker(ax, frame, pattern)
 
     if pattern.invalidation is not None:
         ax.axhline(pattern.invalidation, color=_INVALIDATION, linestyle="--", linewidth=0.8, alpha=0.9)
@@ -167,6 +167,31 @@ def _draw_setup(ax, pattern: AlertPayload, n: int) -> None:
         ax.axhline(pattern.sweep_level, color=_BEAR_ZONE_LINE if _direction_is_bullish(pattern) else _BULL_ZONE_LINE, linestyle="-.", linewidth=0.7, alpha=0.7)
     if pattern.structure_level is not None:
         ax.axhline(pattern.structure_level, color=line_color, linestyle="-.", linewidth=0.7, alpha=0.75)
+
+
+def _draw_entry_marker(ax, frame: pd.DataFrame, pattern: AlertPayload) -> None:
+    index = _entry_index(frame, pattern)
+    if index is None:
+        return
+    candle = frame.iloc[index]
+    price_range = max(float(frame["High"].max() - frame["Low"].min()), 1e-9)
+    offset = price_range * 0.025
+    if _direction_is_bullish(pattern):
+        ax.scatter(index, float(candle["Low"]) - offset, marker="^", s=42, color="#16a34a", edgecolors="white", linewidths=0.45, zorder=6)
+    else:
+        ax.scatter(index, float(candle["High"]) + offset, marker="v", s=42, color="#dc2626", edgecolors="white", linewidths=0.45, zorder=6)
+
+
+def _entry_index(frame: pd.DataFrame, pattern: AlertPayload) -> int | None:
+    entry_time = pattern.metadata.get("entry_time") or pattern.timestamp
+    try:
+        entry_ts = pd.to_datetime(int(entry_time), unit="ms", utc=True)
+    except (TypeError, ValueError):
+        return None
+    matches = frame.index.get_indexer([entry_ts], method="nearest")
+    if len(matches) == 0 or matches[0] < 0:
+        return None
+    return int(matches[0])
 
 
 def _draw_htf_zone(ax, pattern: AlertPayload, n: int) -> None:
@@ -257,7 +282,7 @@ def _render(frame: pd.DataFrame, patterns: list[AlertPayload], symbol: str, time
         patterns,
     )
     if visible_patterns:
-        _draw_patterns(price_ax, visible_patterns, len(frame))
+        _draw_patterns(price_ax, frame, visible_patterns, len(frame))
     _draw_price_label(price_ax, frame)
     _style_axes(price_ax, volume_ax)
     _style_volume_bars(volume_ax, frame)

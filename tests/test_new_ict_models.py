@@ -12,6 +12,7 @@ from formatters import build_setup_summary
 from handlers.common import user_ready
 from handlers.trading import trading_keyboard
 from market_primitives.smt import detect_smt
+from presentation.alert_builders import from_entry_setup
 from scanner.engine import STRATEGY_PATTERNS
 from strategies.htf_context import HTFBias, HTFContext, HTFDealingRange, HTFObjective, HTFZone
 from strategies.ict_models import registry
@@ -22,7 +23,7 @@ from strategies.ict_models.silver_bullet import detect_setups as detect_silver_b
 from strategies.ict_models.turtle_soup import detect_setups as detect_turtle_soup
 from strategies.pre_model_filter import evaluate_pre_model_filter
 from strategies.types import EntrySetup, PrimitiveSnapshot, StrategyContext, default_components
-from visuals import _CANDLE_COUNT, _datetime_format
+from visuals import _CANDLE_COUNT, _datetime_format, _entry_index
 
 
 def candle(ts: int, open_: float, high: float, low: float, close: float) -> dict[str, float | int]:
@@ -81,6 +82,40 @@ class NewICTModelTests(unittest.TestCase):
         self.assertGreaterEqual(_CANDLE_COUNT["5m"], 120)
         self.assertEqual(_datetime_format("1h"), "%m-%d %H:%M")
         self.assertEqual(_datetime_format("1d"), "%Y-%m-%d")
+
+    def test_chart_entry_marker_uses_entry_time(self) -> None:
+        import pandas as pd
+
+        frame = pd.DataFrame(
+            [
+                {"Open": 100, "High": 101, "Low": 99, "Close": 100, "Volume": 1},
+                {"Open": 101, "High": 102, "Low": 100, "Close": 101, "Volume": 1},
+            ],
+            index=pd.to_datetime([1, 2], unit="ms", utc=True),
+        )
+        alert = EntrySetup(
+            model_name="turtle_soup",
+            direction="long",
+            symbol="BTCUSDT",
+            timeframe="5m",
+            status="triggered",
+            entry_low=100,
+            entry_high=101,
+            entry_price=100.5,
+            stop_loss=99,
+            invalidation=99,
+            target_hint=103,
+            sweep_level=None,
+            structure_level=None,
+            context_timeframe="1h",
+            score=4,
+            reason="test",
+            components=default_components(),
+            timestamp=1,
+            metadata={"entry_time": 2},
+        )
+
+        self.assertEqual(_entry_index(frame, from_entry_setup(alert)), 1)
 
     def test_pre_model_filter_allows_only_htf_aligned_direction(self) -> None:
         context = StrategyContext(
