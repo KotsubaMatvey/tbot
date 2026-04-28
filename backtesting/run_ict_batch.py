@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from backtesting import run_ict_models, score_threshold_report
+from backtesting import grid_filter_analysis, run_ict_models, score_threshold_report
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -28,6 +28,11 @@ def main(argv: list[str] | None = None) -> int:
         result = score_threshold_report.main(report_args)
         if result != 0:
             return result
+        if config.get("grid_filters", True):
+            grid_args = ["--events", str(out_dir / "events.csv"), "--min-count", str(config.get("grid_min_count", 10))]
+            result = grid_filter_analysis.main(grid_args)
+            if result != 0:
+                return result
     return 0
 
 
@@ -52,6 +57,15 @@ def build_run_args(config: dict[str, Any], run: dict[str, Any]) -> list[str]:
         value = run.get(name, config.get(name))
         if value is not None:
             args.extend([f"--{name.replace('_', '-')}", str(value)])
+    for name in ("pre_model_allow_neutral_htf", "pre_model_allow_equilibrium", "pre_model_require_smt", "pre_model_require_killzone"):
+        if run.get(name, config.get(name)):
+            args.append(f"--{name.replace('_', '-')}")
+    pre_model_filter = run.get("pre_model_filter", config.get("pre_model_filter"))
+    if pre_model_filter is False:
+        args.append("--no-pre-model-filter")
+    windows = run.get("pre_model_killzone_windows", config.get("pre_model_killzone_windows"))
+    if windows:
+        args.extend(["--pre-model-killzone-windows", str(windows)])
     return args
 
 

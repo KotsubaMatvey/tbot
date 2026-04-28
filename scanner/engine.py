@@ -30,6 +30,7 @@ from strategies.htf_context import build_htf_context
 from strategies.ict_models.lifecycle import classify_setup_lifecycle
 from strategies.ict_models.model_filters import passes_model_filter, setup_filter_event
 from strategies.ict_models.registry import list_active_models, list_research_models, get_live_models
+from strategies.pre_model_filter import evaluate_pre_model_filter, merge_pre_model_metadata, setup_passes_pre_model_filter
 from strategies.setup_utils import current_price
 from timeframes import EXECUTION_HTF_MAP, MODEL_3_HTF_MAP, MODEL_3_LTF_MAP, execution_htf_for
 from strategies.types import PrimitiveSnapshot
@@ -118,11 +119,17 @@ def _build_strategy_alerts(
     setups = []
     model_filters = _load_model_filters()
     config = {"context_mode": ENTRY_MODEL_HTF_MODE, "htf_mode": ENTRY_MODEL_HTF_MODE}
+    pre_model = evaluate_pre_model_filter(context, config)
+    if not pre_model.passed:
+        return []
     for model in get_live_models():
         setups.extend(model.detector(primary.symbol, primary.timeframe, primary.candles, context, config))
 
     best_by_key: dict[tuple[str, str], AlertPayload] = {}
     for setup in setups:
+        if not setup_passes_pre_model_filter(setup, pre_model):
+            continue
+        merge_pre_model_metadata(setup, pre_model)
         if not passes_model_filter(setup_filter_event(setup), model_filters.get(setup.model_name, {})):
             continue
         payload = from_entry_setup(setup)

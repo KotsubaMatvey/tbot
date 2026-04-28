@@ -20,6 +20,7 @@ from strategies.ict_models.registry import (
     RESEARCH_ONLY_MODELS,
     resolve_models,
 )
+from strategies.pre_model_filter import evaluate_pre_model_filter, merge_pre_model_metadata, setup_passes_pre_model_filter
 from strategies.types import EntrySetup
 from timeframes import SUPPORTED_TIMEFRAMES, execution_htf_for
 
@@ -74,6 +75,9 @@ EVENT_FIELDS = [
     "killzone_score",
     "target_rr_score",
     "no_trade_reasons",
+    "pre_model_filter_pass",
+    "pre_model_allowed_directions",
+    "pre_model_reasons",
     "swept_level",
     "sweep_extreme",
     "sweep_liquidity_quality",
@@ -165,6 +169,12 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--silver-bullet-windows", default=None, help="Comma-separated NY windows, e.g. 10:00-11:00,14:00-15:00.")
     parser.add_argument("--silver-bullet-retest-must-occur-within-window", action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument("--silver-bullet-max-retest-bars", type=int, default=None)
+    parser.add_argument("--pre-model-filter", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--pre-model-allow-neutral-htf", action="store_true")
+    parser.add_argument("--pre-model-allow-equilibrium", action="store_true")
+    parser.add_argument("--pre-model-require-smt", action="store_true")
+    parser.add_argument("--pre-model-require-killzone", action="store_true")
+    parser.add_argument("--pre-model-killzone-windows", default=None)
     parser.add_argument("--out-dir", default="backtest_results/new_ict_models")
     return parser
 
@@ -218,9 +228,15 @@ def _run_symbol(symbol: str, timeframes: list[str], models: list[Any], store: di
                     snapshot_cache=cache,
                     htf_mode="strict" if args.context_mode == "strict" else "soft",
                 )
+            pre_model = evaluate_pre_model_filter(context, config)
+            if not pre_model.passed:
+                continue
             for spec in models:
                 setups = spec.detector(symbol, timeframe, visible, context, config)
                 for setup in setups:
+                    if not setup_passes_pre_model_filter(setup, pre_model):
+                        continue
+                    merge_pre_model_metadata(setup, pre_model)
                     if args.context_mode in {"aligned_only", "strict"} and not _context_aligned(setup, context):
                         continue
                     key = (spec.name, symbol, timeframe, setup.direction, setup.timestamp, round(setup.entry_low, 8), round(setup.entry_high, 8))

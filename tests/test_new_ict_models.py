@@ -6,19 +6,22 @@ from datetime import datetime, timezone
 from backtesting.run_ict_models import _decision_score, _evaluate
 from backtesting.run_ict_batch import build_run_args
 from backtesting.score_threshold_report import summarize_thresholds
+from backtesting.grid_filter_analysis import summarize_grid
 from keyboards import MENU_ACTIONS, main_menu
 from formatters import build_setup_summary
 from handlers.common import user_ready
 from handlers.trading import trading_keyboard
 from market_primitives.smt import detect_smt
 from scanner.engine import STRATEGY_PATTERNS
+from strategies.htf_context import HTFBias, HTFContext, HTFDealingRange, HTFObjective, HTFZone
 from strategies.ict_models import registry
 from strategies.ict_models.lifecycle import classify_setup_lifecycle
 from strategies.ict_models.ifvg_retest import detect_setups as detect_ifvg_retest
 from strategies.ict_models.model_filters import passes_model_filter, setup_filter_event
 from strategies.ict_models.silver_bullet import detect_setups as detect_silver_bullet
 from strategies.ict_models.turtle_soup import detect_setups as detect_turtle_soup
-from strategies.types import EntrySetup, default_components
+from strategies.pre_model_filter import evaluate_pre_model_filter
+from strategies.types import EntrySetup, PrimitiveSnapshot, StrategyContext, default_components
 from visuals import _CANDLE_COUNT, _datetime_format
 
 
@@ -78,6 +81,54 @@ class NewICTModelTests(unittest.TestCase):
         self.assertGreaterEqual(_CANDLE_COUNT["5m"], 120)
         self.assertEqual(_datetime_format("1h"), "%m-%d %H:%M")
         self.assertEqual(_datetime_format("1d"), "%Y-%m-%d")
+
+    def test_pre_model_filter_allows_only_htf_aligned_direction(self) -> None:
+        context = StrategyContext(
+            primary=PrimitiveSnapshot("BTCUSDT", "5m", [candle(1, 100, 101, 99, 100)]),
+            htf_context=HTFContext(
+                timeframe="1h",
+                bias=HTFBias("bullish", 0.8, "test"),
+                zone=HTFZone("OB", "bullish", 99, 101, 1, 0.8, "test"),
+                dealing_range=HTFDealingRange(90, 110, 100, "discount"),
+                objective=HTFObjective("up", 120, "swing_high", "test", objective_unreached=True),
+                inside_zone=True,
+                approaching_zone=False,
+                allows_long=True,
+                allows_short=False,
+                score_modifier=0,
+                reason="test",
+            ),
+        )
+
+        decision = evaluate_pre_model_filter(context, {"context_mode": "strict"})
+
+        self.assertTrue(decision.passed)
+        self.assertEqual(decision.allowed_directions, {"long"})
+        self.assertEqual(decision.metadata["pre_model_allowed_directions"], "long")
+
+    def test_pre_model_filter_blocks_neutral_equilibrium(self) -> None:
+        context = StrategyContext(
+            primary=PrimitiveSnapshot("BTCUSDT", "5m", [candle(1, 100, 101, 99, 100)]),
+            htf_context=HTFContext(
+                timeframe="1h",
+                bias=HTFBias("neutral", 0.1, "test"),
+                zone=HTFZone("None", "neutral", None, None, None, 0, "test"),
+                dealing_range=HTFDealingRange(90, 110, 100, "equilibrium"),
+                objective=HTFObjective("none", None, "none", "test"),
+                inside_zone=False,
+                approaching_zone=False,
+                allows_long=False,
+                allows_short=False,
+                score_modifier=0,
+                reason="test",
+            ),
+        )
+
+        decision = evaluate_pre_model_filter(context, {"context_mode": "strict"})
+
+        self.assertFalse(decision.passed)
+        self.assertIn("neutral_htf_bias", decision.reasons)
+        self.assertIn("equilibrium", decision.reasons)
 
     def test_turtle_soup_long_sweep_close_back(self) -> None:
         candles = [
@@ -334,6 +385,44 @@ class NewICTModelTests(unittest.TestCase):
         self.assertEqual(filtered["filtered_out"], 1)
         self.assertEqual(filtered["expectancy"], 3.0)
 
+    def test_filter_grid_summarizes_candidate_rules(self) -> None:
+        report = summarize_grid(
+            [
+                {
+                    "model": "ifvg_retest",
+                    "decision_score": "75",
+                    "target_distance_r": "3",
+                    "has_smt_confirmation": "True",
+                    "session_window": "10:00-11:00",
+                    "displacement_grade": "valid",
+                    "htf_location": "discount",
+                    "target_before_invalidation": "True",
+                    "invalidated": "False",
+                    "hit_2r_before_invalidation": "True",
+                    "mfe_r": "3",
+                },
+                {
+                    "model": "ifvg_retest",
+                    "decision_score": "40",
+                    "target_distance_r": "1",
+                    "has_smt_confirmation": "False",
+                    "session_window": "",
+                    "displacement_grade": "weak",
+                    "htf_location": "equilibrium",
+                    "target_before_invalidation": "False",
+                    "invalidated": "True",
+                    "hit_2r_before_invalidation": "False",
+                    "mfe_r": "0.2",
+                    "no_trade_reasons": "equilibrium;target_rr_below_2",
+                },
+            ],
+            min_count=1,
+        )
+
+        self.assertTrue(report)
+        self.assertEqual(report[0]["rank"], 1)
+        self.assertGreaterEqual(float(report[0]["expectancy"]), 1.0)
+
     def test_live_model_filter_event_uses_setup_rr(self) -> None:
         setup = EntrySetup(
             model_name="breaker_block",
@@ -405,6 +494,8 @@ class NewICTModelTests(unittest.TestCase):
                 "context_mode": "aligned_only",
                 "smt_pairs": ["BTCUSDT:ETHUSDT"],
                 "forward_bars": 20,
+                "pre_model_require_smt": True,
+                "pre_model_filter": False,
             },
             {
                 "symbols": ["BTCUSDT"],
@@ -420,6 +511,8 @@ class NewICTModelTests(unittest.TestCase):
         self.assertNotIn("ETHUSDT", args[args.index("--symbols") + 1 : args.index("--timeframes")])
         self.assertIn("--smt-pairs", args)
         self.assertIn("BTCUSDT:ETHUSDT", args)
+        self.assertIn("--pre-model-require-smt", args)
+        self.assertIn("--no-pre-model-filter", args)
 
     def test_r_hits_are_measured_from_entry_time(self) -> None:
         future = [
