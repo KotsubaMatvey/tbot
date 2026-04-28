@@ -8,6 +8,7 @@ from .callbacks import callback_handler, menu_button_handler
 from .charts import chart_cmd, charts_cmd, handle_chart_callback
 from .core import help_cmd, reset, resume_cmd, start, status_cmd, stop_cmd, zones_cmd
 from .sessions import session_status_cmd, sessions_cmd
+from .trading import trading_cmd
 
 __all__ = [
     "callback_handler",
@@ -27,5 +28,6 @@ __all__ = [
     "start",
     "status_cmd",
     "stop_cmd",
+    "trading_cmd",
     "zones_cmd",
 ]

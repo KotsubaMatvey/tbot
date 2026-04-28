@@ -138,6 +138,7 @@ async def help_cmd(update, context):
         "/start       Dashboard or setup\n"
         "/pay         Subscription and payment\n"
         "/zones       Active zones now\n"
+        "TRADING     Change strategy alerts\n"
         "/status      Subscription overview\n"
         "/reset       Change preferences\n"
         "/stop        Pause alerts\n"

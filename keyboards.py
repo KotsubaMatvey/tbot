@@ -5,6 +5,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton,
 
 MENU_ACTIONS = {
     "zones": "ZONES",
+    "trading": "TRADING",
     "status": "STATUS",
     "settings": "SETTINGS",
     "sessions": "SESSIONS",
@@ -17,7 +18,8 @@ MENU_ACTIONS = {
 
 def main_menu() -> ReplyKeyboardMarkup:
     keyboard = [
-        [KeyboardButton(MENU_ACTIONS["zones"]), KeyboardButton(MENU_ACTIONS["status"])],
+        [KeyboardButton(MENU_ACTIONS["zones"]), KeyboardButton(MENU_ACTIONS["trading"])],
+        [KeyboardButton(MENU_ACTIONS["status"])],
         [
             KeyboardButton(MENU_ACTIONS["settings"]),
             KeyboardButton(MENU_ACTIONS["sessions"]),

@@ -7,6 +7,7 @@ from keyboards import MENU_ACTIONS
 from .charts import handle_chart_callback
 from .core import help_cmd, reset, resume_cmd, status_cmd, stop_cmd, zones_cmd
 from .sessions import sessions_cmd
+from .trading import handle_trading_callback, trading_cmd
 
 
 async def callback_handler(update, context):
@@ -30,6 +31,8 @@ async def callback_handler(update, context):
         return
     if await payment_flow.handle_callback(user_id, data, query, context):
         return
+    if await handle_trading_callback(user_id, data, query, context):
+        return
     if await onboarding.handle_callback(user_id, data, query, context):
         return
     await query.answer()
@@ -41,6 +44,7 @@ async def menu_button_handler(update, context):
 
     dispatch = {
         MENU_ACTIONS["zones"]: zones_cmd,
+        MENU_ACTIONS["trading"]: trading_cmd,
         MENU_ACTIONS["settings"]: reset,
         MENU_ACTIONS["status"]: status_cmd,
         MENU_ACTIONS["help"]: help_cmd,

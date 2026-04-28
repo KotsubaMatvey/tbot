@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from backtesting.run_ict_models import _decision_score, _evaluate
 from backtesting.run_ict_batch import build_run_args
 from backtesting.score_threshold_report import summarize_thresholds
+from keyboards import MENU_ACTIONS, main_menu
+from handlers.trading import trading_keyboard
 from market_primitives.smt import detect_smt
 from scanner.engine import STRATEGY_PATTERNS
 from strategies.ict_models import registry
@@ -34,6 +36,19 @@ class NewICTModelTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             registry.resolve_models(["model1"])
         self.assertEqual(registry.resolve_models(["model1"], include_legacy=True)[0].name, "legacy_model1")
+
+    def test_main_menu_exposes_trading_button(self) -> None:
+        labels = [[button.text for button in row] for row in main_menu().keyboard]
+
+        self.assertTrue(any(MENU_ACTIONS["trading"] in row for row in labels))
+
+    def test_trading_keyboard_uses_strategy_patterns(self) -> None:
+        markup = trading_keyboard({"turtle_soup"})
+        buttons = [button for row in markup.inline_keyboard for button in row]
+
+        self.assertEqual(buttons[0].callback_data, "trade_model_turtle_soup")
+        self.assertIn("OK", buttons[0].text)
+        self.assertEqual(buttons[-1].callback_data, "trade_model_CONFIRM")
 
     def test_turtle_soup_long_sweep_close_back(self) -> None:
         candles = [
