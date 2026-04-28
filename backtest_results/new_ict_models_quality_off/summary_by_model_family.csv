@@ -1,0 +1,2 @@
+model_family,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,expectancy,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count
+ict,14621,14621,14409,175,6.723043,3.054157,0.207783,5.798113,0.237197,0.207783,0.46228,0.306477,0.677177,1.341867,3.787193,2.535582,3.83709,0

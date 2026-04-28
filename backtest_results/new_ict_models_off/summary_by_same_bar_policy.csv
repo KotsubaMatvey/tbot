@@ -1,0 +1,6 @@
+model,same_bar_policy,count,avg_mfe_r,median_mfe_r,target_before_invalidation_rate,invalidation_rate,same_bar_ambiguous_count
+breaker_block,conservative,4032,10.050475,5.17576,0.444444,0.553075,0
+ifvg_retest,conservative,2172,18.086109,7.125984,0.358195,0.63582,0
+reclaimed_ob,conservative,234,11.090451,4.750961,0.636752,0.363248,0
+silver_bullet,conservative,167,3.095311,1.060029,0.239521,0.520958,0
+turtle_soup,conservative,15874,5.116203,2.85671,0.160136,0.722502,0

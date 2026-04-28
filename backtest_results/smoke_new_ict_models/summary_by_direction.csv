@@ -1,0 +1,7 @@
+model,direction,count,avg_mfe_r,median_mfe_r,target_before_invalidation_rate,invalidation_rate,same_bar_ambiguous_count
+ifvg_retest,long,132,12.408119,7.258877,0.378788,0.613636,0
+ifvg_retest,short,117,12.98047,9.062147,0.401709,0.598291,0
+silver_bullet,long,10,3.130576,1.894965,0.4,0.6,0
+silver_bullet,short,8,10.860539,2.65946,0.25,0.75,0
+turtle_soup,long,996,4.513296,2.488674,0.155622,0.732932,0
+turtle_soup,short,908,4.000489,2.590483,0.196035,0.721366,0

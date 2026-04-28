@@ -1,0 +1,5 @@
+model,timeframe,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,expectancy,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count
+ifvg_retest,15m,339,339,338,0,16.880256,9.671525,0.342183,2.0,0.038162,0.342183,0.418879,0.342183,0.651917,2.227811,1.248869,1.06338,1.198276,0
+ifvg_retest,1h,317,317,313,0,29.760041,16.592447,0.208202,2.0,-0.358022,0.208202,0.233438,0.208202,0.776025,1.84345,1.081301,1.22973,1.393939,0
+ifvg_retest,30m,344,344,343,0,21.841887,13.850631,0.244186,2.0,-0.265306,0.244186,0.27907,0.244186,0.752907,1.991254,1.108108,1.15625,1.309524,0
+ifvg_retest,5m,384,384,383,0,9.582688,6.617781,0.361979,2.0,0.096038,0.361979,0.479167,0.361979,0.632812,2.274151,1.415638,1.173913,1.633094,0

@@ -10,7 +10,7 @@ from telegram.ext import Application
 
 from config import DIGEST_INTERVAL, SCAN_INTERVAL, TIMEFRAMES
 from database import get_all_active_users
-from formatters import build_alert_message, utc_now
+from formatters import build_alert_message, build_chart_caption, utc_now
 from health import record_alert, record_error, record_scan
 from presentation.types import AlertPayload
 from scanner import get_active_zones, run_scanner
@@ -84,7 +84,7 @@ async def scanner_loop(application: Application) -> None:
                                     await application.bot.send_photo(
                                         user_id,
                                         photo=chart,
-                                        caption=message,
+                                        caption=build_chart_caption(symbol, timeframe, batch),
                                         reply_markup=_chart_button(symbol, timeframe),
                                     )
                                 else:

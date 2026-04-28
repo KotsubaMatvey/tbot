@@ -1,0 +1,7 @@
+model,symbol,count,valid_outcome_count,skipped_outcome_count,long_count,short_count,avg_mfe_r,median_mfe_r,avg_mae_r,median_mae_r,hit_0_5r_rate,hit_1r_rate,hit_2r_rate,invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,avg_score,best_symbol,best_timeframe
+Entry Model 1,BTCUSDT,7,7,0,4,3,4.491963,2.646003,2.000984,0.642231,0.857143,0.714286,0.571429,0.428571,0.571429,0.428571,4.142857,BTCUSDT,1h
+Entry Model 1,ETHUSDT,5,5,0,5,0,2.87601,1.164921,1.690545,1.742249,0.6,0.6,0.4,0.8,0.4,0.2,4.0,ETHUSDT,1h
+Entry Model 1,SOLUSDT,9,7,2,9,0,0.906084,0.180543,1.102368,0.977549,0.428571,0.428571,0.142857,0.555556,0.428571,0.142857,3.666667,SOLUSDT,4h
+Entry Model 2,BTCUSDT,6,5,1,4,2,1.772422,0.795767,1.003622,0.559335,0.8,0.4,0.4,0.5,0.4,0.4,4.166667,BTCUSDT,4h
+Entry Model 2,ETHUSDT,12,10,2,12,0,2.238611,1.083888,1.494894,1.807151,0.7,0.5,0.4,0.666667,0.4,0.3,3.833333,ETHUSDT,1h
+Entry Model 2,SOLUSDT,15,14,1,15,0,1.748669,0.95571,2.462475,1.252488,0.714286,0.428571,0.357143,0.6,0.285714,0.285714,3.8,SOLUSDT,1h

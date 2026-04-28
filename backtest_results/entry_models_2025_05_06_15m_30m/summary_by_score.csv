@@ -1,0 +1,9 @@
+model,score_bucket,count,valid_outcome_count,skipped_outcome_count,long_count,short_count,avg_mfe_r,median_mfe_r,avg_mae_r,median_mae_r,hit_0_5r_rate,hit_1r_rate,hit_2r_rate,invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,avg_score,best_symbol,best_timeframe
+Entry Model 1,high,1413,1241,172,750,663,4.065982,1.548731,2.743159,1.192135,0.818695,0.638195,0.406124,0.601557,0.532635,0.305399,4.0,BTCUSDT,30m
+Entry Model 1,low,2,2,0,2,0,3.18668,3.18668,3.112525,3.112525,1.0,1.0,0.5,1.0,0.0,0.0,2.0,ETHUSDT,15m
+Entry Model 1,medium,192,176,16,85,107,5.267995,1.430659,1.198262,0.672156,0.795455,0.613636,0.363636,0.40625,0.568182,0.318182,3.0,ETHUSDT,15m
+Entry Model 2,high,2825,2440,385,1390,1435,3.432966,1.795042,2.987329,1.524715,0.820492,0.681148,0.459426,0.655575,0.534836,0.331967,4.51115,BTCUSDT,15m
+Entry Model 2,medium,2,1,1,2,0,35.670659,35.670659,56.844311,56.844311,1.0,1.0,1.0,1.0,1.0,1.0,3.0,ETHUSDT,30m
+Entry Model 3,high,1061,1020,41,499,562,23.3245,2.685008,11.781559,2.752437,0.884314,0.792157,0.604902,0.763431,0.536275,0.356863,4.0,BTCUSDT,30m
+Entry Model 3,low,2,2,0,0,2,1.482259,1.482259,2.27721,2.27721,1.0,0.5,0.5,0.5,0.5,0.5,2.0,ETHUSDT,30m
+Entry Model 3,medium,67,60,7,31,36,3.317496,1.813047,3.802983,1.484083,0.816667,0.7,0.466667,0.58209,0.683333,0.416667,3.0,BTCUSDT,15m

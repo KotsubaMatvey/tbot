@@ -1,0 +1,5 @@
+model,direction,count,valid_outcome_count,skipped_outcome_count,long_count,short_count,avg_mfe_r,median_mfe_r,avg_mae_r,median_mae_r,hit_0_5r_rate,hit_1r_rate,hit_2r_rate,invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,avg_score,best_symbol,best_timeframe
+Entry Model 1,long,18,16,2,18,0,1.714348,0.869529,1.470955,1.292062,0.5625,0.5,0.25,0.611111,0.4375,0.1875,3.833333,ETHUSDT,1h
+Entry Model 1,short,3,3,0,0,3,8.245601,4.785537,2.213639,0.642231,1.0,1.0,1.0,0.333333,0.666667,0.666667,4.333333,BTCUSDT,1h
+Entry Model 2,long,31,27,4,31,0,1.801198,0.944518,2.002339,1.349882,0.703704,0.407407,0.333333,0.645161,0.296296,0.259259,3.83871,ETHUSDT,1h
+Entry Model 2,short,2,2,0,0,2,3.548621,3.548621,0.189279,0.189279,1.0,1.0,1.0,0.0,1.0,1.0,4.5,BTCUSDT,1h

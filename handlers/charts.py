@@ -4,7 +4,7 @@ import logging
 
 import payment_flow
 from database import get_user
-from formatters import build_alert_message
+from formatters import build_alert_message, build_chart_caption
 from scanner import get_cached_candles, get_cached_patterns
 from visuals import generate_chart
 
@@ -75,7 +75,7 @@ async def _send_chart_reply(target_message, user_id: int, symbol: str, timeframe
             await loading.edit_text("Chart generation failed.")
             return
         await loading.delete()
-        caption = build_alert_message(symbol, timeframe, patterns) if patterns else f"{symbol}  {timeframe}"
+        caption = build_chart_caption(symbol, timeframe, patterns) if patterns else f"{symbol}  {timeframe}"
         await target_message.reply_photo(photo=chart, caption=caption)
     except Exception as exc:
         logger.error("chart %s %s: %s", symbol, timeframe, exc)

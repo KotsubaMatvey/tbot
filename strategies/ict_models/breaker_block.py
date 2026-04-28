@@ -42,9 +42,10 @@ def detect_setups(
             timeframe=timeframe,
             entry_low=entry,
             entry_high=entry,
+            entry_price=entry,
             stop_loss=stop,
             target_hint=target,
-            timestamp=block.timestamp,
+            timestamp=block.trigger_time,
             score=3,
             reason="Failed order block retested as breaker",
             metadata={
@@ -57,6 +58,7 @@ def detect_setups(
                 "breaker_mean_threshold": mean,
                 "break_time": block.trigger_time,
                 "retest_time": block.timestamp,
+                "entry_time": block.timestamp,
                 "failed_ob_confirmed": block.failed_ob_confirmed,
             },
         )

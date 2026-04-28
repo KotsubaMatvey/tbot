@@ -125,12 +125,13 @@ def from_fvg(fvg: FairValueGap) -> AlertPayload:
 
 def from_ifvg(ifvg: InvertedFVG) -> AlertPayload:
     direction = "Bullish" if ifvg.direction == "bullish" else "Bearish"
+    state = "inversion retest" if ifvg.retest_at is not None else "inversion armed"
     return AlertPayload(
         symbol=ifvg.symbol,
         timeframe=ifvg.timeframe,
         pattern="IFVG",
         alert_kind="primitive",
-        detail=f"IFVG: {ts_utc(ifvg.timestamp)} | {fmt_price(ifvg.zone_low)} - {fmt_price(ifvg.zone_high)} | {direction} inversion retest",
+        detail=f"IFVG: {ts_utc(ifvg.timestamp)} | {fmt_price(ifvg.zone_low)} - {fmt_price(ifvg.zone_high)} | {direction} {state}",
         direction=direction,
         timestamp=ifvg.timestamp,
         gap_low=ifvg.zone_low,

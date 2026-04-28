@@ -60,6 +60,7 @@ def detect_setups(
             timeframe=timeframe,
             entry_low=entry,
             entry_high=entry,
+            entry_price=entry,
             stop_loss=stop,
             target_hint=target,
             timestamp=max(sweep.timestamp, structure.timestamp, fvg.created_at),

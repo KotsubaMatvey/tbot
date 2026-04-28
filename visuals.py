@@ -33,6 +33,26 @@ _BULL_ZONE_LINE = "#4b9fb0"
 _BEAR_ZONE_FILL = "#b4b0b2"
 _BEAR_ZONE_LINE = "#7b7679"
 _INVALIDATION = "#8c99a3"
+_ZONE_ALPHA = 0.16
+_LABEL_ALPHA = 0.10
+
+_ELEMENT_COLORS = {
+    "FVG": {"bull": ("#00D084", "#1DE9A6"), "bear": ("#FF4D5E", "#FF7A86")},
+    "IFVG": {"bull": ("#8E44FF", "#B084FF"), "bear": ("#6D28D9", "#A78BFA")},
+    "OB": {"bull": ("#2F80ED", "#56CCF2"), "bear": ("#1F5FBF", "#7FB3FF")},
+    "Breaker": {"bull": ("#FF8A00", "#FFB020"), "bear": ("#D66A00", "#FF9F43")},
+    "BB": {"bull": ("#FF8A00", "#FFB020"), "bear": ("#D66A00", "#FF9F43")},
+    "Rejection": {"bull": ("#FFD43B", "#FFE66D"), "bear": ("#DFAF00", "#FFD43B")},
+    "RB": {"bull": ("#FFD43B", "#FFE66D"), "bear": ("#DFAF00", "#FFD43B")},
+    "turtle_soup": {"bull": ("#00C2FF", "#66E3FF"), "bear": ("#0096C7", "#48CAE4")},
+    "Turtle Soup": {"bull": ("#00C2FF", "#66E3FF"), "bear": ("#0096C7", "#48CAE4")},
+    "silver_bullet": {"bull": ("#FF4FD8", "#FF8BE8"), "bear": ("#C026D3", "#E879F9")},
+    "Silver Bullet": {"bull": ("#FF4FD8", "#FF8BE8"), "bear": ("#C026D3", "#E879F9")},
+    "ifvg_retest": {"bull": ("#8E44FF", "#B084FF"), "bear": ("#6D28D9", "#A78BFA")},
+    "breaker_block": {"bull": ("#FF8A00", "#FFB020"), "bear": ("#D66A00", "#FF9F43")},
+    "reclaimed_ob": {"bull": ("#2F80ED", "#56CCF2"), "bear": ("#1F5FBF", "#7FB3FF")},
+    "ict2022_mss_fvg": {"bull": ("#22C55E", "#86EFAC"), "bear": ("#EF4444", "#FCA5A5")},
+}
 
 _STYLE = mpf.make_mpf_style(
     base_mpf_style="default",
@@ -81,6 +101,13 @@ def _direction_is_bullish(alert: AlertPayload) -> bool:
 
 
 def _zone_colors(alert: AlertPayload) -> tuple[str, str, float]:
+    key = "bull" if _direction_is_bullish(alert) else "bear"
+    palette = _ELEMENT_COLORS.get(alert.pattern)
+    if palette is None and alert.pattern.startswith("legacy_"):
+        palette = _ELEMENT_COLORS.get("ict2022_mss_fvg")
+    if palette is not None:
+        fill, line = palette[key]
+        return fill, line, _ZONE_ALPHA if alert.alert_kind == "strategy" else 0.12
     if _direction_is_bullish(alert):
         return _BULL_ZONE_FILL, _BULL_ZONE_LINE, 0.14 if alert.alert_kind == "strategy" else 0.10
     return _BEAR_ZONE_FILL, _BEAR_ZONE_LINE, 0.16 if alert.alert_kind == "strategy" else 0.11
@@ -112,7 +139,7 @@ def _draw_patterns(ax, patterns: list[AlertPayload], n: int) -> None:
             continue
         line_color = _BULL_ZONE_LINE if _direction_is_bullish(pattern) else _BEAR_ZONE_LINE
         ax.axhline(pattern.level, color=line_color, linewidth=0.8, alpha=0.85, linestyle=":")
-        ax.text(n - 0.8, pattern.level, f" {pattern.pattern} ", ha="right", va="bottom", fontsize=6.0, color=line_color)
+        _zone_tag(ax, n, pattern.level, pattern.pattern, line_color, va="bottom")
 
 
 def _draw_setup(ax, pattern: AlertPayload, n: int) -> None:
@@ -152,16 +179,21 @@ def _draw_htf_zone(ax, pattern: AlertPayload, n: int) -> None:
     _zone_tag(ax, n, (low_f + high_f) / 2, f"HTF {zone_type}", line_color)
 
 
-def _zone_tag(ax, n: int, level: float, text: str, color: str) -> None:
+def _zone_tag(ax, n: int, level: float, text: str, color: str, *, va: str = "center") -> None:
     ax.text(
         n - 0.8,
         level,
         f" {text} ",
         ha="right",
-        va="center",
-        color="white",
+        va=va,
+        color=color,
         fontsize=6.0,
-        backgroundcolor=color,
+        bbox={
+            "boxstyle": "round,pad=0.18",
+            "facecolor": (*matplotlib.colors.to_rgb(color), _LABEL_ALPHA),
+            "edgecolor": color,
+            "linewidth": 0.45,
+        },
     )
 
 

@@ -56,6 +56,26 @@ class NewICTModelTests(unittest.TestCase):
 
         self.assertEqual(detect_turtle_soup("BTCUSDT", "5m", candles, config={"turtle_min_swing_age": 1}), [])
 
+    def test_turtle_soup_quality_filter_rejects_small_wick(self) -> None:
+        candles = [
+            candle(1, 101, 102, 100, 101),
+            candle(2, 101, 102, 98, 99),
+            candle(3, 99, 103, 99, 102),
+            candle(4, 102, 104, 101, 103),
+            candle(5, 103, 104, 102, 103),
+            candle(6, 103, 104, 97, 99),
+            candle(7, 99, 100, 98, 99),
+        ]
+
+        setups = detect_turtle_soup(
+            "BTCUSDT",
+            "5m",
+            candles,
+            config={"turtle_min_swing_age": 1, "turtle_soup_min_wick_fraction": 0.8},
+        )
+
+        self.assertEqual(setups, [])
+
     def test_silver_bullet_accepts_fvg_inside_ny_window(self) -> None:
         candles = [
             candle(ts(2026, 4, 20, 14, 0), 99, 100, 98, 99),
@@ -69,6 +89,8 @@ class NewICTModelTests(unittest.TestCase):
 
         self.assertTrue(setups)
         self.assertEqual(setups[0].metadata["session_window"], "10:00-11:00")
+        self.assertEqual(setups[0].timestamp, ts(2026, 4, 20, 14, 5))
+        self.assertEqual(setups[0].metadata["entry_time"], ts(2026, 4, 20, 14, 10))
 
     def test_silver_bullet_ignores_fvg_outside_window(self) -> None:
         candles = [
@@ -77,6 +99,17 @@ class NewICTModelTests(unittest.TestCase):
             candle(ts(2026, 4, 20, 12, 5), 106, 108, 105, 107),
             candle(ts(2026, 4, 20, 12, 10), 107, 107, 104, 105),
             candle(ts(2026, 4, 20, 12, 15), 105, 106, 104, 105),
+        ]
+
+        self.assertEqual(detect_silver_bullet("BTCUSDT", "5m", candles), [])
+
+    def test_silver_bullet_rejects_late_retest(self) -> None:
+        candles = [
+            candle(ts(2026, 4, 20, 14, 0), 99, 100, 98, 99),
+            candle(ts(2026, 4, 20, 14, 3), 99, 101, 99, 100),
+            candle(ts(2026, 4, 20, 14, 5), 106, 108, 105, 107),
+            candle(ts(2026, 4, 20, 15, 15), 107, 107, 104, 105),
+            candle(ts(2026, 4, 20, 15, 20), 105, 106, 104, 105),
         ]
 
         self.assertEqual(detect_silver_bullet("BTCUSDT", "5m", candles), [])
@@ -102,6 +135,8 @@ class NewICTModelTests(unittest.TestCase):
         self.assertTrue(detect_ifvg_retest("BTCUSDT", "5m", body))
         self.assertEqual(detect_ifvg_retest("BTCUSDT", "5m", wick_only), [])
         self.assertEqual(detect_ifvg_retest("BTCUSDT", "5m", body)[0].metadata["entry_mode"], "edge")
+        self.assertEqual(detect_ifvg_retest("BTCUSDT", "5m", body)[0].timestamp, 4)
+        self.assertEqual(detect_ifvg_retest("BTCUSDT", "5m", body)[0].metadata["entry_time"], 5)
 
     def test_same_bar_policies(self) -> None:
         future = [candle(1, 100, 103, 97, 101)]
@@ -113,6 +148,19 @@ class NewICTModelTests(unittest.TestCase):
         self.assertFalse(conservative["target_before_invalidation"])
         self.assertTrue(optimistic["target_before_invalidation"])
         self.assertTrue(neutral["same_bar_ambiguous"])
+        self.assertFalse(conservative["hit_1r_before_invalidation"])
+
+    def test_r_hits_are_measured_from_entry_time(self) -> None:
+        future = [
+            candle(2, 100, 104, 99, 103),
+            candle(3, 100, 102.5, 99, 102),
+        ]
+
+        outcome = _evaluate("long", 100, 98, 104, future, "conservative", entry_time=3)
+
+        self.assertTrue(outcome["hit_1r_before_invalidation"])
+        self.assertFalse(outcome["hit_2r_before_invalidation"])
+        self.assertEqual(outcome["time_to_entry_bars"], 2)
 
 
 if __name__ == "__main__":

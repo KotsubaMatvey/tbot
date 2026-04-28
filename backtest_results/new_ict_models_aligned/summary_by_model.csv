@@ -1,0 +1,7 @@
+model,count,avg_mfe_r,median_mfe_r,target_before_invalidation_rate,invalidation_rate,same_bar_ambiguous_count
+breaker_block,379,7.009109,3.378596,0.414248,0.583113,0
+ict2022_mss_fvg,72,2.220082,1.082953,0.638889,0.236111,0
+ifvg_retest,351,14.361654,6.655925,0.37037,0.618234,0
+reclaimed_ob,27,4.272258,2.399652,0.703704,0.296296,0
+silver_bullet,50,2.861442,0.767643,0.3,0.36,0
+turtle_soup,2200,4.749691,2.643124,0.151364,0.742727,0

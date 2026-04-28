@@ -1,0 +1,2 @@
+model,stop_mode,count,avg_mfe_r,median_mfe_r,target_before_invalidation_rate,invalidation_rate,same_bar_ambiguous_count
+ifvg_retest,ce,1384,19.485975,10.457074,0.380058,0.618497,0

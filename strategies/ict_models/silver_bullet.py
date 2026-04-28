@@ -13,6 +13,8 @@ SILVER_BULLET_START = "10:00"
 SILVER_BULLET_END = "11:00"
 SILVER_BULLET_ENTRY_MODE = "edge"
 SILVER_BULLET_TARGET_MODE = "fixed_r"
+SILVER_BULLET_MAX_RETEST_BARS = 6
+SILVER_BULLET_RETEST_MUST_OCCUR_WITHIN_WINDOW = True
 
 
 def detect_setups(
@@ -27,23 +29,28 @@ def detect_setups(
     if len(closed) < 4:
         return []
     tz_name = str(cfg.get("silver_bullet_tz") or SILVER_BULLET_TZ)
-    start = _parse_time(str(cfg.get("silver_bullet_start") or SILVER_BULLET_START))
-    end = _parse_time(str(cfg.get("silver_bullet_end") or SILVER_BULLET_END))
+    windows = _windows(cfg.get("silver_bullet_windows"), cfg)
     entry_mode = str(cfg.get("entry_mode") or cfg.get("silver_bullet_entry_mode") or SILVER_BULLET_ENTRY_MODE)
     if entry_mode not in {"edge", "ce"}:
         entry_mode = SILVER_BULLET_ENTRY_MODE
     target_mode = str(cfg.get("target_mode") or SILVER_BULLET_TARGET_MODE)
     stop_bps = float(cfg.get("stop_buffer_bps") or 2)
+    max_retest_bars = int(cfg.get("silver_bullet_max_retest_bars") or SILVER_BULLET_MAX_RETEST_BARS)
+    retest_must_be_in_window = bool(cfg.get("silver_bullet_retest_must_occur_within_window", SILVER_BULLET_RETEST_MUST_OCCUR_WITHIN_WINDOW))
     zone = ZoneInfo(tz_name)
 
     gaps = detect_fvg(candles, symbol, timeframe, scan_back=30)
     results = []
     for gap in reversed(gaps):
         fvg_dt = datetime.fromtimestamp(gap.created_at / 1000, tz=ZoneInfo("UTC")).astimezone(zone)
-        if not _in_window(fvg_dt.timetz().replace(tzinfo=None), start, end):
+        window = _matching_window(fvg_dt.timetz().replace(tzinfo=None), windows)
+        if window is None:
             continue
-        retest = _first_retest(closed, gap.created_at, gap.gap_low, gap.gap_high)
+        retest = _first_retest(closed, gap.created_at, gap.gap_low, gap.gap_high, max_retest_bars)
         if retest is None:
+            continue
+        retest_dt = datetime.fromtimestamp(int(retest["time"]) / 1000, tz=ZoneInfo("UTC")).astimezone(zone)
+        if retest_must_be_in_window and _matching_window(retest_dt.timetz().replace(tzinfo=None), [window]) is None:
             continue
         entry = _entry(gap.gap_low, gap.gap_high, gap.direction, entry_mode)
         if gap.direction == "bullish":
@@ -62,21 +69,28 @@ def detect_setups(
             timeframe=timeframe,
             entry_low=entry,
             entry_high=entry,
+            entry_price=entry,
             stop_loss=stop,
             target_hint=target,
-            timestamp=int(retest["time"]),
+            timestamp=gap.created_at,
             score=3,
-            reason=f"Silver Bullet {gap.direction} FVG retest inside NY 10:00-11:00",
+            reason=f"Silver Bullet {gap.direction} FVG with constrained NY retest",
             metadata={
                 "entry_mode": entry_mode,
                 "stop_mode": "swing_or_fvg",
                 "target_mode": target_mode,
-                "session_window": f"{SILVER_BULLET_START}-{SILVER_BULLET_END}",
+                "session_window": _format_window(window),
                 "ny_time": fvg_dt.strftime("%Y-%m-%d %H:%M"),
                 "fvg_time": gap.created_at,
                 "fvg_low": gap.gap_low,
                 "fvg_high": gap.gap_high,
                 "fvg_ce": (gap.gap_low + gap.gap_high) / 2,
+                "entry_time": int(retest["time"]),
+                "retest_time": int(retest["time"]),
+                "retest_ny_time": retest_dt.strftime("%Y-%m-%d %H:%M"),
+                "time_to_retest_bars": _bars_between(closed, gap.created_at, int(retest["time"])),
+                "silver_bullet_max_retest_bars": max_retest_bars,
+                "silver_bullet_retest_must_occur_within_window": retest_must_be_in_window,
             },
         )
         if item:
@@ -90,17 +104,53 @@ def _parse_time(value: str) -> time:
     return time(int(hour), int(minute))
 
 
+def _windows(raw: object, cfg: dict[str, Any]) -> list[tuple[time, time]]:
+    if raw is None:
+        start = _parse_time(str(cfg.get("silver_bullet_start") or SILVER_BULLET_START))
+        end = _parse_time(str(cfg.get("silver_bullet_end") or SILVER_BULLET_END))
+        return [(start, end)]
+    if isinstance(raw, str):
+        chunks = [item.strip() for item in raw.split(",") if item.strip()]
+    else:
+        chunks = [str(item).strip() for item in raw if str(item).strip()]
+    windows: list[tuple[time, time]] = []
+    for chunk in chunks:
+        start_text, end_text = chunk.split("-", 1)
+        windows.append((_parse_time(start_text), _parse_time(end_text)))
+    return windows or [(_parse_time(SILVER_BULLET_START), _parse_time(SILVER_BULLET_END))]
+
+
 def _in_window(value: time, start: time, end: time) -> bool:
     return start <= value < end
 
 
-def _first_retest(candles: list[dict[str, float | int]], after: int, low: float, high: float) -> dict[str, float | int] | None:
+def _matching_window(value: time, windows: list[tuple[time, time]]) -> tuple[time, time] | None:
+    return next((window for window in windows if _in_window(value, window[0], window[1])), None)
+
+
+def _format_window(window: tuple[time, time]) -> str:
+    return f"{window[0].strftime('%H:%M')}-{window[1].strftime('%H:%M')}"
+
+
+def _first_retest(candles: list[dict[str, float | int]], after: int, low: float, high: float, max_bars: int) -> dict[str, float | int] | None:
+    checked = 0
     for candle in candles:
         if int(candle["time"]) <= after:
             continue
+        checked += 1
+        if checked > max_bars:
+            return None
         if float(candle["low"]) <= high and float(candle["high"]) >= low:
             return candle
     return None
+
+
+def _bars_between(candles: list[dict[str, float | int]], start: int, end: int) -> int | None:
+    start_idx = next((idx for idx, candle in enumerate(candles) if int(candle["time"]) == start), None)
+    end_idx = next((idx for idx, candle in enumerate(candles) if int(candle["time"]) == end), None)
+    if start_idx is None or end_idx is None:
+        return None
+    return max(0, end_idx - start_idx)
 
 
 def _entry(low: float, high: float, direction: str, mode: str) -> float:

@@ -1,0 +1,2 @@
+model_family,count,avg_mfe_r,median_mfe_r,target_before_invalidation_rate,invalidation_rate,same_bar_ambiguous_count
+ict,3079,6.029549,2.800845,0.227347,0.686911,0

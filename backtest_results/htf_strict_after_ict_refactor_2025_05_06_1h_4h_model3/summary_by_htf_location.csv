@@ -1,0 +1,4 @@
+model,htf_location,count,valid_outcome_count,skipped_outcome_count,long_count,short_count,avg_mfe_r,median_mfe_r,avg_mae_r,median_mae_r,hit_0_5r_rate,hit_1r_rate,hit_2r_rate,invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,avg_score,best_symbol,best_timeframe
+Entry Model 3,discount,7,6,1,7,0,18.812648,11.043816,17.620722,14.701959,0.833333,0.833333,0.833333,0.857143,0.333333,0.333333,4.142857,ETHUSDT,1h
+Entry Model 3,equilibrium,1,1,0,1,0,39.698039,39.698039,20.145098,20.145098,1.0,1.0,1.0,1.0,1.0,1.0,5.0,ETHUSDT,1h
+Entry Model 3,premium,4,4,0,0,4,12.537741,11.939744,16.579009,2.067818,1.0,1.0,1.0,0.75,0.5,0.5,4.25,BTCUSDT,4h

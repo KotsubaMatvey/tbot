@@ -1,0 +1,3 @@
+model,direction,count,avg_mfe_r,median_mfe_r,target_before_invalidation_rate,invalidation_rate,same_bar_ambiguous_count
+ifvg_retest,long,719,21.048911,10.995778,0.388039,0.61057,0
+ifvg_retest,short,665,17.796123,9.961724,0.371429,0.627068,0

@@ -1,0 +1,13 @@
+model,direction,count,avg_mfe_r,median_mfe_r,target_before_invalidation_rate,invalidation_rate,same_bar_ambiguous_count
+breaker_block,long,350,7.135884,3.703563,0.428571,0.568571,0
+breaker_block,short,29,5.479066,0.436323,0.241379,0.758621,0
+ict2022_mss_fvg,long,66,2.311804,1.102636,0.621212,0.257576,0
+ict2022_mss_fvg,short,6,1.211145,0.945748,0.833333,0.0,0
+ifvg_retest,long,316,14.119212,6.699486,0.370253,0.617089,0
+ifvg_retest,short,35,16.550559,6.578936,0.371429,0.628571,0
+reclaimed_ob,long,24,4.050483,2.311235,0.75,0.25,0
+reclaimed_ob,short,3,6.046464,5.776855,0.333333,0.666667,0
+silver_bullet,long,48,2.07272,0.68244,0.270833,0.375,0
+silver_bullet,short,2,21.790756,21.790756,1.0,0.0,0
+turtle_soup,long,1953,4.870301,2.678813,0.157706,0.737327,0
+turtle_soup,short,247,3.796046,2.266994,0.101215,0.785425,0

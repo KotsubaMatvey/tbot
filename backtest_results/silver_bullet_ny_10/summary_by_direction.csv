@@ -1,0 +1,3 @@
+model,direction,count,avg_mfe_r,median_mfe_r,target_before_invalidation_rate,invalidation_rate,same_bar_ambiguous_count
+silver_bullet,long,33,1.407056,0.616599,0.121212,0.484848,0
+silver_bullet,short,37,3.429395,1.387463,0.27027,0.459459,0

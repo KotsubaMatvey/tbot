@@ -19,6 +19,7 @@ def setup(
     timeframe: str,
     entry_low: float,
     entry_high: float,
+    entry_price: float | None = None,
     stop_loss: float,
     target_hint: float | None,
     timestamp: int,
@@ -26,8 +27,8 @@ def setup(
     reason: str,
     metadata: dict[str, Any],
 ) -> EntrySetup | None:
-    entry_price = (entry_low + entry_high) / 2
-    risk = entry_price - stop_loss if direction == "long" else stop_loss - entry_price
+    resolved_entry = entry_price if entry_price is not None else (entry_low + entry_high) / 2
+    risk = resolved_entry - stop_loss if direction == "long" else stop_loss - resolved_entry
     if risk <= 0:
         return None
     components = default_components()
@@ -40,7 +41,7 @@ def setup(
         status="triggered",
         entry_low=entry_low,
         entry_high=entry_high,
-        entry_price=entry_price,
+        entry_price=resolved_entry,
         stop_loss=stop_loss,
         invalidation=stop_loss,
         target_hint=target_hint,
@@ -53,10 +54,10 @@ def setup(
         timestamp=timestamp,
         metadata={
             "model_family": "ict",
-            "entry_price": entry_price,
+            "entry_price": resolved_entry,
             "stop_loss": stop_loss,
             "risk": risk,
-            "risk_bps": risk / max(entry_price, 1e-9) * 10_000,
+            "risk_bps": risk / max(resolved_entry, 1e-9) * 10_000,
             **metadata,
         },
     )

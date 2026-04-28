@@ -1,0 +1,2 @@
+model,stop_mode,count,avg_mfe_r,median_mfe_r,target_before_invalidation_rate,invalidation_rate,same_bar_ambiguous_count
+silver_bullet,swing_or_fvg,70,2.476006,0.884531,0.2,0.471429,0

@@ -1,0 +1,2 @@
+model,stop_mode,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,expectancy,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count
+silver_bullet,swing_or_fvg,60,60,60,0,0.948922,0.68244,0.1,2.0,0.024999,0.1,0.233333,0.1,0.483333,1.166667,6.482759,7.785714,11.666667,0

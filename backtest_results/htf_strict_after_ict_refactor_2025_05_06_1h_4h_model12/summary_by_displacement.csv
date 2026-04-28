@@ -1,0 +1,4 @@
+model,displacement,count,valid_outcome_count,skipped_outcome_count,long_count,short_count,avg_mfe_r,median_mfe_r,avg_mae_r,median_mae_r,hit_0_5r_rate,hit_1r_rate,hit_2r_rate,invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,avg_score,best_symbol,best_timeframe
+Entry Model 1,has_displacement,19,18,1,16,3,2.649068,1.12397,1.389369,1.093147,0.611111,0.555556,0.333333,0.526316,0.444444,0.222222,3.947368,BTCUSDT,1h
+Entry Model 1,weak_or_none,2,1,1,2,0,4.483156,4.483156,5.167553,5.167553,1.0,1.0,1.0,1.0,1.0,1.0,3.5,BTCUSDT,1h
+Entry Model 2,has_displacement,33,29,4,31,2,1.92171,0.966903,1.8773,1.31831,0.724138,0.448276,0.37931,0.606061,0.344828,0.310345,3.878788,ETHUSDT,1h

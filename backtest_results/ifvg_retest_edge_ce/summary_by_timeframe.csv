@@ -1,0 +1,5 @@
+model,timeframe,count,avg_mfe_r,median_mfe_r,target_before_invalidation_rate,invalidation_rate,same_bar_ambiguous_count
+ifvg_retest,15m,339,17.258505,9.900264,0.39528,0.60472,0
+ifvg_retest,1h,317,30.238106,16.585398,0.365931,0.630915,0
+ifvg_retest,30m,344,22.263553,13.675351,0.389535,0.610465,0
+ifvg_retest,5m,384,10.088059,6.800246,0.369792,0.627604,0
