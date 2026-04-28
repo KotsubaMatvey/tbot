@@ -8,6 +8,8 @@ from pathlib import Path
 from statistics import median
 from typing import Any
 
+from strategies.ict_models.model_filters import passes_model_filter
+
 REPORT_FIELDS = [
     "scope",
     "model",
@@ -90,7 +92,7 @@ def _add_filtered_rows(
     filtered_out = 0
     for model, group in sorted(by_model.items()):
         rules = model_filters.get(model, {})
-        accepted = [event for event in group if _passes_model_filter(event, rules)]
+        accepted = [event for event in group if passes_model_filter(event, rules)]
         filtered_all.extend(accepted)
         filtered_out += len(group) - len(accepted)
         rows.append(
@@ -113,56 +115,6 @@ def _add_filtered_rows(
             filtered_out=filtered_out,
         )
     )
-
-
-def _passes_model_filter(event: dict[str, Any], rules: dict[str, Any]) -> bool:
-    if not rules:
-        return True
-    min_rr = _float_or_none(rules.get("min_target_distance_r"))
-    if min_rr is not None:
-        rr = _float_or_none(event.get("target_distance_r"))
-        if rr is None or rr < min_rr:
-            return False
-    max_rr = _float_or_none(rules.get("max_target_distance_r"))
-    if max_rr is not None:
-        rr = _float_or_none(event.get("target_distance_r"))
-        if rr is None or rr > max_rr:
-            return False
-    min_score = _float_or_none(rules.get("min_decision_score"))
-    if min_score is not None:
-        score = _float_or_none(event.get("decision_score"))
-        if score is None or score < min_score:
-            return False
-    if rules.get("require_smt") and not _bool(event.get("has_smt_confirmation")):
-        return False
-    if rules.get("require_session_window") and not (event.get("session_window") or event.get("ny_time")):
-        return False
-    if not _field_allowed(event, rules, "htf_location", "allowed_htf_locations"):
-        return False
-    if not _displacement_allowed(event, rules):
-        return False
-    excluded = set(rules.get("exclude_no_trade_reasons") or [])
-    if excluded:
-        reasons = {reason.strip() for reason in str(event.get("no_trade_reasons") or "").split(";") if reason.strip()}
-        if reasons & excluded:
-            return False
-    return True
-
-
-def _field_allowed(event: dict[str, Any], rules: dict[str, Any], field: str, rule_name: str) -> bool:
-    allowed = rules.get(rule_name)
-    if not allowed:
-        return True
-    return str(event.get(field) or "none") in {str(item) for item in allowed}
-
-
-def _displacement_allowed(event: dict[str, Any], rules: dict[str, Any]) -> bool:
-    allowed = rules.get("allowed_displacement_grades")
-    if not allowed:
-        return True
-    values = {str(item) for item in allowed}
-    grade = event.get("displacement_grade") or event.get("breach_displacement_grade")
-    return str(grade or "none") in values
 
 
 def _summary_row(

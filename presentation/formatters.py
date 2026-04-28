@@ -36,7 +36,7 @@ def build_strategy_alert_text(alert: AlertPayload) -> str:
         htf_objective = alert.metadata.get("htf_objective_type", "none")
         lines.append(f"HTF: {alert.context_timeframe or '-'} {htf_bias} {htf_location} {htf_zone} objective {htf_objective}")
     if alert.status:
-        lines.append(f"Status: {alert.status.upper()}")
+        lines.append(f"Status: {alert.status.replace('_', ' ').upper()}")
     if alert.reason:
         lines.append(alert.reason)
     if alert.entry_low is not None and alert.entry_high is not None:
@@ -71,7 +71,7 @@ def build_payment_message(price: str | float, expired: bool = False) -> str:
         "Pay in any crypto - USDT | TON | BTC | ETH\n\n"
         "Includes:\n"
         "- Real-time ICT pattern detection\n"
-        "- Turtle Soup / Silver Bullet / IFVG Retest alerts\n"
+        "- Turtle Soup / Silver Bullet / IFVG / Breaker / Rejection / Mitigation alerts\n"
         "- Primitive FVG | IFVG | OB | BOS | CHoCH alerts\n"
         "- Multi-timeframe zone tracking\n"
         "After payment tap Check Payment below."

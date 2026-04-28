@@ -66,6 +66,8 @@ presentation/
 
 - typed market primitives: swings, sweeps, BOS/CHOCH, FVG/IFVG, OB/breakers, EQH/EQL, PD, SMT, volume
 - typed ICT setups: Turtle Soup, Silver Bullet, IFVG Retest, ICT2022 MSS+FVG, Breaker Block, Reclaimed OB, Rejection Block, Mitigation Block
+- live strategy alerts use all current ICT models with per-model filters from `LIVE_MODEL_FILTER_CONFIG`
+- strategy alerts include basic lifecycle status: limit pending, entry filled, cancelled, TP hit, SL hit
 - archived legacy baselines: Entry Model 1, Entry Model 2, Entry Model 3 under `strategies/legacy/`
 - Telegram alerts with optional chart overlays
 - onboarding with primitive/model/direction preferences

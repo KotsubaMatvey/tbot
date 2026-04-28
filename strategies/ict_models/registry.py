@@ -76,6 +76,10 @@ def get_default_models() -> list[ICTModelSpec]:
     return [ACTIVE_ICT_MODELS[name] for name in DEFAULT_MODELS]
 
 
+def get_live_models() -> list[ICTModelSpec]:
+    return list(ACTIVE_ICT_MODELS.values()) + list(RESEARCH_ONLY_MODELS.values())
+
+
 def list_active_models() -> list[str]:
     return list(ACTIVE_ICT_MODELS)
 
@@ -113,6 +117,7 @@ __all__ = [
     "LEGACY_MODELS",
     "RESEARCH_ONLY_MODELS",
     "get_default_models",
+    "get_live_models",
     "get_model",
     "list_active_models",
     "list_legacy_models",

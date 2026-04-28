@@ -9,7 +9,16 @@ from typing import Any
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "users.db")
 
-DEFAULT_ENTRY_MODELS = ["Entry Model 1", "Entry Model 2", "Entry Model 3"]
+DEFAULT_ENTRY_MODELS = [
+    "turtle_soup",
+    "silver_bullet",
+    "ifvg_retest",
+    "ict2022_mss_fvg",
+    "breaker_block",
+    "reclaimed_ob",
+    "rejection_block",
+    "mitigation_block",
+]
 DEFAULT_TRADE_DIRECTIONS = ["long", "short"]
 
 _USER_COLUMNS: dict[str, str] = {
@@ -25,7 +34,7 @@ _USER_COLUMNS: dict[str, str] = {
     "is_owner": "INTEGER DEFAULT 0",
     "sessions_alerts": "INTEGER DEFAULT 0",
     "charts_enabled": "INTEGER DEFAULT 0",
-    "entry_models": """TEXT DEFAULT '["Entry Model 1", "Entry Model 2", "Entry Model 3"]'""",
+    "entry_models": """TEXT DEFAULT '["turtle_soup", "silver_bullet", "ifvg_retest", "ict2022_mss_fvg", "breaker_block", "reclaimed_ob", "rejection_block", "mitigation_block"]'""",
     "trade_directions": """TEXT DEFAULT '["long", "short"]'""",
 }
 _JSON_COLUMNS = {"symbols", "patterns", "timeframes", "entry_models", "trade_directions"}
@@ -185,7 +194,7 @@ def _row_to_user(row: sqlite3.Row) -> dict:
         "symbols": _load_json_set(row["symbols"]),
         "patterns": _load_json_set(row["patterns"]),
         "timeframes": _load_json_set(row["timeframes"]),
-        "entry_models": _load_json_set(row["entry_models"], DEFAULT_ENTRY_MODELS),
+        "entry_models": _normalize_entry_models(_load_json_set(row["entry_models"], DEFAULT_ENTRY_MODELS)),
         "trade_directions": _load_json_set(row["trade_directions"], DEFAULT_TRADE_DIRECTIONS),
         "active": bool(row["active"]),
         "setup_done": bool(row["setup_done"]),
@@ -221,6 +230,13 @@ def _load_json_set(raw: str | None, default: list[str] | None = None) -> set[str
     if isinstance(value, list):
         return {str(item) for item in value}
     return set(default or [])
+
+
+def _normalize_entry_models(models: set[str]) -> set[str]:
+    legacy = {"Entry Model 1", "Entry Model 2", "Entry Model 3", "model1", "model2", "model3"}
+    if not models or models & legacy:
+        return set(DEFAULT_ENTRY_MODELS)
+    return models
 
 
 def _db_value(column: str, value: Any) -> Any:

@@ -7,10 +7,14 @@ from backtesting.run_ict_models import _decision_score, _evaluate
 from backtesting.run_ict_batch import build_run_args
 from backtesting.score_threshold_report import summarize_thresholds
 from market_primitives.smt import detect_smt
+from scanner.engine import STRATEGY_PATTERNS
 from strategies.ict_models import registry
+from strategies.ict_models.lifecycle import classify_setup_lifecycle
 from strategies.ict_models.ifvg_retest import detect_setups as detect_ifvg_retest
+from strategies.ict_models.model_filters import passes_model_filter, setup_filter_event
 from strategies.ict_models.silver_bullet import detect_setups as detect_silver_bullet
 from strategies.ict_models.turtle_soup import detect_setups as detect_turtle_soup
+from strategies.types import EntrySetup, default_components
 
 
 def candle(ts: int, open_: float, high: float, low: float, close: float) -> dict[str, float | int]:
@@ -25,6 +29,8 @@ class NewICTModelTests(unittest.TestCase):
     def test_registry_defaults_are_new_models(self) -> None:
         self.assertEqual(registry.DEFAULT_MODELS, ["turtle_soup", "silver_bullet", "ifvg_retest"])
         self.assertEqual([item.name for item in registry.resolve_models(None)], registry.DEFAULT_MODELS)
+        self.assertIn("rejection_block", [item.name for item in registry.get_live_models()])
+        self.assertIn("mitigation_block", STRATEGY_PATTERNS)
         with self.assertRaises(ValueError):
             registry.resolve_models(["model1"])
         self.assertEqual(registry.resolve_models(["model1"], include_legacy=True)[0].name, "legacy_model1")
@@ -283,6 +289,68 @@ class NewICTModelTests(unittest.TestCase):
         self.assertEqual(filtered["count"], 1)
         self.assertEqual(filtered["filtered_out"], 1)
         self.assertEqual(filtered["expectancy"], 3.0)
+
+    def test_live_model_filter_event_uses_setup_rr(self) -> None:
+        setup = EntrySetup(
+            model_name="breaker_block",
+            direction="long",
+            symbol="BTCUSDT",
+            timeframe="1h",
+            status="triggered",
+            entry_low=100,
+            entry_high=100,
+            entry_price=100,
+            stop_loss=99,
+            invalidation=99,
+            target_hint=104,
+            sweep_level=None,
+            structure_level=None,
+            context_timeframe="4h",
+            score=4,
+            reason="test",
+            components=default_components(),
+            timestamp=1,
+            metadata={"displacement_grade": "valid"},
+        )
+
+        event = setup_filter_event(setup)
+
+        self.assertTrue(passes_model_filter(event, {"min_target_distance_r": 3, "allowed_displacement_grades": ["valid"]}))
+        self.assertFalse(passes_model_filter(event, {"min_target_distance_r": 5}))
+
+    def test_lifecycle_marks_pending_filled_and_target(self) -> None:
+        setup = EntrySetup(
+            model_name="ict2022_mss_fvg",
+            direction="long",
+            symbol="BTCUSDT",
+            timeframe="5m",
+            status="triggered",
+            entry_low=100,
+            entry_high=101,
+            entry_price=100.5,
+            stop_loss=98,
+            invalidation=98,
+            target_hint=105,
+            sweep_level=None,
+            structure_level=None,
+            context_timeframe="1h",
+            score=4,
+            reason="test",
+            components=default_components(),
+            timestamp=1,
+            metadata={},
+        )
+
+        pending = classify_setup_lifecycle(setup, [candle(1, 102, 103, 101.5, 102)])
+        filled = classify_setup_lifecycle(setup, [candle(1, 102, 103, 101.5, 102), candle(2, 102, 102, 100, 101)])
+        target = classify_setup_lifecycle(
+            setup,
+            [candle(1, 102, 103, 101.5, 102), candle(2, 102, 102, 100, 101), candle(3, 101, 106, 100, 105)],
+        )
+
+        self.assertEqual(pending["status"], "limit_pending")
+        self.assertEqual(filled["status"], "entry_filled")
+        self.assertEqual(target["status"], "tp_hit")
 
     def test_ict_batch_builds_repeatable_run_args(self) -> None:
         args = build_run_args(

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
+import os
 from collections import defaultdict
+from pathlib import Path
 
 import aiohttp
 
-from config import CANDLE_LIMIT, ENTRY_MODEL_HTF_MODE, SYMBOLS, TIMEFRAMES
+from config import CANDLE_LIMIT, ENTRY_MODEL_HTF_MODE, LIVE_MODEL_FILTER_CONFIG, SYMBOLS, TIMEFRAMES
 from market_primitives import detect_smt
 from presentation.alert_builders import build_primitive_alerts, from_entry_setup, from_smt_divergence
 from presentation.types import AlertPayload
@@ -24,7 +27,9 @@ from scanner.scoring import score_primitive_bundle
 from scanner.snapshots import build_primitive_snapshot
 from strategies import StrategyContext
 from strategies.htf_context import build_htf_context
-from strategies.ict_models.registry import get_default_models
+from strategies.ict_models.lifecycle import classify_setup_lifecycle
+from strategies.ict_models.model_filters import passes_model_filter, setup_filter_event
+from strategies.ict_models.registry import list_active_models, list_research_models, get_live_models
 from strategies.setup_utils import current_price
 from timeframes import EXECUTION_HTF_MAP, MODEL_3_HTF_MAP, MODEL_3_LTF_MAP, execution_htf_for
 from strategies.types import PrimitiveSnapshot
@@ -50,13 +55,14 @@ PRIMITIVE_PATTERNS = [
     "EQL",
     "SMT",
 ]
-STRATEGY_PATTERNS = ["turtle_soup", "silver_bullet", "ifvg_retest"]
+STRATEGY_PATTERNS = list_active_models() + list_research_models()
 ALL_PATTERNS = PRIMITIVE_PATTERNS + STRATEGY_PATTERNS
 
 SMT_TIMEFRAMES = {"1m", "5m", "15m", "1h", "4h"}
 SMT_PAIRS = [("BTCUSDT", "ETHUSDT"), ("ETHUSDT", "SOLUSDT")]
 
 _sem = asyncio.Semaphore(5)
+_model_filters_cache: dict[str, dict] | None = None
 
 
 async def fetch_candles(
@@ -110,17 +116,45 @@ def _build_strategy_alerts(
         htf_mode=ENTRY_MODEL_HTF_MODE,
     )
     setups = []
-    for model in get_default_models():
-        setups.extend(model.detector(primary.symbol, primary.timeframe, primary.candles, context, None))
+    model_filters = _load_model_filters()
+    config = {"context_mode": ENTRY_MODEL_HTF_MODE, "htf_mode": ENTRY_MODEL_HTF_MODE}
+    for model in get_live_models():
+        setups.extend(model.detector(primary.symbol, primary.timeframe, primary.candles, context, config))
 
     best_by_key: dict[tuple[str, str], AlertPayload] = {}
     for setup in setups:
+        if not passes_model_filter(setup_filter_event(setup), model_filters.get(setup.model_name, {})):
+            continue
         payload = from_entry_setup(setup)
+        lifecycle = classify_setup_lifecycle(setup, primary.candles)
+        payload.status = str(lifecycle.get("status") or payload.status or "setup_formed")
+        payload.metadata.update(lifecycle)
+        payload.metadata["live_filters_applied"] = bool(model_filters)
         key = (payload.pattern, payload.trade_direction or "")
         existing = best_by_key.get(key)
         if existing is None or (payload.score or 0) > (existing.score or 0):
             best_by_key[key] = payload
     return list(best_by_key.values())
+
+
+def _load_model_filters() -> dict[str, dict]:
+    global _model_filters_cache
+    if _model_filters_cache is not None:
+        return _model_filters_cache
+    path = Path(os.getenv("LIVE_MODEL_FILTER_CONFIG", LIVE_MODEL_FILTER_CONFIG))
+    if not path.is_absolute():
+        path = Path(__file__).resolve().parent.parent / path
+    if not path.exists():
+        _model_filters_cache = {}
+        return _model_filters_cache
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Could not load live model filters from %s: %s", path, exc)
+        _model_filters_cache = {}
+        return _model_filters_cache
+    _model_filters_cache = payload.get("model_filters", payload)
+    return _model_filters_cache
 
 
 def _score_primitive_alerts(
