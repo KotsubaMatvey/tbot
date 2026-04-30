@@ -1,0 +1,5 @@
+model,htf_zone_type,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,managed_expectancy,avg_managed_outcome_r,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+rejection_block,Breaker,1,1,1,0,1.958823,1.958823,1.0,1.915226,77.0,1.915226,1.457613,1.457613,1.0,1.0,0.0,0.0,2.0,,5.0,,0,1
+rejection_block,FVG,1,1,0,0,,,0.0,20.290361,97.0,,,,0.0,0.0,0.0,0.0,,,,,0,0
+rejection_block,IFVG,7,7,1,0,1.834568,1.834568,0.0,21.36556,97.0,-1.0,-1.0,-1.0,0.0,0.0,0.0,0.142857,3.0,4.0,,,0,0
+rejection_block,PD,2,2,0,0,,,0.0,4.970571,92.0,,,,0.0,0.0,0.0,0.0,2.0,,,,0,1

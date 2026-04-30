@@ -3,22 +3,29 @@ from __future__ import annotations
 import unittest
 from datetime import datetime, timezone
 
-from backtesting.run_ict_models import _decision_score, _evaluate
+from backtesting.run_ict_models import _candles_until, _decision_score, _evaluate
 from backtesting.run_ict_batch import build_run_args
 from backtesting.score_threshold_report import summarize_thresholds
 from backtesting.grid_filter_analysis import summarize_grid
+from database import DEFAULT_ENTRY_MODELS, _normalize_entry_models
 from keyboards import MENU_ACTIONS, main_menu
-from formatters import build_setup_summary
+from formatters import build_setup_summary, build_strategy_alert_text
+from alerts import _timeframe_enabled_for_user
 from handlers.common import user_ready
 from handlers.trading import trading_keyboard
+from market_primitives.common import BreakerBlock, FairValueGap, LiquiditySweep, OrderBlock, StructureBreak
 from market_primitives.smt import detect_smt
 from presentation.alert_builders import from_entry_setup
-from scanner.engine import STRATEGY_PATTERNS
+from scanner.engine import STRATEGY_PATTERNS, _model_enabled
 from strategies.htf_context import HTFBias, HTFContext, HTFDealingRange, HTFObjective, HTFZone
 from strategies.ict_models import registry
+from strategies.ict_models.breaker_block import detect_setups as detect_breaker_block
 from strategies.ict_models.lifecycle import classify_setup_lifecycle
+from strategies.ict_models.ict2022_mss_fvg import detect_setups as detect_ict2022_mss_fvg
 from strategies.ict_models.ifvg_retest import detect_setups as detect_ifvg_retest
 from strategies.ict_models.model_filters import passes_model_filter, setup_filter_event
+from strategies.ict_models.reclaimed_ob import detect_setups as detect_reclaimed_ob
+from strategies.ict_models.rejection_block import detect_setups as detect_rejection_block
 from strategies.ict_models.silver_bullet import detect_setups as detect_silver_bullet
 from strategies.ict_models.turtle_soup import detect_setups as detect_turtle_soup
 from strategies.pre_model_filter import evaluate_pre_model_filter
@@ -36,13 +43,89 @@ def ts(year: int, month: int, day: int, hour: int, minute: int) -> int:
 
 class NewICTModelTests(unittest.TestCase):
     def test_registry_defaults_are_new_models(self) -> None:
-        self.assertEqual(registry.DEFAULT_MODELS, ["turtle_soup", "silver_bullet", "ifvg_retest"])
+        self.assertEqual(registry.DEFAULT_MODELS, ["ifvg_retest", "reclaimed_ob", "rejection_block"])
         self.assertEqual([item.name for item in registry.resolve_models(None)], registry.DEFAULT_MODELS)
         self.assertIn("rejection_block", [item.name for item in registry.get_live_models()])
-        self.assertIn("mitigation_block", STRATEGY_PATTERNS)
+        self.assertEqual(STRATEGY_PATTERNS, registry.DEFAULT_MODELS)
+        self.assertNotIn("mitigation_block", STRATEGY_PATTERNS)
         with self.assertRaises(ValueError):
             registry.resolve_models(["model1"])
         self.assertEqual(registry.resolve_models(["model1"], include_legacy=True)[0].name, "legacy_model1")
+
+    def test_database_entry_model_defaults_match_live_models(self) -> None:
+        self.assertEqual(DEFAULT_ENTRY_MODELS, registry.DEFAULT_MODELS)
+        self.assertEqual(_normalize_entry_models({"turtle_soup", "ifvg_retest", "mitigation_block"}), {"ifvg_retest"})
+        self.assertEqual(_normalize_entry_models({"model1"}), set(DEFAULT_ENTRY_MODELS))
+
+    def test_live_scanner_skips_disabled_model_detectors(self) -> None:
+        self.assertFalse(_model_enabled("turtle_soup", {"turtle_soup": {"enabled": False}}))
+        self.assertTrue(_model_enabled("ifvg_retest", {"ifvg_retest": {"min_target_distance_r": 3}}))
+
+    def test_strategy_alerts_ignore_user_zone_timeframes(self) -> None:
+        strategy = EntrySetup(
+            model_name="ifvg_retest",
+            direction="long",
+            symbol="BTCUSDT",
+            timeframe="1m",
+            status="triggered",
+            entry_low=100,
+            entry_high=101,
+            entry_price=100.5,
+            stop_loss=99,
+            invalidation=99,
+            target_hint=103,
+            sweep_level=None,
+            structure_level=None,
+            context_timeframe="15m",
+            score=4,
+            reason="test",
+            components=default_components(),
+            timestamp=1,
+            metadata={},
+        )
+        primitive = from_entry_setup(strategy)
+        primitive.alert_kind = "primitive"
+        primitive.pattern = "FVG"
+        user = {"timeframes": {"5m"}}
+
+        self.assertTrue(_timeframe_enabled_for_user(from_entry_setup(strategy), "1m", user))
+        self.assertFalse(_timeframe_enabled_for_user(primitive, "1m", user))
+
+    def test_strategy_alert_text_includes_risk_plan(self) -> None:
+        setup = EntrySetup(
+            model_name="ifvg_retest",
+            direction="long",
+            symbol="BTCUSDT",
+            timeframe="1m",
+            status="triggered",
+            entry_low=100,
+            entry_high=101,
+            entry_price=100.5,
+            stop_loss=99,
+            invalidation=99,
+            target_hint=104,
+            sweep_level=None,
+            structure_level=None,
+            context_timeframe="15m",
+            score=4,
+            reason="test",
+            components=default_components(),
+            timestamp=1,
+            metadata={
+                "tp1_price": 102,
+                "tp2_price": 104,
+                "rr_to_target": 2.33,
+                "stop_model": "ce_fvg",
+                "logical_invalidation_model": "ce_fvg",
+                "logical_invalidation_price": 100,
+            },
+        )
+
+        text = build_strategy_alert_text(from_entry_setup(setup))
+
+        self.assertIn("Targets: TP1", text)
+        self.assertIn("Risk: ce_fvg", text)
+        self.assertIn("Logical invalidation: ce_fvg", text)
 
     def test_main_menu_exposes_trading_button(self) -> None:
         labels = [[button.text for button in row] for row in main_menu().keyboard]
@@ -50,10 +133,10 @@ class NewICTModelTests(unittest.TestCase):
         self.assertTrue(any(MENU_ACTIONS["trading"] in row for row in labels))
 
     def test_trading_keyboard_uses_strategy_patterns(self) -> None:
-        markup = trading_keyboard({"turtle_soup"})
+        markup = trading_keyboard({"ifvg_retest"})
         buttons = [button for row in markup.inline_keyboard for button in row]
 
-        self.assertEqual(buttons[0].callback_data, "trade_model_turtle_soup")
+        self.assertEqual(buttons[0].callback_data, "trade_model_ifvg_retest")
         self.assertIn("OK", buttons[0].text)
         self.assertEqual(buttons[-1].callback_data, "trade_model_CONFIRM")
 
@@ -70,7 +153,7 @@ class NewICTModelTests(unittest.TestCase):
             "symbols": {"BTCUSDT"},
             "patterns": set(),
             "timeframes": {"5m"},
-            "entry_models": {"turtle_soup"},
+            "entry_models": {"ifvg_retest"},
             "trade_directions": {"long"},
         }
         summary = build_setup_summary(user["symbols"], user["patterns"], user["timeframes"])
@@ -190,6 +273,29 @@ class NewICTModelTests(unittest.TestCase):
         self.assertIn("not_in_htf_poi", blocked.reasons)
         self.assertTrue(allowed.passed)
 
+    def test_pre_model_filter_can_allow_aligned_discount_without_poi(self) -> None:
+        context = StrategyContext(
+            primary=PrimitiveSnapshot("BTCUSDT", "5m", [candle(1, 100, 101, 99, 100)]),
+            htf_context=HTFContext(
+                timeframe="1h",
+                bias=HTFBias("bullish", 0.8, "test"),
+                zone=HTFZone("OB", "bullish", 80, 85, 1, 0.8, "test"),
+                dealing_range=HTFDealingRange(70, 110, 90, "discount"),
+                objective=HTFObjective("up", 120, "swing_high", "test", objective_unreached=True),
+                inside_zone=False,
+                approaching_zone=False,
+                allows_long=False,
+                allows_short=False,
+                score_modifier=0,
+                reason="test",
+            ),
+        )
+
+        decision = evaluate_pre_model_filter(context, {"context_mode": "strict", "pre_model_require_htf_poi": False})
+
+        self.assertTrue(decision.passed)
+        self.assertEqual(decision.allowed_directions, {"long"})
+
     def test_turtle_soup_long_sweep_close_back(self) -> None:
         candles = [
             candle(1, 101, 102, 100, 101),
@@ -206,6 +312,8 @@ class NewICTModelTests(unittest.TestCase):
         self.assertTrue(any(item.direction == "long" for item in setups))
         setup = next(item for item in setups if item.direction == "long")
         self.assertLess(setup.stop_loss or 0, setup.metadata["sweep_extreme"])
+        self.assertEqual(setup.metadata["logical_invalidation_model"], "sweep_extreme")
+        self.assertEqual(setup.metadata["logical_invalidation_price"], setup.metadata["sweep_extreme"])
 
     def test_turtle_soup_body_close_beyond_level_is_not_sweep(self) -> None:
         candles = [
@@ -255,6 +363,26 @@ class NewICTModelTests(unittest.TestCase):
         self.assertEqual(setups[0].metadata["session_window"], "10:00-11:00")
         self.assertEqual(setups[0].timestamp, ts(2026, 4, 20, 14, 5))
         self.assertEqual(setups[0].metadata["entry_time"], ts(2026, 4, 20, 14, 10))
+        self.assertIsNone(setups[0].metadata["logical_invalidation_model"])
+        self.assertIsNone(setups[0].metadata["logical_invalidation_price"])
+
+    def test_silver_bullet_accepts_first_retest_of_prior_fvg_inside_window(self) -> None:
+        candles = [
+            candle(ts(2026, 4, 20, 13, 40), 99, 100, 98, 99),
+            candle(ts(2026, 4, 20, 13, 45), 109, 110, 99, 109),
+            candle(ts(2026, 4, 20, 13, 50), 106, 108, 105, 107),
+            candle(ts(2026, 4, 20, 13, 55), 107, 109, 106, 108),
+            candle(ts(2026, 4, 20, 14, 0), 108, 109, 106, 107),
+            candle(ts(2026, 4, 20, 14, 5), 107, 108, 104, 105),
+            candle(ts(2026, 4, 20, 14, 10), 105, 106, 104, 105),
+        ]
+
+        setups = detect_silver_bullet("BTCUSDT", "5m", candles)
+
+        self.assertTrue(setups)
+        self.assertEqual(setups[0].timestamp, ts(2026, 4, 20, 14, 5))
+        self.assertEqual(setups[0].metadata["fvg_time"], ts(2026, 4, 20, 13, 50))
+        self.assertEqual(setups[0].metadata["silver_bullet_fvg_source"], "first_retest_in_window")
 
     def test_silver_bullet_ignores_fvg_outside_window(self) -> None:
         candles = [
@@ -284,8 +412,12 @@ class NewICTModelTests(unittest.TestCase):
             candle(2, 104, 105, 101, 103),
             candle(3, 98, 99, 94, 95),
             candle(4, 104, 108, 103, 106),
-            candle(5, 106, 106, 104, 105),
-            candle(6, 105, 106, 104, 105),
+            candle(5, 107, 108, 106, 107),
+            candle(6, 107, 108, 106, 107),
+            candle(7, 107, 108, 106, 107),
+            candle(8, 107, 108, 106, 107),
+            candle(9, 106, 106, 104, 105),
+            candle(10, 105, 106, 104, 105),
         ]
         wick_only = [
             candle(1, 105, 106, 105, 105.5),
@@ -301,22 +433,239 @@ class NewICTModelTests(unittest.TestCase):
         setup = detect_ifvg_retest("BTCUSDT", "5m", body, config={"ifvg_require_displacement": False})[0]
         self.assertEqual(setup.metadata["entry_mode"], "edge")
         self.assertEqual(setup.timestamp, 4)
-        self.assertEqual(setup.metadata["entry_time"], 5)
+        self.assertEqual(setup.metadata["entry_time"], 9)
+        self.assertEqual(setup.metadata["stop_model"], "ce_fvg")
+        self.assertEqual(setup.metadata["logical_invalidation_model"], "ce_fvg")
+        self.assertEqual(setup.metadata["logical_invalidation_price"], setup.metadata["ifvg_ce"])
+        self.assertIsNotNone(setup.metadata["tp1_price"])
+        self.assertIsNotNone(setup.metadata["rr_to_target"])
 
     def test_ifvg_retest_default_requires_displacement(self) -> None:
         candles = [
             candle(1, 105, 106, 104, 105),
             candle(2, 104, 105, 101, 103),
             candle(3, 98, 99, 94, 95),
-            candle(4, 100, 116, 100, 115),
-            candle(5, 106, 107, 103, 105),
-            candle(6, 105, 106, 104, 105),
+            candle(4, 106, 122, 106, 121),
+            candle(5, 116, 117, 116, 116),
+            candle(6, 116, 117, 116, 116),
+            candle(7, 116, 117, 116, 116),
+            candle(8, 116, 117, 116, 116),
+            candle(9, 106, 107, 103, 105),
+            candle(10, 105, 106, 104, 105),
         ]
 
         setups = detect_ifvg_retest("BTCUSDT", "5m", candles)
 
         self.assertTrue(setups)
         self.assertIn(setups[0].metadata["breach_displacement_grade"], {"valid", "strong"})
+
+    def test_ict2022_uses_fvg_retest_as_entry_time(self) -> None:
+        candles = [
+            candle(1, 100, 101, 99, 100),
+            candle(2, 100, 101, 98, 100),
+            candle(3, 100, 103, 99, 102),
+            candle(4, 104, 107, 104, 106),
+            candle(5, 106, 108, 105, 107),
+            candle(6, 107, 108, 103, 104),
+        ]
+        snapshot = PrimitiveSnapshot(
+            symbol="BTCUSDT",
+            timeframe="5m",
+            candles=candles,
+            sweeps=[
+                LiquiditySweep(
+                    symbol="BTCUSDT",
+                    timeframe="5m",
+                    direction="bullish",
+                    timestamp=2,
+                    liquidity_level=99,
+                    wick_extreme=98,
+                    close_back_inside=100,
+                    source_swing_index=0,
+                    clean=True,
+                )
+            ],
+            structure_breaks=[
+                StructureBreak(
+                    symbol="BTCUSDT",
+                    timeframe="5m",
+                    break_type="MSS",
+                    direction="bullish",
+                    timestamp=4,
+                    broken_level=103,
+                    close_price=106,
+                    source_swing_index=0,
+                    strength=1.0,
+                    displacement_factor=2.5,
+                    has_displacement=True,
+                    body_ratio=0.8,
+                    range_expansion=2.0,
+                    created_fvg_after_break=True,
+                    displacement_grade="strong",
+                    close_beyond_structure=True,
+                )
+            ],
+            fvgs=[
+                FairValueGap(
+                    symbol="BTCUSDT",
+                    timeframe="5m",
+                    direction="bullish",
+                    created_at=4,
+                    gap_low=101,
+                    gap_high=104,
+                    mitigated=True,
+                    invalidated=False,
+                    mitigated_at=6,
+                    invalidated_at=None,
+                    fill_ratio=0.5,
+                )
+            ],
+        )
+
+        setups = detect_ict2022_mss_fvg(
+            "BTCUSDT",
+            "5m",
+            candles,
+            StrategyContext(primary=snapshot),
+            config={"ict2022_require_killzone": False, "ict2022_max_fvg_retest_bars": 3},
+        )
+
+        self.assertTrue(setups)
+        self.assertEqual(setups[0].timestamp, 4)
+        self.assertEqual(setups[0].metadata["entry_time"], 6)
+        self.assertEqual(setups[0].metadata["time_to_retest_bars"], 2)
+
+    def test_breaker_block_default_requires_displacement(self) -> None:
+        candles = [
+            candle(1, 100, 101, 99, 100),
+            candle(2, 100, 102, 99, 101),
+            candle(3, 101, 103, 100, 102),
+            candle(4, 102, 104, 101, 103),
+        ]
+        weak_block = BreakerBlock(
+            symbol="BTCUSDT",
+            timeframe="5m",
+            direction="bullish",
+            timestamp=4,
+            origin_time=2,
+            trigger_time=3,
+            zone_low=100,
+            zone_high=101,
+            retested=True,
+            source_order_block_time=2,
+            source_order_block_direction="bearish",
+            sweep_time=1,
+            failed_ob_confirmed=True,
+            metadata={"displacement_grade": "weak"},
+        )
+        snapshot = PrimitiveSnapshot(symbol="BTCUSDT", timeframe="5m", candles=candles, breaker_blocks=[weak_block])
+        context = StrategyContext(primary=snapshot)
+
+        self.assertEqual(detect_breaker_block("BTCUSDT", "5m", candles, context), [])
+        self.assertTrue(detect_breaker_block("BTCUSDT", "5m", candles, context, config={"breaker_require_displacement": False}))
+
+    def test_reclaimed_ob_default_stop_uses_block_extreme(self) -> None:
+        candles = [
+            candle(1, 100, 101, 99, 100),
+            candle(2, 100, 102, 99, 101),
+            candle(3, 101, 103, 100, 102),
+            candle(4, 102, 104, 100.5, 101),
+        ]
+        block = OrderBlock(
+            symbol="BTCUSDT",
+            timeframe="5m",
+            direction="bullish",
+            timestamp=4,
+            origin_time=2,
+            zone_low=100,
+            zone_high=101,
+            midpoint=100.5,
+            mitigated=True,
+            invalidated=False,
+            open=101,
+            close=100,
+            high=102,
+            low=99,
+            mean_threshold=100.5,
+            validated=True,
+            validation_time=3,
+        )
+        snapshot = PrimitiveSnapshot(symbol="BTCUSDT", timeframe="5m", candles=candles, order_blocks=[block])
+        setups = detect_reclaimed_ob("BTCUSDT", "5m", candles, StrategyContext(primary=snapshot))
+
+        self.assertTrue(setups)
+        self.assertEqual(setups[0].metadata["stop_mode"], "block_extreme")
+        self.assertLess(setups[0].stop_loss or 0, block.zone_low)
+        self.assertEqual(setups[0].metadata["logical_invalidation_model"], "mean_threshold")
+
+    def test_rejection_block_uses_swing_body_limit_entry(self) -> None:
+        candles = [
+            candle(1, 100, 101, 99, 100),
+            candle(2, 100, 102, 99, 101),
+            candle(3, 101, 103, 100, 102),
+            candle(4, 102, 104, 101, 103),
+            candle(5, 103, 105, 102, 104),
+            candle(6, 105, 110, 104, 106),
+            candle(7, 104, 108, 103, 104),
+            candle(8, 103, 105, 101, 102),
+            candle(9, 102, 105, 100, 101),
+            candle(10, 102, 107, 100, 101),
+            candle(11, 101, 102, 100, 101),
+        ]
+        context = StrategyContext(
+            primary=PrimitiveSnapshot("BTCUSDT", "5m", candles),
+            htf_context=HTFContext(
+                timeframe="1h",
+                bias=HTFBias("bearish", 0.8, "test"),
+                zone=HTFZone("OB", "bearish", 106, 110, 1, 0.8, "test"),
+                dealing_range=HTFDealingRange(90, 110, 100, "premium"),
+                objective=HTFObjective("down", 90, "swing_low", "test", objective_unreached=True),
+                inside_zone=True,
+                approaching_zone=False,
+                allows_long=False,
+                allows_short=True,
+                score_modifier=0,
+                reason="test",
+                draw_direction="down",
+            ),
+        )
+
+        setups = detect_rejection_block("BTCUSDT", "5m", candles, context=context, config={"context_mode": "strict"})
+
+        self.assertTrue(setups)
+        setup = setups[0]
+        self.assertEqual(setup.direction, "short")
+        self.assertEqual(setup.timestamp, 6)
+        self.assertEqual(setup.metadata["entry_time"], 10)
+        self.assertEqual(setup.entry_price, 106)
+        self.assertGreater(setup.stop_loss or 0, 110)
+        self.assertEqual(setup.target_hint, 90)
+        self.assertEqual(setup.metadata["dol_priority"], 1)
+        self.assertEqual(setup.metadata["target_mode"], "dol_hierarchy")
+        self.assertEqual(setup.metadata["logical_invalidation_model"], "wick_extreme")
+        self.assertEqual(setup.metadata["logical_invalidation_price"], 110)
+
+    def test_rejection_block_rebuilds_after_fresh_extreme_before_entry(self) -> None:
+        candles = [
+            candle(1, 100, 101, 99, 100),
+            candle(2, 100, 102, 99, 101),
+            candle(3, 101, 103, 100, 102),
+            candle(4, 102, 104, 101, 103),
+            candle(5, 103, 105, 102, 104),
+            candle(6, 105, 110, 104, 106),
+            candle(7, 104, 108, 103, 104),
+            candle(8, 103, 111, 101, 102),
+            candle(9, 102, 105, 100, 101),
+            candle(10, 102, 107, 100, 101),
+            candle(11, 101, 102, 100, 101),
+        ]
+
+        setups = detect_rejection_block("BTCUSDT", "5m", candles)
+
+        self.assertTrue(setups)
+        self.assertEqual(setups[0].timestamp, 8)
+        self.assertEqual(setups[0].entry_price, 103)
+        self.assertEqual(setups[0].metadata["rejection_wick_extreme"], 111)
 
     def test_same_bar_policies(self) -> None:
         future = [candle(1, 100, 103, 97, 101)]
@@ -327,6 +676,7 @@ class NewICTModelTests(unittest.TestCase):
 
         self.assertFalse(conservative["target_before_invalidation"])
         self.assertTrue(optimistic["target_before_invalidation"])
+        self.assertTrue(conservative["same_bar_ambiguous"])
         self.assertTrue(neutral["same_bar_ambiguous"])
         self.assertFalse(conservative["hit_1r_before_invalidation"])
 
@@ -360,6 +710,13 @@ class NewICTModelTests(unittest.TestCase):
 
         self.assertTrue(any(item.direction == "bullish" for item in divergences))
 
+    def test_candles_until_can_limit_recent_history(self) -> None:
+        candles = [candle(idx, 100, 101, 99, 100) for idx in range(1, 6)]
+
+        visible = _candles_until(candles, 4, limit=2)
+
+        self.assertEqual([item["time"] for item in visible], [3, 4])
+
     def test_decision_score_records_penalties_without_blocking(self) -> None:
         score = _decision_score(
             "long",
@@ -379,6 +736,21 @@ class NewICTModelTests(unittest.TestCase):
         self.assertIn("against_htf_flow", score["no_trade_reasons"])
         self.assertIn("equilibrium", score["no_trade_reasons"])
         self.assertIn("target_rr_below_2", score["no_trade_reasons"])
+
+    def test_decision_score_accepts_silver_bullet_two_r_target(self) -> None:
+        score = _decision_score(
+            "long",
+            "silver_bullet",
+            {
+                "htf_mode": "off",
+                "session_window": "10:00-11:00",
+                "displacement_grade": "valid",
+            },
+            2.0,
+        )
+
+        self.assertEqual(score["target_rr_score"], 20)
+        self.assertNotIn("target_rr_below_3", score["no_trade_reasons"])
 
     def test_score_threshold_report_filters_by_decision_score(self) -> None:
         report = summarize_thresholds(
@@ -510,6 +882,13 @@ class NewICTModelTests(unittest.TestCase):
 
         self.assertTrue(passes_model_filter(event, {"min_target_distance_r": 3, "allowed_displacement_grades": ["valid"]}))
         self.assertFalse(passes_model_filter(event, {"min_target_distance_r": 5}))
+        self.assertTrue(passes_model_filter(event, {"allowed_timeframes": ["1h"], "allowed_symbols": ["BTCUSDT"]}))
+        self.assertFalse(passes_model_filter(event, {"allowed_timeframes": ["4h"]}))
+        event["htf_inside_poi"] = True
+        event["htf_zone_type"] = "FVG"
+        self.assertTrue(passes_model_filter(event, {"require_htf_inside_poi": True, "allowed_htf_zone_types": ["FVG"]}))
+        self.assertFalse(passes_model_filter({**event, "htf_inside_poi": False}, {"require_htf_inside_poi": True}))
+        self.assertFalse(passes_model_filter(event, {"allowed_htf_zone_types": ["PD"]}))
 
     def test_lifecycle_marks_pending_filled_and_target(self) -> None:
         setup = EntrySetup(
@@ -545,6 +924,40 @@ class NewICTModelTests(unittest.TestCase):
         self.assertEqual(filled["status"], "entry_filled")
         self.assertEqual(target["status"], "tp_hit")
 
+    def test_lifecycle_uses_tp1_and_logical_invalidation(self) -> None:
+        setup = EntrySetup(
+            model_name="ifvg_retest",
+            direction="long",
+            symbol="BTCUSDT",
+            timeframe="5m",
+            status="triggered",
+            entry_low=100,
+            entry_high=101,
+            entry_price=100.5,
+            stop_loss=98,
+            invalidation=98,
+            target_hint=106,
+            sweep_level=None,
+            structure_level=None,
+            context_timeframe="1h",
+            score=4,
+            reason="test",
+            components=default_components(),
+            timestamp=1,
+            metadata={"entry_time": 2, "tp1_price": 103, "logical_invalidation_price": 99, "logical_invalidation_model": "ce_fvg"},
+        )
+
+        cancelled = classify_setup_lifecycle(setup, [candle(1, 102, 103.5, 101.5, 103), candle(2, 102, 102, 100, 101)])
+        tp1 = classify_setup_lifecycle(setup, [candle(1, 102, 102, 101.5, 102), candle(2, 102, 102, 100, 101), candle(3, 101, 103.5, 100, 102)])
+        invalidated = classify_setup_lifecycle(setup, [candle(1, 102, 102, 101.5, 102), candle(2, 102, 102, 100, 101), candle(3, 101, 102, 98.5, 98.8)])
+
+        self.assertEqual(cancelled["status"], "cancelled")
+        self.assertEqual(cancelled["lifecycle_reason"], "target_reached_before_entry")
+        self.assertEqual(tp1["status"], "tp1_hit")
+        self.assertTrue(tp1["moved_to_be"])
+        self.assertEqual(invalidated["status"], "invalidated")
+        self.assertEqual(invalidated["exit_reason"], "ce_violation")
+
     def test_ict_batch_builds_repeatable_run_args(self) -> None:
         args = build_run_args(
             {
@@ -557,6 +970,11 @@ class NewICTModelTests(unittest.TestCase):
                 "pre_model_require_smt": True,
                 "pre_model_filter": False,
                 "pre_model_require_htf_poi": False,
+                "silver_bullet_windows": "03:00-04:00,10:00-11:00,14:00-15:00",
+                "silver_bullet_max_retest_bars": 6,
+                "silver_bullet_retest_must_occur_within_window": True,
+                "silver_bullet_use_ce_invalidation": False,
+                "ict2022_max_fvg_retest_bars": 12,
             },
             {
                 "symbols": ["BTCUSDT"],
@@ -575,6 +993,31 @@ class NewICTModelTests(unittest.TestCase):
         self.assertIn("--pre-model-require-smt", args)
         self.assertIn("--no-pre-model-filter", args)
         self.assertIn("--no-pre-model-require-htf-poi", args)
+        self.assertIn("--silver-bullet-windows", args)
+        self.assertIn("03:00-04:00,10:00-11:00,14:00-15:00", args)
+        self.assertIn("--silver-bullet-max-retest-bars", args)
+        self.assertIn("6", args)
+        self.assertIn("--silver-bullet-retest-must-occur-within-window", args)
+        self.assertIn("--no-silver-bullet-use-ce-invalidation", args)
+        self.assertIn("--ict2022-max-fvg-retest-bars", args)
+        self.assertIn("12", args)
+
+    def test_ict_batch_can_disable_smt_pairs(self) -> None:
+        args = build_run_args(
+            {
+                "data_dir": "tests/fixtures",
+                "symbols": ["BTCUSDT"],
+                "models": ["silver_bullet"],
+                "smt_pairs": [],
+            },
+            {
+                "timeframes": ["5m"],
+                "out_dir": "backtest_results/example",
+            },
+        )
+
+        self.assertIn("--smt-pairs", args)
+        self.assertEqual(args.index("--smt-pairs"), len(args) - 1)
 
     def test_r_hits_are_measured_from_entry_time(self) -> None:
         future = [
@@ -587,6 +1030,42 @@ class NewICTModelTests(unittest.TestCase):
         self.assertTrue(outcome["hit_1r_before_invalidation"])
         self.assertFalse(outcome["hit_2r_before_invalidation"])
         self.assertEqual(outcome["time_to_entry_bars"], 2)
+
+    def test_backtest_can_cancel_if_tp1_hits_before_limit_entry(self) -> None:
+        future = [
+            candle(2, 100, 103, 99, 102),
+            candle(3, 100, 101, 99, 100),
+        ]
+
+        outcome = _evaluate("long", 100, 98, 106, future, "conservative", entry_time=3, tp1=102, cancel_on_pre_entry_tp1=True)
+
+        self.assertFalse(outcome["activated_trade"])
+        self.assertTrue(outcome["target_reached_before_entry"])
+        self.assertEqual(outcome["exit_reason"], "target_reached_before_entry")
+
+    def test_backtest_managed_partial_tp_then_be(self) -> None:
+        future = [
+            candle(1, 100, 102.2, 99.5, 101),
+            candle(2, 101, 101.5, 99.8, 100.2),
+        ]
+
+        outcome = _evaluate(
+            "long",
+            100,
+            98,
+            106,
+            future,
+            "conservative",
+            entry_time=1,
+            tp1_r=1.0,
+            partial_close_fraction=0.5,
+            move_to_be_after_tp1=True,
+        )
+
+        self.assertTrue(outcome["tp1_hit"])
+        self.assertTrue(outcome["moved_to_be"])
+        self.assertEqual(outcome["managed_exit_reason"], "be_after_tp1")
+        self.assertEqual(outcome["managed_outcome_r"], 0.5)
 
 
 if __name__ == "__main__":

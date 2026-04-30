@@ -1,0 +1,9 @@
+model,htf_zone_type,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,managed_expectancy,avg_managed_outcome_r,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+ifvg_retest,FVG,1,1,0,0,,,0.0,295.128135,100.0,,,,0.0,0.0,0.0,0.0,15.0,,,,0,0
+reclaimed_ob,FVG,2,2,1,0,0.983833,0.983833,0.5,4.306619,100.0,0.24442,0.24442,0.24442,0.5,0.0,0.0,0.0,1.5,,,,0,1
+reclaimed_ob,IFVG,1,1,0,0,,,0.0,18.443997,100.0,,,,0.0,0.0,0.0,0.0,2.0,,,,0,0
+rejection_block,Breaker,1,1,1,0,3.939251,3.939251,0.0,4.072525,97.0,3.939251,0.5,0.5,0.0,1.0,1.0,0.0,2.0,,6.0,12.0,0,0
+rejection_block,FVG,52,52,15,0,3.015706,2.460562,0.019231,47.321478,98.538462,-0.932579,-0.232579,-0.232579,0.019231,0.134615,0.038462,0.269231,3.6,3.928571,1.714286,3.5,0,3
+rejection_block,Liquidity,1,1,0,0,,,0.0,56.880393,100.0,,,,0.0,0.0,0.0,0.0,,,,,0,0
+rejection_block,OB,2,2,1,0,3.123033,3.123033,0.0,4.168681,97.0,-1.0,0.5,0.5,0.0,0.5,0.5,0.5,4.0,7.0,1.0,2.0,0,0
+rejection_block,PD,5,5,1,0,1.020226,1.020226,0.0,47.749317,100.0,-1.0,0.5,0.5,0.0,0.2,0.0,0.2,5.75,4.0,3.0,,0,0

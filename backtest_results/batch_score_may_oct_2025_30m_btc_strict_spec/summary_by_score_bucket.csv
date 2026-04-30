@@ -1,0 +1,4 @@
+model,score_bucket,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+ifvg_retest,high,17,17,17,0,15.22715,9.193407,0.294118,3.197427,100.0,0.034228,0.294118,0.411765,0.352941,0.705882,2.705882,1.5,1.285714,1.0,0,11
+reclaimed_ob,high,10,10,8,2,8.871101,7.701916,0.3,7.175258,94.0,0.081085,0.3,0.5,0.4,0.5,2.3,2.2,1.0,1.0,0,6
+rejection_block,high,28,28,28,0,4.858705,3.238299,0.464286,2.179148,91.0,0.208298,0.464286,0.428571,0.285714,0.5,1.0,1.357143,3.166667,1.125,0,21

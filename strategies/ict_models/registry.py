@@ -56,7 +56,7 @@ LEGACY_MODELS: dict[str, ICTModelSpec] = {
     "legacy_model3": ICTModelSpec("legacy_model3", "Legacy Entry Model 3", _legacy_adapter(detect_legacy_model_3), "legacy", legacy=True),
 }
 
-DEFAULT_MODELS = ["turtle_soup", "silver_bullet", "ifvg_retest"]
+DEFAULT_MODELS = ["ifvg_retest", "reclaimed_ob", "rejection_block"]
 
 _OLD_ALIASES = {"model1": "legacy_model1", "entry_model_1": "legacy_model1", "model2": "legacy_model2", "entry_model_2": "legacy_model2", "model3": "legacy_model3", "entry_model_3": "legacy_model3"}
 
@@ -73,7 +73,7 @@ def get_model(name: str) -> ICTModelSpec:
 
 
 def get_default_models() -> list[ICTModelSpec]:
-    return [ACTIVE_ICT_MODELS[name] for name in DEFAULT_MODELS]
+    return [get_model(name) for name in DEFAULT_MODELS]
 
 
 def get_live_models() -> list[ICTModelSpec]:

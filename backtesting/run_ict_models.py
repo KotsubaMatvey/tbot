@@ -25,6 +25,7 @@ from strategies.types import EntrySetup
 from timeframes import SUPPORTED_TIMEFRAMES, execution_htf_for
 
 DEFAULT_DATA_DIR = "data/history_2025-05-01_2025-10-31"
+DETECTOR_CANDLE_WINDOW = 1500
 
 EVENT_FIELDS = [
     "model",
@@ -38,19 +39,35 @@ EVENT_FIELDS = [
     "entry_time",
     "entry_mode",
     "stop_mode",
+    "stop_model",
     "target_mode",
+    "target_model",
+    "dol_priority",
+    "dol_target_type",
+    "dol_source",
     "entry_price",
     "entry_low",
     "entry_high",
     "stop_loss",
     "invalidation",
     "target_hint",
+    "tp1_price",
+    "tp2_price",
+    "final_target",
+    "rr_to_target",
+    "logical_invalidation_model",
+    "logical_invalidation_price",
+    "partial_close_fraction",
+    "be_trigger_r",
+    "moved_to_be",
+    "exit_reason",
     "risk",
     "risk_bps",
     "same_bar_policy",
     "same_bar_ambiguous",
     "activated_trade",
     "invalidated_before_entry",
+    "target_reached_before_entry",
     "session_window",
     "ny_time",
     "htf_mode",
@@ -60,6 +77,9 @@ EVENT_FIELDS = [
     "htf_objective_type",
     "htf_context_alignment",
     "htf_score_modifier",
+    "pd_array_type",
+    "pd_array_age_bars",
+    "p_d_value",
     "has_smt_confirmation",
     "smt_direction",
     "smt_pair",
@@ -85,18 +105,27 @@ EVENT_FIELDS = [
     "sweep_liquidity_quality",
     "sweep_level_age_bars",
     "displacement_grade",
+    "displacement_factor",
+    "body_ratio",
+    "range_expansion",
     "breach_displacement_grade",
     "turtle_quality",
+    "time_to_confirmation_bars",
+    "ltf_trigger_type",
     "fvg_low",
     "fvg_high",
     "fvg_ce",
     "ifvg_low",
     "ifvg_high",
     "ifvg_ce",
+    "source_fvg_age_bars",
+    "source_fvg_touches_before_inversion",
     "ob_low",
     "ob_high",
     "breaker_low",
     "breaker_high",
+    "poi_retest_count",
+    "trigger_to_retest_bars",
     "rejection_body_level",
     "rejection_wick_extreme",
     "mitigation_low",
@@ -113,6 +142,13 @@ EVENT_FIELDS = [
     "mae_r",
     "invalidated",
     "target_hit",
+    "tp1_hit",
+    "tp2_hit",
+    "final_target_hit",
+    "logical_invalidated",
+    "tp1_r",
+    "managed_outcome_r",
+    "managed_exit_reason",
     "target_before_invalidation",
     "hit_1r_before_invalidation",
     "hit_2r_before_invalidation",
@@ -151,8 +187,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--include-legacy", action="store_true")
     parser.add_argument("--entry-mode", choices=["edge", "midpoint", "ce", "close", "retest"], default=None)
     parser.add_argument("--stop-mode", choices=["aggressive", "standard", "structural", "ce", "opposite_boundary", "mean_threshold", "block_extreme"], default=None)
-    parser.add_argument("--target-mode", choices=["nearest_liquidity", "opposite_range", "fixed_r"], default=None)
+    parser.add_argument("--target-mode", choices=["nearest_liquidity", "opposite_range", "fixed_r", "dol_hierarchy"], default=None)
     parser.add_argument("--same-bar-policy", choices=["conservative", "neutral", "optimistic"], default="conservative")
+    parser.add_argument("--tp1-r", type=float, default=1.0)
+    parser.add_argument("--partial-close-fraction", type=float, default=0.5)
+    parser.add_argument("--move-to-be-after-tp1", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--context-mode", choices=["off", "aligned_only", "strict"], default="off")
     parser.add_argument("--forward-bars", type=int, default=20)
     parser.add_argument("--warmup-bars", type=int, default=100)
@@ -161,8 +200,21 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--turtle-soup-min-close-back-fraction", type=float, default=None)
     parser.add_argument("--turtle-soup-min-level-age-bars", type=int, default=None)
     parser.add_argument("--turtle-soup-max-confirmation-bars", type=int, default=None)
+    parser.add_argument("--turtle-soup-allowed-swing-significances", nargs="*", default=None)
     parser.add_argument("--turtle-soup-require-killzone", action="store_true")
     parser.add_argument("--turtle-soup-require-smt", action="store_true")
+    parser.add_argument("--turtle-soup-require-mss-confirmation", action="store_true")
+    parser.add_argument("--turtle-soup-require-confirmation-fvg", action=argparse.BooleanOptionalAction, default=None)
+    parser.add_argument("--max-ifvg-retest-bars", type=int, default=None)
+    parser.add_argument("--min-ifvg-retest-bars", type=int, default=None)
+    parser.add_argument("--ifvg-entry-mode", choices=["edge", "ce"], default=None)
+    parser.add_argument("--ifvg-stop-mode", choices=["ce", "opposite_boundary"], default=None)
+    parser.add_argument("--ifvg-max-source-touches-before-inversion", type=int, default=None)
+    parser.add_argument("--ifvg-max-source-age-bars", type=int, default=None)
+    parser.add_argument("--ict2022-max-fvg-retest-bars", type=int, default=None)
+    parser.add_argument("--breaker-max-trigger-to-retest-bars", type=int, default=None)
+    parser.add_argument("--breaker-max-retest-count", type=int, default=None)
+    parser.add_argument("--breaker-require-displacement", action="store_true")
     parser.add_argument("--smt-pairs", nargs="*", default=["BTCUSDT:ETHUSDT", "ETHUSDT:SOLUSDT"])
     parser.add_argument("--smt-lookback-bars", type=int, default=50)
     parser.add_argument("--smt-max-time-delta-bars", type=int, default=10)
@@ -171,6 +223,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--silver-bullet-windows", default=None, help="Comma-separated NY windows, e.g. 10:00-11:00,14:00-15:00.")
     parser.add_argument("--silver-bullet-retest-must-occur-within-window", action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument("--silver-bullet-max-retest-bars", type=int, default=None)
+    parser.add_argument("--silver-bullet-use-ce-invalidation", action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument("--pre-model-filter", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--pre-model-allow-neutral-htf", action="store_true")
     parser.add_argument("--pre-model-allow-equilibrium", action="store_true")
@@ -215,13 +268,16 @@ def _run_symbol(symbol: str, timeframes: list[str], models: list[Any], store: di
         candles = store.get((symbol, timeframe), [])
         for idx in range(max(args.warmup_bars, 0), len(candles)):
             ts = int(candles[idx]["time"])
-            visible = candles[: idx + 1]
+            visible = candles[max(0, idx + 1 - DETECTOR_CANDLE_WINDOW) : idx + 1]
             config = {k: v for k, v in vars(args).items() if v is not None}
             if args.turtle_soup_min_level_age_bars is not None:
                 config["turtle_min_swing_age"] = args.turtle_soup_min_level_age_bars
-            smt = _smt_divergences(symbol, timeframe, visible, store, args, ts)
-            config["smt_divergences"] = smt
-            config["has_smt_confirmation"] = bool(smt)
+            config["smt_divergences"] = []
+            config["has_smt_confirmation"] = False
+            if args.pre_model_require_smt:
+                smt = _smt_divergences(symbol, timeframe, visible, store, args, ts)
+                config["smt_divergences"] = smt
+                config["has_smt_confirmation"] = bool(smt)
             context = None
             if args.context_mode != "off":
                 context = build_accumulated_strategy_context_for_replay(
@@ -234,6 +290,10 @@ def _run_symbol(symbol: str, timeframes: list[str], models: list[Any], store: di
             pre_model = evaluate_pre_model_filter(context, config)
             if not pre_model.passed:
                 continue
+            if not args.pre_model_require_smt:
+                smt = _smt_divergences(symbol, timeframe, visible, store, args, ts)
+                config["smt_divergences"] = smt
+                config["has_smt_confirmation"] = bool(smt)
             for spec in models:
                 setups = spec.detector(symbol, timeframe, visible, context, config)
                 for setup in setups:
@@ -250,7 +310,7 @@ def _run_symbol(symbol: str, timeframes: list[str], models: list[Any], store: di
                     if event_idx is None:
                         continue
                     event_window = candles[event_idx + 1 : event_idx + 1 + args.forward_bars]
-                    rows.append(_event_row(setup, spec.name, spec.model_family, args.same_bar_policy, event_window, detected_at=ts))
+                    rows.append(_event_row(setup, spec.name, spec.model_family, args.same_bar_policy, event_window, detected_at=ts, args=args))
     return rows
 
 
@@ -263,14 +323,15 @@ def _context_aligned(setup: EntrySetup, context: object | None) -> bool:
 
 def _smt_divergences(symbol: str, timeframe: str, visible: list[Candle], store: dict[tuple[str, str], list[Candle]], args: argparse.Namespace, timestamp: int) -> list[Any]:
     results = []
+    smt_window = max(args.smt_lookback_bars + args.smt_max_time_delta_bars + 2, args.smt_lookback_bars)
     for raw in args.smt_pairs or []:
         if ":" not in raw:
             continue
         primary, secondary = (part.strip().upper() for part in raw.split(":", 1))
         if symbol not in {primary, secondary}:
             continue
-        primary_candles = visible if symbol == primary else _candles_until(store.get((primary, timeframe), []), timestamp)
-        secondary_candles = visible if symbol == secondary else _candles_until(store.get((secondary, timeframe), []), timestamp)
+        primary_candles = visible[-smt_window:] if symbol == primary else _candles_until(store.get((primary, timeframe), []), timestamp, smt_window)
+        secondary_candles = visible[-smt_window:] if symbol == secondary else _candles_until(store.get((secondary, timeframe), []), timestamp, smt_window)
         if not primary_candles or not secondary_candles:
             continue
         results.extend(
@@ -289,8 +350,9 @@ def _smt_divergences(symbol: str, timeframe: str, visible: list[Candle], store: 
     return results
 
 
-def _candles_until(candles: list[Candle], timestamp: int) -> list[Candle]:
-    return [candle for candle in candles if int(candle["time"]) <= timestamp]
+def _candles_until(candles: list[Candle], timestamp: int, limit: int | None = None) -> list[Candle]:
+    visible = [candle for candle in candles if int(candle["time"]) <= timestamp]
+    return visible[-limit:] if limit is not None else visible
 
 
 def _index_at_or_before(candles: list[Candle], timestamp: int) -> int | None:
@@ -303,13 +365,37 @@ def _index_at_or_before(candles: list[Candle], timestamp: int) -> int | None:
     return match
 
 
-def _event_row(setup: EntrySetup, model_name: str, model_family: str, same_bar_policy: str, future: list[Candle], *, detected_at: int | None = None) -> dict[str, Any]:
+def _event_row(
+    setup: EntrySetup,
+    model_name: str,
+    model_family: str,
+    same_bar_policy: str,
+    future: list[Candle],
+    *,
+    detected_at: int | None = None,
+    args: argparse.Namespace | None = None,
+) -> dict[str, Any]:
     metadata = dict(setup.metadata)
     entry = setup.entry_price if setup.entry_price is not None else (setup.entry_low + setup.entry_high) / 2
     stop = setup.stop_loss if setup.stop_loss is not None else setup.invalidation
     risk = abs(entry - stop) if stop is not None else None
     entry_time = int(metadata.get("entry_time") or setup.timestamp)
-    outcome = _evaluate(setup.direction, entry, stop, setup.target_hint, future, same_bar_policy, entry_time=entry_time)
+    outcome = _evaluate(
+        setup.direction,
+        entry,
+        stop,
+        setup.target_hint,
+        future,
+        same_bar_policy,
+        entry_time=entry_time,
+        tp1=metadata.get("tp1_price"),
+        logical_invalidation=metadata.get("logical_invalidation_price"),
+        final_target=metadata.get("final_target"),
+        cancel_on_pre_entry_tp1=True,
+        tp1_r=float(getattr(args, "tp1_r", 1.0) if args is not None else 1.0),
+        partial_close_fraction=float(getattr(args, "partial_close_fraction", 0.5) if args is not None else 0.5),
+        move_to_be_after_tp1=bool(getattr(args, "move_to_be_after_tp1", True) if args is not None else True),
+    )
     target_distance_r = abs(setup.target_hint - entry) / risk if setup.target_hint is not None and risk and risk > 0 else None
     decision = _decision_score(setup.direction, model_name, metadata, target_distance_r)
     row = {
@@ -339,7 +425,7 @@ def _event_row(setup: EntrySetup, model_name: str, model_family: str, same_bar_p
         "target_distance_r": target_distance_r,
         "time_to_entry_bars": outcome["time_to_entry_bars"],
         "metadata_json": json.dumps(metadata, ensure_ascii=True, sort_keys=True, default=str),
-        **{field: metadata.get(field) for field in EVENT_FIELDS if field not in {"model", "model_family", "direction", "symbol", "timeframe", "timestamp", "setup_timestamp", "detected_at", "entry_time", "entry_mode", "stop_mode", "target_mode", "entry_price", "entry_low", "entry_high", "stop_loss", "invalidation", "target_hint", "risk", "risk_bps", "same_bar_policy", "same_bar_ambiguous", "invalidated_before_entry", "target_distance_r", "time_to_entry_bars", "bars_to_invalidation", "bars_to_1r", "bars_to_2r", "metadata_json", "mfe_r", "mae_r", "invalidated", "target_hit", "target_before_invalidation", "hit_1r_before_invalidation", "hit_2r_before_invalidation"}},
+        **{field: metadata.get(field) for field in EVENT_FIELDS if field not in {"model", "model_family", "direction", "symbol", "timeframe", "timestamp", "setup_timestamp", "detected_at", "entry_time", "entry_mode", "stop_mode", "target_mode", "entry_price", "entry_low", "entry_high", "stop_loss", "invalidation", "target_hint", "risk", "risk_bps", "same_bar_policy", "same_bar_ambiguous", "invalidated_before_entry", "target_reached_before_entry", "target_distance_r", "time_to_entry_bars", "bars_to_invalidation", "bars_to_1r", "bars_to_2r", "metadata_json", "mfe_r", "mae_r", "invalidated", "target_hit", "tp1_hit", "tp2_hit", "final_target_hit", "logical_invalidated", "managed_outcome_r", "managed_exit_reason", "target_before_invalidation", "hit_1r_before_invalidation", "hit_2r_before_invalidation"}},
         **decision,
         **outcome,
     }
@@ -355,7 +441,7 @@ def _decision_score(direction: str, model_name: str, metadata: dict[str, Any], t
     displacement_score = _displacement_score(model_name, metadata, reasons)
     smt_score = 20 if metadata.get("has_smt_confirmation") else 0
     killzone_score = _killzone_score(model_name, metadata, reasons)
-    target_rr_score = _target_rr_score(target_distance_r, reasons)
+    target_rr_score = _target_rr_score(model_name, target_distance_r, reasons)
     total = min(
         100,
         htf_score
@@ -450,9 +536,14 @@ def _killzone_score(model_name: str, metadata: dict[str, Any], reasons: list[str
     return 0
 
 
-def _target_rr_score(target_distance_r: float | None, reasons: list[str]) -> int:
+def _target_rr_score(model_name: str, target_distance_r: float | None, reasons: list[str]) -> int:
     if target_distance_r is None:
         reasons.append("missing_target_rr")
+        return 0
+    if model_name == "silver_bullet":
+        if target_distance_r >= 2:
+            return 20
+        reasons.append("target_rr_below_2")
         return 0
     if target_distance_r >= 3:
         return 20
@@ -474,26 +565,65 @@ def _empty_outcome() -> dict[str, Any]:
         "hit_2r_before_invalidation": False,
         "same_bar_ambiguous": False,
         "invalidated_before_entry": False,
+        "target_reached_before_entry": False,
         "activated_trade": False,
         "time_to_entry_bars": None,
         "bars_to_invalidation": None,
         "bars_to_1r": None,
         "bars_to_2r": None,
+        "tp1_hit": False,
+        "tp2_hit": False,
+        "final_target_hit": False,
+        "logical_invalidated": False,
+        "moved_to_be": False,
+        "tp1_r": None,
+        "partial_close_fraction": None,
+        "managed_outcome_r": None,
+        "managed_exit_reason": None,
+        "exit_reason": None,
     }
 
 
-def _evaluate(direction: str, entry: float, stop: float | None, target: float | None, future: list[Candle], policy: str, entry_time: int | None = None) -> dict[str, Any]:
+def _evaluate(
+    direction: str,
+    entry: float,
+    stop: float | None,
+    target: float | None,
+    future: list[Candle],
+    policy: str,
+    entry_time: int | None = None,
+    *,
+    tp1: float | None = None,
+    logical_invalidation: float | None = None,
+    final_target: float | None = None,
+    cancel_on_pre_entry_tp1: bool = False,
+    tp1_r: float = 1.0,
+    partial_close_fraction: float = 0.5,
+    move_to_be_after_tp1: bool = True,
+) -> dict[str, Any]:
     if stop is None or target is None:
         return _empty_outcome()
     risk = abs(entry - stop)
     if risk <= 0:
         return _empty_outcome()
     entry_time = int(entry_time or (future[0]["time"] if future else 0))
-    invalidated_before_entry = any(_stop_hit(direction, candle, stop) for candle in future if int(candle["time"]) < entry_time)
+    tp1_cancel = entry + risk * tp1_r if direction == "long" else entry - risk * tp1_r
+    before_entry = [candle for candle in future if int(candle["time"]) < entry_time]
+    invalidated_before_entry = any(
+        _stop_hit(direction, candle, stop) or _logical_hit(direction, candle, logical_invalidation)
+        for candle in before_entry
+    )
+    target_reached_before_entry = bool(
+        cancel_on_pre_entry_tp1
+        and any(_target_hit(direction, candle, tp1_cancel) for candle in before_entry)
+    )
     active = [candle for candle in future if int(candle["time"]) >= entry_time]
-    if invalidated_before_entry or not active:
+    if invalidated_before_entry or target_reached_before_entry or not active:
         outcome = _empty_outcome()
         outcome["invalidated_before_entry"] = invalidated_before_entry
+        outcome["target_reached_before_entry"] = target_reached_before_entry
+        outcome["exit_reason"] = "target_reached_before_entry" if target_reached_before_entry else "invalidated_before_entry" if invalidated_before_entry else None
+        outcome["managed_exit_reason"] = outcome["exit_reason"]
         outcome["time_to_entry_bars"] = _bars_until_or_none(future, entry_time)
         return outcome
     highs = [float(c["high"]) for c in active]
@@ -509,29 +639,59 @@ def _evaluate(direction: str, entry: float, stop: float | None, target: float | 
     target_before = False
     hit_1r = False
     hit_2r = False
+    tp1_hit = False
+    tp2_hit = False
+    final_target_hit = False
+    logical_invalidated = False
+    moved_to_be = False
+    managed_outcome: float | None = None
+    managed_exit_reason = None
+    exit_reason = None
     bars_to_1r = None
     bars_to_2r = None
     bars_to_invalidation = None
     ambiguous = False
     target_1r = entry + risk if direction == "long" else entry - risk
     target_2r = entry + risk * 2 if direction == "long" else entry - risk * 2
+    tp1_target = entry + risk * tp1_r if direction == "long" else entry - risk * tp1_r
+    if tp1 is not None and abs(float(tp1) - tp1_target) < risk * 0.01:
+        tp1_target = float(tp1)
+    tp2_target = target
+    final_target = float(final_target) if isinstance(final_target, (int, float)) else target
+    partial = min(max(partial_close_fraction, 0.0), 1.0)
     for offset, candle in enumerate(active, start=1):
-        stop_hit = _stop_hit(direction, candle, stop)
+        effective_stop = entry if moved_to_be and move_to_be_after_tp1 else stop
+        stop_hit = _stop_hit(direction, candle, effective_stop)
+        logical_hit = _logical_hit(direction, candle, logical_invalidation)
         target_reached = _target_hit(direction, candle, target)
+        tp1_reached = _target_hit(direction, candle, tp1_target)
+        tp2_reached = _target_hit(direction, candle, tp2_target) if tp2_target is not None else False
+        final_reached = _target_hit(direction, candle, final_target) if final_target is not None else False
         hit_1r_now = _target_hit(direction, candle, target_1r)
         hit_2r_now = _target_hit(direction, candle, target_2r)
         any_target = target_reached or hit_1r_now or hit_2r_now
-        if stop_hit and any_target:
+        if (stop_hit or logical_hit) and any_target:
             ambiguous = True
             if policy == "optimistic":
+                target_rr = abs(target - entry) / risk
                 target_hit = True
                 target_before = True
                 hit_1r = hit_1r or hit_1r_now
                 hit_2r = hit_2r or hit_2r_now
+                tp1_hit = tp1_hit or tp1_reached
+                tp2_hit = tp2_hit or tp2_reached
+                final_target_hit = final_target_hit or final_reached
+                exit_reason = "tp_hit"
+                managed_outcome = partial * tp1_r + (1.0 - partial) * target_rr if tp1_reached else target_rr
+                managed_exit_reason = "final_target_hit"
                 bars_to_1r = bars_to_1r or (offset if hit_1r_now else None)
                 bars_to_2r = bars_to_2r or (offset if hit_2r_now else None)
                 break
             invalidated = True
+            logical_invalidated = logical_hit
+            exit_reason = "logical_invalidation" if logical_hit else "sl_hit"
+            managed_outcome = partial * tp1_r if moved_to_be else -1.0
+            managed_exit_reason = "be_after_tp1" if moved_to_be and not logical_hit else exit_reason
             bars_to_invalidation = offset
             if policy == "neutral":
                 target_hit = True
@@ -543,14 +703,42 @@ def _evaluate(direction: str, entry: float, stop: float | None, target: float | 
         if hit_2r_now and bars_to_2r is None:
             hit_2r = True
             bars_to_2r = offset
+        if tp1_reached:
+            tp1_hit = True
+            moved_to_be = True
+        if tp2_reached:
+            tp2_hit = True
+        if final_reached:
+            final_target_hit = True
         if target_reached:
             target_hit = True
             target_before = True
+            exit_reason = "tp_hit"
+            target_rr = abs(target - entry) / risk
+            managed_outcome = partial * tp1_r + (1.0 - partial) * target_rr if tp1_hit else target_rr
+            managed_exit_reason = "final_target_hit"
+            break
+        if logical_hit:
+            invalidated = True
+            logical_invalidated = True
+            exit_reason = "logical_invalidation"
+            managed_outcome = partial * tp1_r if moved_to_be else -1.0
+            managed_exit_reason = "logical_invalidation_after_tp1" if moved_to_be else "logical_invalidation"
+            bars_to_invalidation = offset
             break
         if stop_hit:
             invalidated = True
+            exit_reason = "sl_hit"
+            managed_outcome = partial * tp1_r if moved_to_be else -1.0
+            managed_exit_reason = "be_after_tp1" if moved_to_be and move_to_be_after_tp1 else "sl_hit"
             bars_to_invalidation = offset
             break
+    if managed_outcome is None and tp1_hit:
+        managed_outcome = partial * tp1_r
+        managed_exit_reason = "partial_open"
+    elif managed_outcome is None and not invalidated:
+        managed_outcome = mfe / risk
+        managed_exit_reason = "open_mark_to_mfe"
     return {
         "mfe_r": mfe / risk,
         "mae_r": mae / risk,
@@ -559,13 +747,24 @@ def _evaluate(direction: str, entry: float, stop: float | None, target: float | 
         "target_before_invalidation": target_before,
         "hit_1r_before_invalidation": hit_1r,
         "hit_2r_before_invalidation": hit_2r,
-        "same_bar_ambiguous": ambiguous if policy == "neutral" else False,
+        "same_bar_ambiguous": ambiguous,
         "invalidated_before_entry": invalidated_before_entry,
+        "target_reached_before_entry": target_reached_before_entry,
         "activated_trade": True,
         "time_to_entry_bars": _bars_until_or_none(future, entry_time),
         "bars_to_invalidation": bars_to_invalidation,
         "bars_to_1r": bars_to_1r,
         "bars_to_2r": bars_to_2r,
+        "tp1_hit": tp1_hit,
+        "tp2_hit": tp2_hit,
+        "final_target_hit": final_target_hit,
+        "logical_invalidated": logical_invalidated,
+        "moved_to_be": moved_to_be,
+        "tp1_r": tp1_r,
+        "partial_close_fraction": partial,
+        "managed_outcome_r": managed_outcome,
+        "managed_exit_reason": managed_exit_reason,
+        "exit_reason": exit_reason,
     }
 
 
@@ -575,6 +774,12 @@ def _stop_hit(direction: str, candle: Candle, stop: float) -> bool:
 
 def _target_hit(direction: str, candle: Candle, target: float) -> bool:
     return float(candle["high"]) >= target if direction == "long" else float(candle["low"]) <= target
+
+
+def _logical_hit(direction: str, candle: Candle, level: float | None) -> bool:
+    if level is None:
+        return False
+    return float(candle["close"]) <= level if direction == "long" else float(candle["close"]) >= level
 
 
 def _bars_until_or_none(candles: list[Candle], timestamp: int) -> int | None:
@@ -625,6 +830,8 @@ def _group(events: list[dict[str, Any]], fields: tuple[str, ...]) -> list[dict[s
                 "avg_rr": _avg_field(group, "target_distance_r"),
                 "avg_decision_score": _avg_field(group, "decision_score"),
                 "expectancy": _expectancy(group),
+                "managed_expectancy": _avg_field(group, "managed_outcome_r"),
+                "avg_managed_outcome_r": _avg_field(group, "managed_outcome_r"),
                 "target_before_invalidation_rate": round(sum(1 for e in group if e.get("target_before_invalidation")) / len(group), 6) if group else None,
                 "hit_1r_before_invalidation_rate": round(sum(1 for e in group if e.get("hit_1r_before_invalidation")) / len(group), 6) if group else None,
                 "hit_2r_before_invalidation_rate": round(sum(1 for e in group if e.get("hit_2r_before_invalidation")) / len(group), 6) if group else None,

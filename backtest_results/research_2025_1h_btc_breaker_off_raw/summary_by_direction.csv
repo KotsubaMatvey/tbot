@@ -1,0 +1,3 @@
+model,direction,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,managed_expectancy,avg_managed_outcome_r,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+breaker_block,long,14,14,5,0,9.447127,9.196272,0.285714,2.254104,63.0,0.696163,0.948082,0.948082,0.285714,0.357143,0.357143,0.071429,4.285714,2.0,1.0,1.0,0,10
+breaker_block,short,22,22,10,0,12.896036,12.13736,0.227273,5.449685,67.545455,0.080641,0.157379,0.157379,0.227273,0.227273,0.181818,0.227273,2.318182,1.2,1.0,1.0,0,13

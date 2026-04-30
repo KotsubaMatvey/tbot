@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 _tasks: dict[str, asyncio.Task] = {}
 _RESTART_DELAY = 10
 _HEALTH_LOG_INTERVAL = 300
+_config_validated = False
 
 
 class ConfigError(RuntimeError):
@@ -24,6 +25,10 @@ class ConfigError(RuntimeError):
 
 
 def validate_config() -> None:
+    global _config_validated
+    if _config_validated:
+        return
+
     errors: list[str] = []
     warnings: list[str] = []
 
@@ -43,6 +48,7 @@ def validate_config() -> None:
             logger.critical("Config error: %s", error)
         raise ConfigError("Bot cannot start: " + "; ".join(errors))
 
+    _config_validated = True
     logger.info("Config validation passed")
 
 

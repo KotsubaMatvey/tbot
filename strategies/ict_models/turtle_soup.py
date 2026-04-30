@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from market_primitives.common import collect_swings
+from market_primitives.structure import detect_structure_breaks
 
 from .common import avg_range, buffered_stop, closed_candles, opposite_range_target, setup, wick_extension_bps
 from .sessions import LONDON_OPEN, NY_OPEN, SILVER_BULLET_AM, SILVER_BULLET_PM, in_ny_windows
@@ -16,6 +17,7 @@ TURTLE_MIN_WICK_FRACTION = 0.10
 TURTLE_MIN_WICK_ATR_RATIO = 0.0
 TURTLE_MIN_CLOSE_BACK_FRACTION = 0.05
 TURTLE_MAX_CONFIRMATION_BARS = 1
+TURTLE_REQUIRE_MSS_CONFIRMATION = False
 
 
 def detect_setups(
@@ -40,10 +42,34 @@ def detect_setups(
     max_confirmation_bars = int(cfg.get("turtle_soup_max_confirmation_bars") or TURTLE_MAX_CONFIRMATION_BARS)
     require_killzone = bool(cfg.get("turtle_soup_require_killzone", False))
     require_smt = bool(cfg.get("turtle_soup_require_smt", False))
+    require_mss_confirmation = bool(cfg.get("turtle_soup_require_mss_confirmation", TURTLE_REQUIRE_MSS_CONFIRMATION))
+    require_confirmation_fvg = bool(cfg.get("turtle_soup_require_confirmation_fvg", True))
+    allowed_significances = set(cfg.get("turtle_soup_allowed_swing_significances") or [])
     if len(closed) < min_age + 5:
         return []
 
     scan = closed[-lookback:]
+    if require_mss_confirmation:
+        return _confirmed_setups(
+            symbol,
+            timeframe,
+            candles,
+            scan,
+            cfg,
+            entry_mode,
+            target_mode,
+            stop_bps,
+            min_age,
+            min_wick_fraction,
+            min_wick_atr_ratio,
+            min_close_back_fraction,
+            max_confirmation_bars,
+            require_killzone,
+            require_smt,
+            require_confirmation_fvg,
+            allowed_significances,
+        )
+
     sweep = scan[-1]
     highs, lows = collect_swings(scan[:-1], symbol, timeframe, left=1, right=1)
     results = []
@@ -56,7 +82,16 @@ def detect_setups(
             return []
 
     average_true_range = avg_range(scan[:-1])
-    low = next((s for s in reversed(lows) if len(scan) - 1 - s.index >= min_age and sweep["low"] < s.level < sweep["close"]), None)
+    low = next(
+        (
+            s
+            for s in reversed(lows)
+            if len(scan) - 1 - s.index >= min_age
+            and (not allowed_significances or s.significance in allowed_significances)
+            and sweep["low"] < s.level < sweep["close"]
+        ),
+        None,
+    )
     if low is not None:
         quality = _quality("long", sweep, low.level, average_true_range, min_wick_fraction, min_wick_atr_ratio, min_close_back_fraction)
         if not quality["passed"]:
@@ -96,7 +131,16 @@ def detect_setups(
         if item:
             results.append(item)
 
-    high = next((s for s in reversed(highs) if len(scan) - 1 - s.index >= min_age and sweep["high"] > s.level > sweep["close"]), None)
+    high = next(
+        (
+            s
+            for s in reversed(highs)
+            if len(scan) - 1 - s.index >= min_age
+            and (not allowed_significances or s.significance in allowed_significances)
+            and sweep["high"] > s.level > sweep["close"]
+        ),
+        None,
+    )
     if high is not None:
         quality = _quality("short", sweep, high.level, average_true_range, min_wick_fraction, min_wick_atr_ratio, min_close_back_fraction)
         if not quality["passed"]:
@@ -136,6 +180,151 @@ def detect_setups(
         if item:
             results.append(item)
     return results
+
+
+def _confirmed_setups(
+    symbol: str,
+    timeframe: str,
+    candles: list[dict[str, float | int]],
+    scan: list[dict[str, float | int]],
+    cfg: dict[str, Any],
+    entry_mode: str,
+    target_mode: str,
+    stop_bps: float,
+    min_age: int,
+    min_wick_fraction: float,
+    min_wick_atr_ratio: float,
+    min_close_back_fraction: float,
+    max_confirmation_bars: int,
+    require_killzone: bool,
+    require_smt: bool,
+    require_confirmation_fvg: bool,
+    allowed_significances: set[str],
+) -> list:
+    if max_confirmation_bars < 1:
+        return []
+    if require_smt and not _has_smt_confirmation(cfg):
+        return []
+    current = scan[-1]
+    structures = [
+        item
+        for item in detect_structure_breaks(candles, symbol, timeframe)
+        if item.timestamp == int(current["time"])
+        and item.displacement_grade in {"valid", "strong"}
+        and (item.created_fvg_after_break or not require_confirmation_fvg)
+    ]
+    if not structures:
+        return []
+
+    highs, lows = collect_swings(scan[:-1], symbol, timeframe, left=1, right=1)
+    results = []
+    for structure in structures:
+        side = "long" if structure.direction == "bullish" else "short"
+        sweep_match = _find_confirmed_sweep(
+            side,
+            scan,
+            highs,
+            lows,
+            current,
+            min_age,
+            max_confirmation_bars,
+            min_wick_fraction,
+            min_wick_atr_ratio,
+            min_close_back_fraction,
+            allowed_significances,
+        )
+        if sweep_match is None:
+            continue
+        swing, sweep_idx, quality = sweep_match
+        sweep = scan[sweep_idx]
+        if require_killzone and not _in_default_killzone(int(sweep["time"])):
+            continue
+        if _closed_beyond_sweep_extreme(side, scan[sweep_idx + 1 :], float(sweep["low"] if side == "long" else sweep["high"])):
+            continue
+        entry = float(current["close"] if entry_mode == "close" else swing.level)
+        stop = buffered_stop(side, float(sweep["low"] if side == "long" else sweep["high"]), entry, stop_bps)
+        target = opposite_range_target(scan, side, entry, stop) if target_mode == "opposite_range" else None
+        item = setup(
+            model_name="turtle_soup",
+            direction=side,
+            symbol=symbol,
+            timeframe=timeframe,
+            entry_low=entry,
+            entry_high=entry,
+            entry_price=entry,
+            stop_loss=stop,
+            target_hint=target,
+            timestamp=int(current["time"]),
+            score=4 if structure.displacement_grade == "strong" else 3,
+            reason=f"{side.title()} Turtle Soup sweep, close-back, displacement MSS/FVG confirmation",
+            metadata={
+                "entry_mode": entry_mode,
+                "stop_mode": "sweep_extreme",
+                "target_mode": target_mode,
+                "swept_level": swing.level,
+                "sweep_extreme": sweep["low"] if side == "long" else sweep["high"],
+                "sweep_time": int(sweep["time"]),
+                "entry_time": int(current["time"]),
+                "mss_time": structure.timestamp,
+                "structure_level": structure.broken_level,
+                "displacement_grade": structure.displacement_grade,
+                "displacement_factor": structure.displacement_factor,
+                "body_ratio": structure.body_ratio,
+                "range_expansion": structure.range_expansion,
+                "created_fvg_after_break": structure.created_fvg_after_break,
+                "wick_extension_bps": wick_extension_bps(swing.level, float(sweep["low"] if side == "long" else sweep["high"])),
+                "close_back_distance_bps": wick_extension_bps(swing.level, float(sweep["close"])),
+                "sweep_swing_significance": swing.significance,
+                "sweep_liquidity_quality": swing.quality,
+                "sweep_level_age_bars": sweep_idx - swing.index,
+                "time_to_confirmation_bars": len(scan) - 1 - sweep_idx,
+                "turtle_quality": quality["quality"],
+                "turtle_quality_filters": quality,
+                "ltf_trigger_type": "mss_displacement_fvg" if structure.created_fvg_after_break else "mss_displacement",
+            },
+        )
+        if item:
+            results.append(item)
+    return results
+
+
+def _find_confirmed_sweep(
+    side: str,
+    scan: list[dict[str, float | int]],
+    highs: list,
+    lows: list,
+    current: dict[str, float | int],
+    min_age: int,
+    max_confirmation_bars: int,
+    min_wick_fraction: float,
+    min_wick_atr_ratio: float,
+    min_close_back_fraction: float,
+    allowed_significances: set[str],
+) -> tuple[Any, int, dict[str, Any]] | None:
+    latest_idx = len(scan) - 1
+    earliest_idx = max(0, latest_idx - max_confirmation_bars)
+    swings = lows if side == "long" else highs
+    for sweep_idx in range(latest_idx - 1, earliest_idx - 1, -1):
+        sweep = scan[sweep_idx]
+        average_true_range = avg_range(scan[max(0, sweep_idx - 20) : sweep_idx])
+        for swing in reversed(swings):
+            if swing.index >= sweep_idx or sweep_idx - swing.index < min_age:
+                continue
+            if allowed_significances and swing.significance not in allowed_significances:
+                continue
+            swept = float(sweep["low"]) < swing.level < float(sweep["close"]) if side == "long" else float(sweep["high"]) > swing.level > float(sweep["close"])
+            if not swept:
+                continue
+            quality = _quality(side, sweep, swing.level, average_true_range, min_wick_fraction, min_wick_atr_ratio, min_close_back_fraction)
+            if quality["passed"]:
+                return swing, sweep_idx, quality
+    return None
+
+
+def _closed_beyond_sweep_extreme(side: str, candles: list[dict[str, float | int]], extreme: float) -> bool:
+    if side == "long":
+        return any(float(candle["close"]) < extreme for candle in candles)
+    return any(float(candle["close"]) > extreme for candle in candles)
 
 
 def _quality(

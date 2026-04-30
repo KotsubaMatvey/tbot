@@ -10,14 +10,9 @@ from typing import Any
 DB_PATH = os.path.join(os.path.dirname(__file__), "users.db")
 
 DEFAULT_ENTRY_MODELS = [
-    "turtle_soup",
-    "silver_bullet",
     "ifvg_retest",
-    "ict2022_mss_fvg",
-    "breaker_block",
     "reclaimed_ob",
     "rejection_block",
-    "mitigation_block",
 ]
 DEFAULT_TRADE_DIRECTIONS = ["long", "short"]
 
@@ -34,7 +29,7 @@ _USER_COLUMNS: dict[str, str] = {
     "is_owner": "INTEGER DEFAULT 0",
     "sessions_alerts": "INTEGER DEFAULT 0",
     "charts_enabled": "INTEGER DEFAULT 0",
-    "entry_models": """TEXT DEFAULT '["turtle_soup", "silver_bullet", "ifvg_retest", "ict2022_mss_fvg", "breaker_block", "reclaimed_ob", "rejection_block", "mitigation_block"]'""",
+    "entry_models": """TEXT DEFAULT '["ifvg_retest", "reclaimed_ob", "rejection_block"]'""",
     "trade_directions": """TEXT DEFAULT '["long", "short"]'""",
 }
 _JSON_COLUMNS = {"symbols", "patterns", "timeframes", "entry_models", "trade_directions"}
@@ -234,9 +229,11 @@ def _load_json_set(raw: str | None, default: list[str] | None = None) -> set[str
 
 def _normalize_entry_models(models: set[str]) -> set[str]:
     legacy = {"Entry Model 1", "Entry Model 2", "Entry Model 3", "model1", "model2", "model3"}
+    allowed = set(DEFAULT_ENTRY_MODELS)
     if not models or models & legacy:
         return set(DEFAULT_ENTRY_MODELS)
-    return models
+    normalized = {model for model in models if model in allowed}
+    return normalized or set(DEFAULT_ENTRY_MODELS)
 
 
 def _db_value(column: str, value: Any) -> Any:

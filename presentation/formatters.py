@@ -43,6 +43,24 @@ def build_strategy_alert_text(alert: AlertPayload) -> str:
         lines.append(f"Entry zone: {fmt_price(alert.entry_low)} - {fmt_price(alert.entry_high)}")
     if alert.invalidation is not None:
         lines.append(f"Invalidation: {fmt_price(alert.invalidation)}")
+    tp1 = alert.metadata.get("tp1_price")
+    tp2 = alert.metadata.get("tp2_price")
+    if isinstance(tp1, (int, float)) or isinstance(tp2, (int, float)):
+        parts = []
+        if isinstance(tp1, (int, float)):
+            parts.append(f"TP1 {fmt_price(tp1)}")
+        if isinstance(tp2, (int, float)):
+            parts.append(f"TP2 {fmt_price(tp2)}")
+        lines.append("Targets: " + " | ".join(parts))
+    rr = alert.metadata.get("rr_to_target")
+    stop_model = alert.metadata.get("stop_model")
+    if isinstance(rr, (int, float)) or stop_model:
+        rr_text = f"{float(rr):.2f}R" if isinstance(rr, (int, float)) else "n/a"
+        lines.append(f"Risk: {stop_model or 'physical_stop'} | RR {rr_text}")
+    logical_price = alert.metadata.get("logical_invalidation_price")
+    logical_model = alert.metadata.get("logical_invalidation_model")
+    if isinstance(logical_price, (int, float)):
+        lines.append(f"Logical invalidation: {logical_model or 'body_close'} {fmt_price(logical_price)}")
     if alert.score is not None:
         lines.append(f"Score: {alert.score}/5")
     return "\n".join(lines)

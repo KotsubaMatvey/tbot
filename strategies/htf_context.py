@@ -35,6 +35,7 @@ class HTFDealingRange:
     equilibrium: float | None
     location: HTFLocation
     source: str = "unknown"
+    p_d_value: float | None = None
 
 
 @dataclass(slots=True)
@@ -68,6 +69,7 @@ class HTFContext:
     location: HTFLocation = "unknown"
     poi_direction: HTFDirection = "neutral"
     context_alignment: Literal["aligned", "mixed", "opposed", "neutral"] = "neutral"
+    current_time: int | None = None
 
 
 def build_htf_context(snapshot: PrimitiveSnapshot, current_price_value: float | None = None) -> HTFContext:
@@ -94,8 +96,8 @@ def build_htf_context(snapshot: PrimitiveSnapshot, current_price_value: float | 
     short_poi = zone.direction == "bearish" and (inside_zone or approaching_zone)
     long_objective = objective.direction == "up"
     short_objective = objective.direction == "down"
-    allows_long = bias.direction == "bullish" and long_objective and objective.objective_unreached and (long_poi or long_location)
-    allows_short = bias.direction == "bearish" and short_objective and objective.objective_unreached and (short_poi or short_location)
+    allows_long = bias.direction == "bullish" and long_objective and objective.objective_unreached and long_location and long_poi
+    allows_short = bias.direction == "bearish" and short_objective and objective.objective_unreached and short_location and short_poi
     alignment = _context_alignment(bias.direction, zone.direction, objective.direction)
 
     score_modifier = 0.0
@@ -131,6 +133,7 @@ def build_htf_context(snapshot: PrimitiveSnapshot, current_price_value: float | 
         location=dealing_range.location,
         poi_direction=zone.direction,
         context_alignment=alignment,
+        current_time=int(snapshot.candles[-1]["time"]) if snapshot.candles else None,
     )
 
 
@@ -204,6 +207,9 @@ def htf_metadata(context: HTFContext | None) -> dict[str, object]:
             "htf_objective_unreached": False,
             "htf_context_alignment": "neutral",
             "htf_poi_direction": "neutral",
+            "pd_array_type": "None",
+            "pd_array_age_bars": None,
+            "p_d_value": None,
             "dealing_range_source": "unknown",
             "htf_reason": "no HTF context",
         }
@@ -229,6 +235,9 @@ def htf_metadata(context: HTFContext | None) -> dict[str, object]:
         "objective_unreached": context.objective_unreached,
         "htf_context_alignment": context.context_alignment,
         "htf_poi_direction": context.poi_direction,
+        "pd_array_type": context.zone.zone_type,
+        "pd_array_age_bars": _age_bars(context.zone.origin_time, context.timeframe, context.current_time),
+        "p_d_value": context.dealing_range.p_d_value,
         "dealing_range_source": context.dealing_range.source,
         "htf_reason": context.reason,
     }
@@ -246,9 +255,11 @@ def _build_dealing_range(snapshot: PrimitiveSnapshot, price: float | None) -> HT
     if range_high <= range_low:
         return HTFDealingRange(range_low, range_high, None, "unknown", "invalid")
     equilibrium = (range_high + range_low) / 2
+    p_d_value = None
     if price is None:
         location: HTFLocation = "unknown"
     else:
+        p_d_value = max(0.0, min(1.0, (price - range_low) / max(range_high - range_low, 1e-9)))
         buffer = max((range_high - range_low) * 0.05, equilibrium * 0.001)
         if price < equilibrium - buffer:
             location = "discount"
@@ -257,7 +268,7 @@ def _build_dealing_range(snapshot: PrimitiveSnapshot, price: float | None) -> HT
         else:
             location = "equilibrium"
     source = "long_swing_pair" if any(item.significance == "long" for item in (last_high, last_low)) else "significant_swing_pair"
-    return HTFDealingRange(range_low, range_high, equilibrium, location, source)
+    return HTFDealingRange(range_low, range_high, equilibrium, location, source, p_d_value)
 
 
 def _select_active_zone(snapshot: PrimitiveSnapshot, price: float | None) -> HTFZone:
@@ -282,7 +293,7 @@ def _select_active_zone(snapshot: PrimitiveSnapshot, price: float | None) -> HTF
         candidates.append(HTFZone("Liquidity", "bullish", item.level, item.level, item.timestamp, 0.35, "equal lows"))
     if not candidates:
         return HTFZone("None", "neutral", None, None, None, 0.0, "no active HTF zone")
-    candidates = [item for item in candidates if not _zone_is_stale(item, snapshot.timeframe, current_ts)]
+    candidates = [item for item in candidates if not _zone_is_stale(item, snapshot.timeframe, current_ts) and not _zone_invalidated(item, snapshot)]
     if not candidates:
         return HTFZone("None", "neutral", None, None, None, 0.0, "no fresh HTF zone")
 
@@ -425,6 +436,33 @@ def _zone_is_stale(zone: HTFZone, timeframe: str, current_ts: int | None) -> boo
     if tf_ms is None:
         return False
     return current_ts - zone.origin_time > tf_ms * 120
+
+
+def _zone_invalidated(zone: HTFZone, snapshot: PrimitiveSnapshot) -> bool:
+    if zone.zone_type == "None" or zone.origin_time is None or zone.low is None or zone.high is None:
+        return False
+    low, high = sorted((zone.low, zone.high))
+    opposite = "bearish" if zone.direction == "bullish" else "bullish" if zone.direction == "bearish" else None
+    if opposite and any(item.direction == opposite and item.timestamp > zone.origin_time for item in snapshot.structure_breaks):
+        return True
+    for candle in snapshot.candles:
+        if int(candle["time"]) <= zone.origin_time:
+            continue
+        close = float(candle["close"])
+        if zone.direction == "bullish" and close < low:
+            return True
+        if zone.direction == "bearish" and close > high:
+            return True
+    return False
+
+
+def _age_bars(origin_time: int | None, timeframe: str, current_time: int | None) -> int | None:
+    if origin_time is None or current_time is None:
+        return None
+    tf_ms = timeframe_to_ms(timeframe)
+    if tf_ms is None:
+        return None
+    return max(0, int((current_time - origin_time) // tf_ms))
 
 
 __all__ = [

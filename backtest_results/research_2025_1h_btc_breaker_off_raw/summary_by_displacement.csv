@@ -1,0 +1,3 @@
+model,displacement_grade,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,managed_expectancy,avg_managed_outcome_r,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+breaker_block,strong,16,16,7,0,12.397213,11.202193,0.25,1.920895,68.625,0.35916,0.251009,0.251009,0.25,0.25,0.1875,0.1875,2.6875,1.0,1.0,1.0,0,12
+breaker_block,valid,20,20,8,0,11.176938,9.665989,0.25,6.03581,63.5,0.221638,0.569642,0.569642,0.25,0.3,0.3,0.15,3.4,1.666667,1.0,1.0,0,11

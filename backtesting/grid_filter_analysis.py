@@ -15,6 +15,7 @@ GRID_FIELDS = [
     "count",
     "filtered_out",
     "expectancy",
+    "managed_expectancy",
     "target_before_invalidation_rate",
     "hit_2r_before_invalidation_rate",
     "invalidation_rate",
@@ -66,7 +67,7 @@ def summarize_grid(events: list[dict[str, Any]], *, min_count: int = 10) -> list
         if len(accepted) < min_count:
             continue
         rows.append(_grid_row(accepted, len(events) - len(accepted), rules))
-    rows.sort(key=lambda row: (_float_or_none(row.get("expectancy")) is None, -(_float_or_none(row.get("expectancy")) or -999), -int(row["count"])))
+    rows.sort(key=lambda row: (_float_or_none(row.get("managed_expectancy")) is None, -(_float_or_none(row.get("managed_expectancy")) or -999), -int(row["count"])))
     for rank, row in enumerate(rows, start=1):
         row["rank"] = rank
     return rows
@@ -88,6 +89,7 @@ def _grid_row(group: list[dict[str, Any]], filtered_out: int, rules: dict[str, A
         "count": len(group),
         "filtered_out": filtered_out,
         "expectancy": _expectancy(group),
+        "managed_expectancy": _avg(group, "managed_outcome_r"),
         "target_before_invalidation_rate": _rate(group, "target_before_invalidation"),
         "hit_2r_before_invalidation_rate": _rate(group, "hit_2r_before_invalidation"),
         "invalidation_rate": _rate(group, "invalidated"),

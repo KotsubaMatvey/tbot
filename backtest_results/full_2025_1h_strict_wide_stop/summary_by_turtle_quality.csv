@@ -1,0 +1,4 @@
+model,turtle_quality,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+ifvg_retest,none,22,22,14,0,14.529968,7.089148,0.136364,10.704277,100.0,-0.424187,0.136364,0.181818,0.181818,0.5,2.142857,1.636364,1.0,1.0,0,9
+reclaimed_ob,none,10,10,5,1,15.033828,1.911688,0.3,13.857714,93.6,0.857595,0.3,0.3,0.2,0.2,1.8,4.0,1.0,1.0,0,5
+rejection_block,none,87,87,87,0,4.819507,2.534978,0.333333,3.207883,95.655172,0.292209,0.333333,0.505747,0.356322,0.632184,1.0,2.418182,1.795455,2.903226,0,54

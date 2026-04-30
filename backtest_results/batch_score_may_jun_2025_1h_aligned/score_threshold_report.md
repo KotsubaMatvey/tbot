@@ -1,0 +1,37 @@
+# ICT Decision Score Threshold Report
+
+- events: `backtest_results\batch_score_may_jun_2025_1h_aligned\events.csv`
+- thresholds: 0, 50, 70
+
+## All Models
+| scope | model | threshold | count | activated_trades | invalidated_before_entry | avg_decision_score | avg_mfe_r | median_mfe_r | avg_rr | expectancy | target_before_invalidation_rate | hit_1r_before_invalidation_rate | hit_2r_before_invalidation_rate | invalidation_rate | same_bar_ambiguous_count | no_trade_reason_count | top_no_trade_reasons |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| all | ALL | 0 | 382 | 361 | 15 | 67.143979 | 6.191096 | 3.387608 | 5.478438 | 0.3537 | 0.282723 | 0.387435 | 0.264398 | 0.594241 |  | 231 | target_rr_below_2:146;poor_pd_location:56;target_rr_below_3:54;insufficient_displacement:31;equilibrium:29 |
+| all | ALL | 50 | 350 | 329 | 15 | 70.025714 | 6.550242 | 3.712699 | 5.799696 | 0.358303 | 0.274286 | 0.377143 | 0.262857 | 0.6 |  | 199 | target_rr_below_2:132;poor_pd_location:56;target_rr_below_3:36;insufficient_displacement:31;equilibrium:29 |
+| all | ALL | 70 | 193 | 178 | 10 | 84.761658 | 7.411259 | 3.502134 | 3.852687 | 0.0813 | 0.362694 | 0.373057 | 0.238342 | 0.533679 |  | 175 | target_rr_below_2:110;poor_pd_location:43;target_rr_below_3:34;insufficient_displacement:21;equilibrium:20 |
+
+## By Model
+| scope | model | threshold | count | activated_trades | invalidated_before_entry | avg_decision_score | avg_mfe_r | median_mfe_r | avg_rr | expectancy | target_before_invalidation_rate | hit_1r_before_invalidation_rate | hit_2r_before_invalidation_rate | invalidation_rate | same_bar_ambiguous_count | no_trade_reason_count | top_no_trade_reasons |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| model | breaker_block | 0 | 31 | 13 | 14 | 77.548387 | 11.647242 | 9.19118 | 4.350119 | 0.521575 | 0.225806 | 0.258065 | 0.193548 | 0.193548 |  | 31 | insufficient_displacement:31;target_rr_below_2:20;poor_pd_location:10;equilibrium:9;target_rr_below_3:3 |
+| model | ict2022_mss_fvg | 0 | 1 | 1 |  | 100.0 | 1.675943 | 1.675943 | 6.957059 | 1.675943 |  | 1.0 |  |  |  |  |  |
+| model | ifvg_retest | 0 | 28 | 26 |  | 94.892857 | 24.866026 | 16.874769 | 5.217411 | -0.139175 | 0.214286 | 0.285714 | 0.285714 | 0.714286 |  | 18 | target_rr_below_2:13;poor_pd_location:7;equilibrium:4;target_rr_below_3:1 |
+| model | mitigation_block | 0 | 78 | 78 |  | 78.051282 | 1.947558 | 1.503239 | 1.13764 | -0.566923 | 0.307692 | 0.166667 | 0.038462 | 0.692308 |  | 78 | target_rr_below_2:62;poor_pd_location:14;target_rr_below_3:13;equilibrium:8 |
+| model | reclaimed_ob | 0 | 7 | 6 | 1 | 83.142857 | 7.218751 | 8.297995 | 30.369679 | 0.390023 | 0.571429 | 0.714286 | 0.714286 | 0.285714 |  | 6 | target_rr_below_2:5;equilibrium:2;poor_pd_location:1 |
+| model | rejection_block | 0 | 70 | 70 |  | 84.171429 | 5.799647 | 4.572091 | 2.40827 | 0.746023 | 0.557143 | 0.585714 | 0.4 | 0.385714 |  | 64 | target_rr_below_2:32;poor_pd_location:24;target_rr_below_3:17;equilibrium:6 |
+| model | silver_bullet | 0 | 2 | 2 |  | 68.0 | 0.563267 | 0.563267 | 2.0 | -1.0 |  |  |  | 1.0 |  | 2 | target_rr_below_3:2 |
+| model | turtle_soup | 0 | 165 | 165 |  | 47.212121 | 5.048818 | 3.45309 | 8.066439 | 0.693977 | 0.169697 | 0.436364 | 0.309091 | 0.70303 |  | 32 | target_rr_below_3:18;target_rr_below_2:14 |
+| model | breaker_block | 50 | 31 | 13 | 14 | 77.548387 | 11.647242 | 9.19118 | 4.350119 | 0.521575 | 0.225806 | 0.258065 | 0.193548 | 0.193548 |  | 31 | insufficient_displacement:31;target_rr_below_2:20;poor_pd_location:10;equilibrium:9;target_rr_below_3:3 |
+| model | ict2022_mss_fvg | 50 | 1 | 1 |  | 100.0 | 1.675943 | 1.675943 | 6.957059 | 1.675943 |  | 1.0 |  |  |  |  |  |
+| model | ifvg_retest | 50 | 28 | 26 |  | 94.892857 | 24.866026 | 16.874769 | 5.217411 | -0.139175 | 0.214286 | 0.285714 | 0.285714 | 0.714286 |  | 18 | target_rr_below_2:13;poor_pd_location:7;equilibrium:4;target_rr_below_3:1 |
+| model | mitigation_block | 50 | 78 | 78 |  | 78.051282 | 1.947558 | 1.503239 | 1.13764 | -0.566923 | 0.307692 | 0.166667 | 0.038462 | 0.692308 |  | 78 | target_rr_below_2:62;poor_pd_location:14;target_rr_below_3:13;equilibrium:8 |
+| model | reclaimed_ob | 50 | 7 | 6 | 1 | 83.142857 | 7.218751 | 8.297995 | 30.369679 | 0.390023 | 0.571429 | 0.714286 | 0.714286 | 0.285714 |  | 6 | target_rr_below_2:5;equilibrium:2;poor_pd_location:1 |
+| model | rejection_block | 50 | 70 | 70 |  | 84.171429 | 5.799647 | 4.572091 | 2.40827 | 0.746023 | 0.557143 | 0.585714 | 0.4 | 0.385714 |  | 64 | target_rr_below_2:32;poor_pd_location:24;target_rr_below_3:17;equilibrium:6 |
+| model | silver_bullet | 50 | 2 | 2 |  | 68.0 | 0.563267 | 0.563267 | 2.0 | -1.0 |  |  |  | 1.0 |  | 2 | target_rr_below_3:2 |
+| model | turtle_soup | 50 | 133 | 133 |  | 50.0 | 5.662398 | 3.948448 | 9.534534 | 0.787233 | 0.120301 | 0.421053 | 0.315789 | 0.744361 |  |  |  |
+| model | breaker_block | 70 | 21 | 9 | 9 | 84.952381 | 10.809532 | 5.858796 | 6.002357 | 0.551514 | 0.238095 | 0.285714 | 0.190476 | 0.190476 |  | 21 | insufficient_displacement:21;target_rr_below_2:10;poor_pd_location:5;equilibrium:4;target_rr_below_3:3 |
+| model | ict2022_mss_fvg | 70 | 1 | 1 |  | 100.0 | 1.675943 | 1.675943 | 6.957059 | 1.675943 |  | 1.0 |  |  |  |  |  |
+| model | ifvg_retest | 70 | 28 | 26 |  | 94.892857 | 24.866026 | 16.874769 | 5.217411 | -0.139175 | 0.214286 | 0.285714 | 0.285714 | 0.714286 |  | 18 | target_rr_below_2:13;poor_pd_location:7;equilibrium:4;target_rr_below_3:1 |
+| model | mitigation_block | 70 | 71 | 71 |  | 79.633803 | 1.865261 | 1.331764 | 1.206743 | -0.62849 | 0.267606 | 0.15493 | 0.014085 | 0.732394 |  | 71 | target_rr_below_2:55;target_rr_below_3:13;poor_pd_location:9;equilibrium:6 |
+| model | reclaimed_ob | 70 | 7 | 6 | 1 | 83.142857 | 7.218751 | 8.297995 | 30.369679 | 0.390023 | 0.571429 | 0.714286 | 0.714286 | 0.285714 |  | 6 | target_rr_below_2:5;equilibrium:2;poor_pd_location:1 |
+| model | rejection_block | 70 | 65 | 65 |  | 85.876923 | 6.122764 | 5.170654 | 2.557047 | 0.826661 | 0.553846 | 0.630769 | 0.430769 | 0.384615 |  | 59 | target_rr_below_2:27;poor_pd_location:21;target_rr_below_3:17;equilibrium:4 |

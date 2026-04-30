@@ -1,0 +1,89 @@
+{
+  "data_dir": "data/history_2025-05-01_2025-06-30",
+  "symbols": ["BTCUSDT"],
+  "models": [
+    "silver_bullet",
+    "ifvg_retest",
+    "ict2022_mss_fvg",
+    "turtle_soup",
+    "breaker_block",
+    "reclaimed_ob",
+    "rejection_block",
+    "mitigation_block"
+  ],
+  "smt_pairs": ["BTCUSDT:ETHUSDT", "ETHUSDT:SOLUSDT"],
+  "thresholds": [0, 50, 70],
+  "context_mode": "strict",
+  "pre_model_require_htf_poi": false,
+  "forward_bars": 20,
+  "warmup_bars": 100,
+  "tp1_r": 1.0,
+  "partial_close_fraction": 0.5,
+  "move_to_be_after_tp1": true,
+  "turtle_soup_require_smt": true,
+  "turtle_soup_require_mss_confirmation": true,
+  "turtle_soup_require_confirmation_fvg": true,
+  "turtle_soup_min_wick_atr_ratio": 0.25,
+  "turtle_soup_max_confirmation_bars": 3,
+  "turtle_soup_allowed_swing_significances": ["intermediate", "long"],
+  "breaker_max_trigger_to_retest_bars": 12,
+  "breaker_max_retest_count": 1,
+  "breaker_require_displacement": true,
+  "min_ifvg_retest_bars": 1,
+  "max_ifvg_retest_bars": 48,
+  "ifvg_entry_mode": "edge",
+  "ifvg_stop_mode": "ce",
+  "ifvg_max_source_touches_before_inversion": 12,
+  "ifvg_max_source_age_bars": 100,
+  "ict2022_max_fvg_retest_bars": 20,
+  "silver_bullet_windows": "03:00-04:00,10:00-11:00,14:00-15:00",
+  "silver_bullet_max_retest_bars": 6,
+  "silver_bullet_retest_must_occur_within_window": true,
+  "silver_bullet_use_ce_invalidation": false,
+  "model_filters": {
+    "silver_bullet": {
+      "min_target_distance_r": 2.0,
+      "require_session_window": true,
+      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"]
+    },
+    "ifvg_retest": {
+      "min_target_distance_r": 2.0,
+      "allowed_displacement_grades": ["valid", "strong"],
+      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"]
+    },
+    "ict2022_mss_fvg": {
+      "min_target_distance_r": 2.0,
+      "allowed_displacement_grades": ["valid", "strong"],
+      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"]
+    },
+    "turtle_soup": {
+      "min_target_distance_r": 2.0,
+      "require_smt": true,
+      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"]
+    },
+    "breaker_block": {
+      "min_target_distance_r": 2.0,
+      "allowed_displacement_grades": ["valid", "strong"],
+      "exclude_no_trade_reasons": ["target_rr_below_2"]
+    },
+    "reclaimed_ob": {
+      "min_target_distance_r": 2.0,
+      "exclude_no_trade_reasons": ["target_rr_below_2"]
+    },
+    "rejection_block": {
+      "min_target_distance_r": 2.0,
+      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"]
+    },
+    "mitigation_block": {
+      "min_target_distance_r": 2.0,
+      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"]
+    }
+  },
+  "runs": [
+    {
+      "name": "btc_1h_strict_notebooklm",
+      "timeframes": ["1h"],
+      "out_dir": "backtest_results/notebooklm_smoke_2025_btc_1h"
+    }
+  ]
+}

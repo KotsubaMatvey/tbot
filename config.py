@@ -4,26 +4,39 @@ from timeframes import EXECUTION_HTF_MAP, MODEL_3_HTF_MAP, MODEL_3_LTF_MAP, SUPP
 
 load_dotenv()
 
+
+def _csv_env(name: str, default: list[str]) -> list[str]:
+    raw = os.getenv(name)
+    if not raw:
+        return list(default)
+    values = [item.strip() for item in raw.split(",") if item.strip()]
+    return values or list(default)
+
 # ── Telegram
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 # ── Binance Futures symbols
-SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XAUUSDT", "XAGUSDT"]
+SYMBOLS = _csv_env("SYMBOLS", ["BTCUSDT", "ETHUSDT", "SOLUSDT"])
 
 # ── Timeframes
-TIMEFRAMES = SUPPORTED_TIMEFRAMES
+TIMEFRAMES = [tf for tf in _csv_env("TIMEFRAMES", ["5m", "15m", "30m", "1h"]) if tf in SUPPORTED_TIMEFRAMES]
+STRATEGY_TIMEFRAMES = [
+    tf
+    for tf in _csv_env("STRATEGY_TIMEFRAMES", ["1m", "3m", "5m", "15m", "30m", "1h", "4h"])
+    if tf in SUPPORTED_TIMEFRAMES
+]
 
 # Entry model HTF/LTF behavior
 REQUIRE_HTF_CONTEXT_FOR_ENTRY_MODELS = True
 ENTRY_MODEL_HTF_MODE = os.getenv("ENTRY_MODEL_HTF_MODE", "strict")  # strict | soft | off
-LIVE_MODEL_FILTER_CONFIG = os.getenv("LIVE_MODEL_FILTER_CONFIG", "configs/backtests/ict_may_oct_2025.json")
+LIVE_MODEL_FILTER_CONFIG = os.getenv("LIVE_MODEL_FILTER_CONFIG", "configs/live_model_filters_2025.json")
 DISPLACEMENT_MIN_BODY_RATIO = 0.55
 DISPLACEMENT_MIN_RANGE_EXPANSION = 1.2
 DISPLACEMENT_FVG_BONUS = 0.25
-DISPLACEMENT_VALID_BODY_RATIO = 0.50
-DISPLACEMENT_VALID_RANGE_EXPANSION = 1.2
+DISPLACEMENT_VALID_BODY_RATIO = 0.70
+DISPLACEMENT_VALID_RANGE_EXPANSION = 1.5
 DISPLACEMENT_STRONG_BODY_RATIO = 0.70
-DISPLACEMENT_STRONG_RANGE_EXPANSION = 1.5
+DISPLACEMENT_STRONG_RANGE_EXPANSION = 2.0
 SWING_INTERMEDIATE_RANGE_MULT = 1.1
 SWING_LONG_MIN_AGE_BARS = 20
 EQ_TOLERANCE_BPS = 5
@@ -38,7 +51,8 @@ DEFAULT_STOP_MODE = "structural"
 DEFAULT_MODEL3_STOP_MODE = "source_zone_extreme"
 INVALIDATION_CONFIRMATION = "close"
 MAX_SWEEP_TO_IFVG_BARS = 30
-MAX_IFVG_RETEST_BARS = 40
+MIN_IFVG_RETEST_BARS = 1
+MAX_IFVG_RETEST_BARS = 15
 MAX_SETUP_AGE_BARS = 30
 MAX_INVERSION_AGE_BARS = 40
 

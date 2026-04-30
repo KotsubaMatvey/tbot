@@ -1,0 +1,2 @@
+model,displacement_grade,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+breaker_block,strong,1,1,1,0,18.911044,18.911044,0.0,6.845265,100.0,-1.0,0.0,0.0,0.0,1.0,2.0,1.0,,,0,0

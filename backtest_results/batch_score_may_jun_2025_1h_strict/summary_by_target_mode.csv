@@ -1,0 +1,9 @@
+model,target_mode,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+breaker_block,nearest_liquidity,31,31,13,14,11.647242,9.19118,0.225806,4.350119,77.548387,0.521575,0.225806,0.258065,0.193548,0.193548,8.217391,1.166667,1.0,1.0,0,31
+ict2022_mss_fvg,htf_external_liquidity,1,1,1,0,1.675943,1.675943,0.0,6.957059,100.0,1.675943,0.0,1.0,0.0,0.0,1.0,,1.0,,0,0
+ifvg_retest,nearest_liquidity,28,28,26,0,24.866026,16.874769,0.214286,5.217411,94.892857,-0.139175,0.214286,0.285714,0.285714,0.714286,2.576923,1.2,1.0,1.0,0,18
+mitigation_block,nearest_liquidity,78,78,78,0,1.947558,1.503239,0.307692,1.13764,78.051282,-0.566923,0.307692,0.166667,0.038462,0.692308,1.0,2.259259,3.153846,4.666667,0,78
+reclaimed_ob,nearest_liquidity,7,7,6,1,7.218751,8.297995,0.571429,30.369679,83.142857,0.390023,0.571429,0.714286,0.714286,0.285714,1.285714,3.0,1.0,1.0,0,6
+rejection_block,nearest_liquidity,70,70,70,0,5.799647,4.572091,0.557143,2.40827,84.171429,0.746023,0.557143,0.585714,0.4,0.385714,1.0,3.518519,1.390244,2.571429,0,64
+silver_bullet,fixed_r,2,2,2,0,0.563267,0.563267,0.0,2.0,68.0,-1.0,0.0,0.0,0.0,1.0,1.0,9.0,,,0,2
+turtle_soup,opposite_range,165,165,165,0,5.048818,3.45309,0.169697,8.066439,47.212121,0.693977,0.169697,0.436364,0.309091,0.70303,1.0,3.163793,2.444444,4.411765,0,32

@@ -1,0 +1,5 @@
+model,no_trade_reasons,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+turtle_soup,none,24,24,24,0,3.433067,2.30481,0.041667,10.24889,80.0,0.176797,0.041667,0.333333,0.25,0.708333,1.0,1.647059,1.125,1.833333,0,0
+turtle_soup,poor_pd_location,5,5,5,0,2.01598,1.482026,0.0,5.940588,65.0,-0.43436,0.0,0.2,0.0,0.8,1.0,1.0,2.0,,0,5
+turtle_soup,target_rr_below_2,3,3,3,0,1.105652,1.202677,0.333333,1.475272,60.0,0.32461,0.333333,0.666667,0.0,0.333333,1.0,1.0,2.0,,0,3
+turtle_soup,target_rr_below_3,2,2,2,0,0.594621,0.594621,0.0,2.455727,70.0,0.594621,0.0,0.0,0.0,0.0,1.0,,,,0,2

@@ -8,6 +8,8 @@ from strategies.types import EntrySetup
 def passes_model_filter(event: dict[str, Any], rules: dict[str, Any]) -> bool:
     if not rules:
         return True
+    if rules.get("enabled") is False:
+        return False
     min_rr = _float_or_none(rules.get("min_target_distance_r"))
     if min_rr is not None:
         rr = _float_or_none(event.get("target_distance_r"))
@@ -27,7 +29,15 @@ def passes_model_filter(event: dict[str, Any], rules: dict[str, Any]) -> bool:
         return False
     if rules.get("require_session_window") and not (event.get("session_window") or event.get("ny_time")):
         return False
+    if rules.get("require_htf_inside_poi") and not _bool(event.get("htf_inside_poi")):
+        return False
+    if not _field_allowed(event, rules, "symbol", "allowed_symbols"):
+        return False
+    if not _field_allowed(event, rules, "timeframe", "allowed_timeframes"):
+        return False
     if not _field_allowed(event, rules, "htf_location", "allowed_htf_locations"):
+        return False
+    if not _field_allowed(event, rules, "htf_zone_type", "allowed_htf_zone_types"):
         return False
     if not _displacement_allowed(event, rules):
         return False
@@ -48,6 +58,8 @@ def setup_filter_event(setup: EntrySetup) -> dict[str, Any]:
         **setup.metadata,
         "model": setup.model_name,
         "direction": setup.direction,
+        "symbol": setup.symbol,
+        "timeframe": setup.timeframe,
         "score": setup.score,
         "target_distance_r": target_distance_r,
     }

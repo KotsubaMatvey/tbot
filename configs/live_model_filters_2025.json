@@ -1,0 +1,42 @@
+{
+  "model_filters": {
+    "ifvg_retest": {
+      "enabled": false,
+      "allowed_timeframes": ["4h"],
+      "min_target_distance_r": 3.0,
+      "allowed_displacement_grades": ["valid", "strong"],
+      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"],
+      "research_note": "Strict 5-15 IFVG annual sample produced almost no activated trades after the spec update."
+    },
+    "reclaimed_ob": {
+      "enabled": true,
+      "allowed_timeframes": ["4h"],
+      "allowed_htf_zone_types": ["FVG", "Breaker"],
+      "require_htf_inside_poi": true,
+      "min_target_distance_r": 1.0,
+      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location"]
+    },
+    "rejection_block": {
+      "enabled": false,
+      "allowed_timeframes": ["1h"],
+      "min_target_distance_r": 2.0,
+      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"],
+      "research_note": "Full-2025 annual baseline is negative across BTC/ETH/SOL after swing-limit RB rewrite."
+    },
+    "turtle_soup": {
+      "enabled": false
+    },
+    "silver_bullet": {
+      "enabled": false
+    },
+    "ict2022_mss_fvg": {
+      "enabled": false
+    },
+    "breaker_block": {
+      "enabled": false
+    },
+    "mitigation_block": {
+      "enabled": false
+    }
+  }
+}

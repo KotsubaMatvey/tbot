@@ -38,6 +38,7 @@ def detect_setups(
     stop_bps = float(cfg.get("stop_buffer_bps") or 2)
     max_retest_bars = int(cfg.get("silver_bullet_max_retest_bars") or SILVER_BULLET_MAX_RETEST_BARS)
     retest_must_be_in_window = bool(cfg.get("silver_bullet_retest_must_occur_within_window", SILVER_BULLET_RETEST_MUST_OCCUR_WITHIN_WINDOW))
+    use_ce_invalidation = bool(cfg.get("silver_bullet_use_ce_invalidation", False))
     zone = ZoneInfo(tz_name)
 
     gaps = detect_fvg(candles, symbol, timeframe, scan_back=30)
@@ -45,12 +46,21 @@ def detect_setups(
     for gap in reversed(gaps):
         fvg_dt = datetime.fromtimestamp(gap.created_at / 1000, tz=ZoneInfo("UTC")).astimezone(zone)
         window = _matching_window(fvg_dt.timetz().replace(tzinfo=None), windows)
-        if window is None:
-            continue
         retest = _first_retest(closed, gap.created_at, gap.gap_low, gap.gap_high, max_retest_bars)
         if retest is None:
             continue
         retest_dt = datetime.fromtimestamp(int(retest["time"]) / 1000, tz=ZoneInfo("UTC")).astimezone(zone)
+        retest_window = _matching_window(retest_dt.timetz().replace(tzinfo=None), windows)
+        signal_time = gap.created_at
+        signal_dt = fvg_dt
+        fvg_source = "created_in_window"
+        if window is None:
+            if retest_window is None:
+                continue
+            window = retest_window
+            signal_time = int(retest["time"])
+            signal_dt = retest_dt
+            fvg_source = "first_retest_in_window"
         if retest_must_be_in_window and _matching_window(retest_dt.timetz().replace(tzinfo=None), [window]) is None:
             continue
         entry = _entry(gap.gap_low, gap.gap_high, gap.direction, entry_mode)
@@ -73,7 +83,7 @@ def detect_setups(
             entry_price=entry,
             stop_loss=stop,
             target_hint=target,
-            timestamp=gap.created_at,
+            timestamp=signal_time,
             score=3,
             reason=f"Silver Bullet {gap.direction} FVG with constrained NY retest",
             metadata={
@@ -81,11 +91,16 @@ def detect_setups(
                 "stop_mode": "swing_or_fvg",
                 "target_mode": target_mode,
                 "session_window": _format_window(window),
-                "ny_time": fvg_dt.strftime("%Y-%m-%d %H:%M"),
+                "ny_time": signal_dt.strftime("%Y-%m-%d %H:%M"),
+                "signal_time": signal_time,
+                "signal_ny_time": signal_dt.strftime("%Y-%m-%d %H:%M"),
+                "silver_bullet_fvg_source": fvg_source,
                 "fvg_time": gap.created_at,
+                "fvg_ny_time": fvg_dt.strftime("%Y-%m-%d %H:%M"),
                 "fvg_low": gap.gap_low,
                 "fvg_high": gap.gap_high,
                 "fvg_ce": (gap.gap_low + gap.gap_high) / 2,
+                "silver_bullet_use_ce_invalidation": use_ce_invalidation,
                 "entry_time": int(retest["time"]),
                 "retest_time": int(retest["time"]),
                 "retest_ny_time": retest_dt.strftime("%Y-%m-%d %H:%M"),

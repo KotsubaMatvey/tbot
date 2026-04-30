@@ -6,7 +6,7 @@ from .common import buffered_stop, closed_candles, context_metadata, nearest_liq
 
 RECLAIMED_OB_MIN_PRIOR_REACTION_R = 0.5
 RECLAIMED_OB_ENTRY_MODE = "body_edge"
-RECLAIMED_OB_STOP_MODE = "mean_threshold"
+RECLAIMED_OB_STOP_MODE = "block_extreme"
 
 
 def detect_setups(

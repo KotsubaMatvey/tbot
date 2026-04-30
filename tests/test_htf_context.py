@@ -21,13 +21,14 @@ def candle(ts: int, price: float) -> dict[str, float | int]:
 
 
 class HTFContextTests(unittest.TestCase):
-    def test_context_builder_slices_htf_by_timestamp(self) -> None:
-        current_ts = 1_700_000_600_000
-        primary = [candle(1_700_000_000_000, 100), candle(current_ts, 101)]
+    def test_context_builder_uses_only_closed_htf_candles(self) -> None:
+        base_ts = 1_700_000_000_000
+        current_ts = base_ts + 3_600_000
+        primary = [candle(base_ts, 100), candle(current_ts, 101)]
         store = {
             ("BTCUSDT", "5m"): primary,
             ("BTCUSDT", "1h"): [
-                candle(1_700_000_000_000, 100),
+                candle(base_ts, 100),
                 candle(current_ts, 101),
                 candle(current_ts + 60_000, 120),
             ],
@@ -44,7 +45,7 @@ class HTFContextTests(unittest.TestCase):
 
         self.assertIsNotNone(context.higher_timeframe)
         assert context.higher_timeframe is not None
-        self.assertTrue(all(int(item["time"]) <= current_ts for item in context.higher_timeframe.candles))
+        self.assertEqual([int(item["time"]) for item in context.higher_timeframe.candles], [base_ts])
         self.assertIsNotNone(context.htf_context)
 
     def test_build_htf_context_from_structure_and_range(self) -> None:

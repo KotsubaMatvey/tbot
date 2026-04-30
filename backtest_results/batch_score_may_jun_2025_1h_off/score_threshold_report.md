@@ -1,0 +1,33 @@
+# ICT Decision Score Threshold Report
+
+- events: `backtest_results\batch_score_may_jun_2025_1h_off\events.csv`
+- thresholds: 0, 50, 70
+
+## All Models
+| scope | model | threshold | count | activated_trades | invalidated_before_entry | avg_decision_score | avg_mfe_r | median_mfe_r | avg_rr | expectancy | target_before_invalidation_rate | hit_1r_before_invalidation_rate | hit_2r_before_invalidation_rate | invalidation_rate | same_bar_ambiguous_count | no_trade_reason_count | top_no_trade_reasons |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| all | ALL | 0 | 3955 | 3903 | 35 | 47.127434 | 5.627484 | 2.852476 | 4.583385 | 0.147065 | 0.316056 | 0.431858 | 0.270544 | 0.611125 |  | 2172 | target_rr_below_2:1639;target_rr_below_3:499;insufficient_displacement:153 |
+| all | ALL | 50 | 2193 | 2164 | 17 | 54.230278 | 7.064919 | 3.780087 | 7.36028 | 0.231488 | 0.178751 | 0.452804 | 0.323301 | 0.72777 |  | 410 | target_rr_below_2:278;target_rr_below_3:98;insufficient_displacement:58 |
+| all | ALL | 70 | 153 | 142 | 4 | 77.673203 | 22.037377 | 10.144176 | 9.109202 | -0.057478 | 0.176471 | 0.320261 | 0.281046 | 0.738562 |  | 24 | target_rr_below_2:13;insufficient_displacement:6;target_rr_below_3:5 |
+
+## By Model
+| scope | model | threshold | count | activated_trades | invalidated_before_entry | avg_decision_score | avg_mfe_r | median_mfe_r | avg_rr | expectancy | target_before_invalidation_rate | hit_1r_before_invalidation_rate | hit_2r_before_invalidation_rate | invalidation_rate | same_bar_ambiguous_count | no_trade_reason_count | top_no_trade_reasons |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| model | breaker_block | 0 | 153 | 113 | 33 | 47.346405 | 17.147228 | 9.875295 | 2.561585 | 0.859938 | 0.496732 | 0.535948 | 0.45098 | 0.24183 |  | 153 | insufficient_displacement:153;target_rr_below_2:104;target_rr_below_3:15 |
+| model | ifvg_retest | 0 | 184 | 174 |  | 70.146739 | 24.385851 | 11.619966 | 6.97193 | -0.209743 | 0.23913 | 0.293478 | 0.277174 | 0.701087 |  | 86 | target_rr_below_2:67;target_rr_below_3:19 |
+| model | mitigation_block | 0 | 967 | 967 |  | 42.901758 | 2.48564 | 1.346411 | 0.8802 | -0.251995 | 0.427094 | 0.255429 | 0.093071 | 0.548087 |  | 935 | target_rr_below_2:809;target_rr_below_3:126 |
+| model | reclaimed_ob | 0 | 14 | 12 | 2 | 44.428571 | 16.788186 | 12.819462 | 1.234744 | 0.726073 | 0.642857 | 0.642857 | 0.642857 | 0.214286 |  | 13 | target_rr_below_2:12;target_rr_below_3:1 |
+| model | rejection_block | 0 | 669 | 669 |  | 47.865471 | 5.9514 | 4.065856 | 2.12594 | 0.383574 | 0.553064 | 0.609865 | 0.351271 | 0.427504 |  | 521 | target_rr_below_2:409;target_rr_below_3:112 |
+| model | silver_bullet | 0 | 26 | 26 |  | 68.0 | 1.179953 | 0.854455 | 2.0 | -0.191782 | 0.115385 | 0.384615 | 0.115385 | 0.615385 |  | 26 | target_rr_below_3:26 |
+| model | turtle_soup | 0 | 1942 | 1942 |  | 46.519053 | 4.719906 | 3.048721 | 7.265621 | 0.255745 | 0.172503 | 0.46241 | 0.315654 | 0.729145 |  | 438 | target_rr_below_2:238;target_rr_below_3:200 |
+| model | breaker_block | 50 | 58 | 40 | 16 | 60.413793 | 22.536144 | 11.269731 | 4.946543 | 1.500862 | 0.362069 | 0.465517 | 0.37931 | 0.327586 |  | 58 | insufficient_displacement:58;target_rr_below_2:22;target_rr_below_3:2 |
+| model | ifvg_retest | 50 | 184 | 174 |  | 70.146739 | 24.385851 | 11.619966 | 6.97193 | -0.209743 | 0.23913 | 0.293478 | 0.277174 | 0.701087 |  | 86 | target_rr_below_2:67;target_rr_below_3:19 |
+| model | mitigation_block | 50 | 167 | 167 |  | 60.275449 | 2.4723 | 1.296206 | 1.677544 | -0.339625 | 0.353293 | 0.245509 | 0.071856 | 0.634731 |  | 135 | target_rr_below_2:111;target_rr_below_3:24 |
+| model | reclaimed_ob | 50 | 4 | 3 | 1 | 58.0 | 16.411729 | 10.866927 | 1.392598 | 1.82472 | 0.75 | 0.75 | 0.75 |  |  | 3 | target_rr_below_2:3 |
+| model | rejection_block | 50 | 250 | 250 |  | 61.0 | 6.670762 | 5.243981 | 3.665679 | 0.518983 | 0.42 | 0.652 | 0.452 | 0.548 |  | 102 | target_rr_below_2:75;target_rr_below_3:27 |
+| model | silver_bullet | 50 | 26 | 26 |  | 68.0 | 1.179953 | 0.854455 | 2.0 | -0.191782 | 0.115385 | 0.384615 | 0.115385 | 0.615385 |  | 26 | target_rr_below_3:26 |
+| model | turtle_soup | 50 | 1504 | 1504 |  | 50.0 | 5.308127 | 3.602672 | 8.854535 | 0.26854 | 0.104388 | 0.462101 | 0.335771 | 0.790559 |  |  |  |
+| model | breaker_block | 70 | 6 | 2 | 4 | 78.0 | 5.87471 | 5.87471 | 8.022743 | -1.0 |  | 0.166667 | 0.166667 | 0.333333 |  | 6 | insufficient_displacement:6 |
+| model | ifvg_retest | 70 | 116 | 109 |  | 77.568966 | 26.99964 | 13.812004 | 10.382367 | -0.266286 | 0.146552 | 0.232759 | 0.224138 | 0.784483 |  | 18 | target_rr_below_2:13;target_rr_below_3:5 |
+| model | mitigation_block | 70 | 7 | 7 |  | 78.0 | 3.466322 | 5.044048 | 6.049753 | 1.821883 | 0.571429 | 0.714286 | 0.571429 | 0.428571 |  |  |  |
+| model | rejection_block | 70 | 24 | 24 |  | 78.0 | 6.263882 | 4.811681 | 4.119524 | 0.421258 | 0.25 | 0.666667 | 0.5 | 0.708333 |  |  |  |

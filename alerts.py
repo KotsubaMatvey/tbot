@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application
 
-from config import DIGEST_INTERVAL, SCAN_INTERVAL, TIMEFRAMES
+from config import DIGEST_INTERVAL, SCAN_INTERVAL
 from database import get_all_active_users
 from formatters import build_alert_message, build_chart_caption, utc_now
 from health import record_alert, record_error, record_scan
@@ -37,6 +37,10 @@ def _alert_enabled_for_user(alert: AlertPayload, user: dict) -> bool:
     return alert.pattern in user.get("patterns", set())
 
 
+def _timeframe_enabled_for_user(alert: AlertPayload, timeframe: str, user: dict) -> bool:
+    return alert.alert_kind == "strategy" or timeframe in user.get("timeframes", set())
+
+
 async def scanner_loop(application: Application) -> None:
     global _last_reset_date
     logger.info("Scanner loop started")
@@ -62,9 +66,14 @@ async def scanner_loop(application: Application) -> None:
                 user_id = user["user_id"]
                 auto_charts = user.get("charts_enabled", False)
                 for (symbol, timeframe), grouped_alerts in grouped.items():
-                    if symbol not in user["symbols"] or timeframe not in user["timeframes"]:
+                    if symbol not in user["symbols"]:
                         continue
-                    filtered = [alert for alert in grouped_alerts if _alert_enabled_for_user(alert, user)]
+                    filtered = [
+                        alert
+                        for alert in grouped_alerts
+                        if _timeframe_enabled_for_user(alert, timeframe, user)
+                        and _alert_enabled_for_user(alert, user)
+                    ]
                     if not filtered:
                         continue
 
@@ -127,11 +136,9 @@ async def _send_digest(application: Application, users: list[dict]) -> None:
         has_alerts = False
         for symbol in sorted(user["symbols"]):
             symbol_lines = [f"\n{symbol}"]
-            for timeframe in TIMEFRAMES:
-                if timeframe not in user["timeframes"]:
-                    continue
+            for timeframe in sorted(zones.get(symbol, {})):
                 for alert in zones.get(symbol, {}).get(timeframe, []):
-                    if _alert_enabled_for_user(alert, user):
+                    if _timeframe_enabled_for_user(alert, timeframe, user) and _alert_enabled_for_user(alert, user):
                         symbol_lines.append(f"  {timeframe}  {alert.detail}")
                         has_alerts = True
             if len(symbol_lines) > 1:

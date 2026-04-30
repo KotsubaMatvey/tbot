@@ -1,0 +1,48 @@
+{
+  "data_dir": "tests/fixtures",
+  "symbols": ["BTCUSDT"],
+  "models": [
+    "silver_bullet",
+    "ifvg_retest",
+    "ict2022_mss_fvg",
+    "turtle_soup",
+    "breaker_block"
+  ],
+  "smt_pairs": [],
+  "thresholds": [0, 50, 70],
+  "context_mode": "off",
+  "pre_model_filter": false,
+  "forward_bars": 20,
+  "warmup_bars": 30,
+  "tp1_r": 1.0,
+  "partial_close_fraction": 0.5,
+  "move_to_be_after_tp1": true,
+  "turtle_soup_require_smt": false,
+  "turtle_soup_require_mss_confirmation": true,
+  "turtle_soup_require_confirmation_fvg": true,
+  "turtle_soup_min_wick_atr_ratio": 0.25,
+  "turtle_soup_max_confirmation_bars": 3,
+  "turtle_soup_allowed_swing_significances": ["intermediate", "long"],
+  "breaker_max_trigger_to_retest_bars": 12,
+  "breaker_max_retest_count": 1,
+  "breaker_require_displacement": true,
+  "min_ifvg_retest_bars": 1,
+  "max_ifvg_retest_bars": 48,
+  "ifvg_entry_mode": "edge",
+  "ifvg_stop_mode": "ce",
+  "ifvg_max_source_touches_before_inversion": 12,
+  "ifvg_max_source_age_bars": 100,
+  "ict2022_max_fvg_retest_bars": 20,
+  "silver_bullet_windows": "03:00-04:00,10:00-11:00,14:00-15:00",
+  "silver_bullet_max_retest_bars": 6,
+  "silver_bullet_retest_must_occur_within_window": true,
+  "silver_bullet_use_ce_invalidation": false,
+  "grid_filters": false,
+  "runs": [
+    {
+      "name": "fixture_5m_15m_off_probe",
+      "timeframes": ["5m", "15m"],
+      "out_dir": "backtest_results/notebooklm_fixture_probe_5m_15m"
+    }
+  ]
+}

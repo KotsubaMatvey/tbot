@@ -1,0 +1,4 @@
+model,session_window,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,managed_expectancy,avg_managed_outcome_r,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+ifvg_retest,none,15,15,5,0,8.982657,2.038557,0.2,2.942714,99.466667,2.790499,2.273349,2.273349,0.2,0.266667,0.133333,0.133333,5.714286,2.0,1.0,1.0,0,9
+reclaimed_ob,none,9,9,3,0,19.940528,15.879401,0.222222,2.418917,92.111111,0.248319,0.273823,0.273823,0.222222,0.222222,0.222222,0.111111,1.777778,1.0,1.0,1.0,0,6
+rejection_block,none,25,25,25,0,2.872896,1.357874,0.36,2.087349,92.24,-0.179363,-0.081435,-0.081435,0.36,0.28,0.16,0.64,1.0,2.25,1.142857,1.25,0,20

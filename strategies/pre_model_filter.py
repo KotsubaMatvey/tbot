@@ -44,7 +44,7 @@ def evaluate_pre_model_filter(context: object | None, config: dict[str, Any] | N
     if cfg.get("pre_model_require_htf_poi", True) and not (htf.inside_zone or htf.approaching_zone):
         reasons.append("not_in_htf_poi")
 
-    allowed = _allowed_by_context(htf, objective_unreached)
+    allowed = _allowed_by_context(htf, objective_unreached, htf_mode, require_htf_poi=cfg.get("pre_model_require_htf_poi", True))
     if cfg.get("pre_model_require_smt"):
         allowed &= _allowed_by_smt(cfg)
         if not allowed:
@@ -77,20 +77,42 @@ def setup_passes_pre_model_filter(setup: Any, decision: PreModelDecision) -> boo
     return decision.passed and setup.direction in decision.allowed_directions
 
 
-def _allowed_by_context(htf: Any, objective_unreached: bool) -> set[str]:
+def _allowed_by_context(htf: Any, objective_unreached: bool, htf_mode: str, require_htf_poi: bool = True) -> set[str]:
     allowed: set[str] = set()
+    if htf_mode in {"strict", "aligned_only"}:
+        if not require_htf_poi:
+            if (
+                htf.bias.direction == "bullish"
+                and htf.objective.direction == "up"
+                and objective_unreached
+                and htf.dealing_range.location == "discount"
+            ):
+                allowed.add("long")
+            if (
+                htf.bias.direction == "bearish"
+                and htf.objective.direction == "down"
+                and objective_unreached
+                and htf.dealing_range.location == "premium"
+            ):
+                allowed.add("short")
+            return allowed
+        if htf.allows_long:
+            allowed.add("long")
+        if htf.allows_short:
+            allowed.add("short")
+        return allowed
     if htf.allows_long or (
         htf.bias.direction == "bullish"
         and htf.objective.direction == "up"
         and objective_unreached
-        and htf.dealing_range.location != "premium"
+        and htf.dealing_range.location == "discount"
     ):
         allowed.add("long")
     if htf.allows_short or (
         htf.bias.direction == "bearish"
         and htf.objective.direction == "down"
         and objective_unreached
-        and htf.dealing_range.location != "discount"
+        and htf.dealing_range.location == "premium"
     ):
         allowed.add("short")
     return allowed

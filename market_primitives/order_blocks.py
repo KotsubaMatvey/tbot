@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .common import BreakerBlock, Candle, OrderBlock, collect_swings
+from .displacement import evaluate_displacement
 
 
 def detect_order_blocks(candles: list[Candle], symbol: str, timeframe: str) -> list[OrderBlock]:
@@ -123,6 +124,7 @@ def detect_breaker_blocks(candles: list[Candle], symbol: str, timeframe: str) ->
         bos_idx = next((i for i in range(low2.index + 1, n) if lookback[i]["close"] > pivot.level), None)
         if bos_idx is None:
             continue
+        displacement = _breaker_displacement(lookback, bos_idx, "bullish", pivot.level)
         candle = next((lookback[i] for i in range(pivot.index, max(pivot.index - 3, -1), -1) if lookback[i]["close"] > lookback[i]["open"]), None)
         if candle is None:
             continue
@@ -149,6 +151,7 @@ def detect_breaker_blocks(candles: list[Candle], symbol: str, timeframe: str) ->
                     "source_ob_time": candle["time"],
                     "sweep_time": low2.timestamp,
                     "failed_ob_confirmed": True,
+                    **displacement,
                 },
             )
         )
@@ -166,6 +169,7 @@ def detect_breaker_blocks(candles: list[Candle], symbol: str, timeframe: str) ->
         bos_idx = next((i for i in range(high2.index + 1, n) if lookback[i]["close"] < pivot.level), None)
         if bos_idx is None:
             continue
+        displacement = _breaker_displacement(lookback, bos_idx, "bearish", pivot.level)
         candle = next((lookback[i] for i in range(pivot.index, max(pivot.index - 3, -1), -1) if lookback[i]["close"] < lookback[i]["open"]), None)
         if candle is None:
             continue
@@ -192,6 +196,7 @@ def detect_breaker_blocks(candles: list[Candle], symbol: str, timeframe: str) ->
                     "source_ob_time": candle["time"],
                     "sweep_time": high2.timestamp,
                     "failed_ob_confirmed": True,
+                    **displacement,
                 },
             )
         )
@@ -214,6 +219,39 @@ def _largest_body_run(candles: list[Candle], start_idx: int, bearish: bool) -> C
             best = candle
             best_body = body
     return best
+
+
+def _breaker_displacement(candles: list[Candle], break_idx: int, direction: str, structure_level: float) -> dict[str, object]:
+    created_fvg = _created_fvg_near_break(candles, break_idx, direction)
+    quality = evaluate_displacement(
+        candles,
+        break_idx,
+        direction=direction,
+        structure_level=structure_level,
+        created_fvg_after_break=created_fvg,
+    )
+    return {
+        "displacement_grade": quality.displacement_grade,
+        "displacement_factor": quality.displacement_factor,
+        "body_ratio": quality.body_ratio,
+        "range_expansion": quality.range_expansion,
+        "created_fvg_after_break": quality.created_fvg_after_break,
+        "close_beyond_structure": quality.close_beyond_structure,
+        "break_candle_time": candles[break_idx]["time"],
+    }
+
+
+def _created_fvg_near_break(candles: list[Candle], break_idx: int, direction: str) -> bool:
+    for idx in range(break_idx, min(len(candles), break_idx + 3)):
+        if idx < 2:
+            continue
+        c0 = candles[idx - 2]
+        c2 = candles[idx]
+        if direction == "bullish" and float(c0["high"]) < float(c2["low"]):
+            return True
+        if direction == "bearish" and float(c0["low"]) > float(c2["high"]):
+            return True
+    return False
 
 
 __all__ = ["detect_breaker_blocks", "detect_order_blocks"]

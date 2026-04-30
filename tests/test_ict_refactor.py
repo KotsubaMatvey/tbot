@@ -46,8 +46,8 @@ class ICTRefactorTests(unittest.TestCase):
 
         self.assertTrue(quality.has_displacement)
         self.assertEqual(quality.displacement_grade, "strong")
-        self.assertGreaterEqual(quality.body_ratio, 0.55)
-        self.assertGreaterEqual(quality.range_expansion, 1.2)
+        self.assertGreaterEqual(quality.body_ratio, 0.70)
+        self.assertGreaterEqual(quality.range_expansion, 2.0)
 
     def test_displacement_weak_break_fails(self) -> None:
         candles = [
@@ -67,7 +67,7 @@ class ICTRefactorTests(unittest.TestCase):
             candle(1, 100, 102, 99, 101),
             candle(2, 101, 103, 100, 102),
             candle(3, 102, 104, 101, 103),
-            candle(4, 103, 112, 102, 109),
+            candle(4, 103, 108, 103, 107),
         ]
 
         no_fvg = evaluate_displacement(candles, 3, direction="bullish", structure_level=105, created_fvg_after_break=False)

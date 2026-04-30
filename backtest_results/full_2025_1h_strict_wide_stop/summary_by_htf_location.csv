@@ -1,0 +1,7 @@
+model,htf_location,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+ifvg_retest,discount,8,8,5,0,29.162314,13.739913,0.25,14.788138,100.0,0.395611,0.25,0.25,0.25,0.375,1.875,1.333333,1.0,1.0,0,3
+ifvg_retest,premium,14,14,9,0,6.400887,5.909981,0.071429,8.370642,100.0,-0.879631,0.071429,0.142857,0.142857,0.571429,2.307692,1.75,1.0,1.0,0,6
+reclaimed_ob,discount,6,6,2,1,1.379791,1.379791,0.0,21.636467,92.666667,-1.0,0.0,0.166667,0.0,0.333333,2.166667,4.0,1.0,,0,2
+reclaimed_ob,premium,4,4,3,0,24.13652,3.725986,0.75,2.189583,95.0,2.095991,0.75,0.5,0.5,0.0,1.25,,1.0,1.0,0,3
+rejection_block,discount,24,24,24,0,3.714944,2.41612,0.291667,3.249717,95.083333,0.349671,0.291667,0.625,0.458333,0.583333,1.0,3.357143,1.666667,3.181818,0,13
+rejection_block,premium,63,63,63,0,5.240294,2.813013,0.349206,3.191946,95.873016,0.270319,0.349206,0.460317,0.31746,0.650794,1.0,2.097561,1.862069,2.75,0,41

@@ -1,0 +1,9 @@
+model,no_trade_reasons,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,managed_expectancy,avg_managed_outcome_r,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+mitigation_block,none,1,1,1,0,0.0,0.0,0.0,8.65751,97.0,-1.0,-1.0,-1.0,0.0,0.0,0.0,1.0,1.0,1.0,,,0,0
+mitigation_block,target_rr_below_2,15,15,15,0,1.26278,0.936841,0.6,0.63904,77.0,-0.022,0.02248,0.02248,0.6,0.333333,0.0,0.4,1.0,2.0,2.2,,0,15
+mitigation_block,target_rr_below_3,1,1,1,0,1.785091,1.785091,0.0,2.035433,87.0,-1.0,0.5,0.5,0.0,1.0,0.0,1.0,1.0,14.0,8.0,,0,1
+reclaimed_ob,none,3,3,3,0,3.936397,4.297039,0.0,11.119776,97.0,-1.0,0.5,0.5,0.0,1.0,0.666667,1.0,1.0,5.666667,1.0,1.5,2,0
+rejection_block,none,9,9,1,0,1.834568,1.834568,0.0,19.7345,97.0,-1.0,-1.0,-1.0,0.0,0.0,0.0,0.111111,3.0,4.0,,,0,0
+rejection_block,target_rr_below_2,1,1,1,0,1.958823,1.958823,1.0,1.915226,77.0,1.915226,1.457613,1.457613,1.0,1.0,0.0,0.0,2.0,,5.0,,0,1
+rejection_block,target_rr_below_3,1,1,0,0,,,0.0,2.179919,87.0,,,,0.0,0.0,0.0,0.0,2.0,,,,0,1
+silver_bullet,none,1,1,1,0,3.589295,3.589295,1.0,2.0,100.0,2.0,1.5,1.5,1.0,1.0,1.0,0.0,1.0,,8.0,9.0,0,0

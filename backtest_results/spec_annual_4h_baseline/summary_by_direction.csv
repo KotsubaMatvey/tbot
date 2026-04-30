@@ -1,0 +1,6 @@
+model,direction,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,managed_expectancy,avg_managed_outcome_r,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+ifvg_retest,short,1,1,0,0,,,0.0,4.395491,100.0,,,,0.0,0.0,0.0,0.0,8.0,,,,0,0
+reclaimed_ob,long,3,3,1,0,36.524943,36.524943,0.333333,10.043191,91.333333,1.725836,1.362918,1.362918,0.333333,0.333333,0.333333,0.0,1.666667,,1.0,1.0,0,2
+reclaimed_ob,short,6,6,2,0,11.648321,11.648321,0.166667,7.963103,100.0,4.790205,2.395103,2.395103,0.166667,0.166667,0.166667,0.166667,1.833333,1.0,1.0,1.0,0,1
+rejection_block,long,22,22,9,0,1.297132,0.636546,0.045455,6.084204,92.5,-0.714526,-0.381193,-0.381193,0.045455,0.090909,0.045455,0.318182,4.764706,4.428571,2.5,3.0,0,11
+rejection_block,short,42,42,9,0,1.642451,0.923018,0.0,21.472399,98.928571,-1.0,-0.666667,-0.666667,0.0,0.047619,0.0,0.214286,4.111111,3.888889,1.0,,0,4

@@ -9,7 +9,7 @@ from pathlib import Path
 
 import aiohttp
 
-from config import CANDLE_LIMIT, ENTRY_MODEL_HTF_MODE, LIVE_MODEL_FILTER_CONFIG, SYMBOLS, TIMEFRAMES
+from config import CANDLE_LIMIT, ENTRY_MODEL_HTF_MODE, LIVE_MODEL_FILTER_CONFIG, STRATEGY_TIMEFRAMES, SYMBOLS, TIMEFRAMES
 from market_primitives import detect_smt
 from presentation.alert_builders import build_primitive_alerts, from_entry_setup, from_smt_divergence
 from presentation.types import AlertPayload
@@ -29,7 +29,7 @@ from strategies import StrategyContext
 from strategies.htf_context import build_htf_context
 from strategies.ict_models.lifecycle import classify_setup_lifecycle
 from strategies.ict_models.model_filters import passes_model_filter, setup_filter_event
-from strategies.ict_models.registry import list_active_models, list_research_models, get_live_models
+from strategies.ict_models.registry import DEFAULT_MODELS, get_live_models
 from strategies.pre_model_filter import evaluate_pre_model_filter, merge_pre_model_metadata, setup_passes_pre_model_filter
 from strategies.setup_utils import current_price
 from timeframes import EXECUTION_HTF_MAP, MODEL_3_HTF_MAP, MODEL_3_LTF_MAP, execution_htf_for
@@ -56,7 +56,7 @@ PRIMITIVE_PATTERNS = [
     "EQL",
     "SMT",
 ]
-STRATEGY_PATTERNS = list_active_models() + list_research_models()
+STRATEGY_PATTERNS = list(DEFAULT_MODELS)
 ALL_PATTERNS = PRIMITIVE_PATTERNS + STRATEGY_PATTERNS
 
 SMT_TIMEFRAMES = {"1m", "5m", "15m", "1h", "4h"}
@@ -64,6 +64,16 @@ SMT_PAIRS = [("BTCUSDT", "ETHUSDT"), ("ETHUSDT", "SOLUSDT")]
 
 _sem = asyncio.Semaphore(5)
 _model_filters_cache: dict[str, dict] | None = None
+MODEL_DEDUP_PRIORITY = {
+    "ict2022_mss_fvg": 10,
+    "breaker_block": 20,
+    "reclaimed_ob": 25,
+    "ifvg_retest": 30,
+    "rejection_block": 40,
+    "turtle_soup": 50,
+    "silver_bullet": 60,
+    "mitigation_block": 70,
+}
 
 
 async def fetch_candles(
@@ -107,11 +117,12 @@ def _build_strategy_alerts(
     lower: PrimitiveSnapshot | None,
     htf_timeframe: str | None,
 ) -> list[AlertPayload]:
+    closed_higher = _closed_htf_snapshot(higher) if higher is not None else None
     context = StrategyContext(
         primary=primary,
-        higher_timeframe=higher,
+        higher_timeframe=closed_higher,
         lower_timeframe=lower,
-        htf_context=build_htf_context(higher, current_price(primary)) if higher is not None else None,
+        htf_context=build_htf_context(closed_higher, current_price(primary)) if closed_higher is not None else None,
         htf_timeframe=htf_timeframe,
         execution_timeframe=primary.timeframe,
         htf_mode=ENTRY_MODEL_HTF_MODE,
@@ -123,9 +134,11 @@ def _build_strategy_alerts(
     if not pre_model.passed:
         return []
     for model in get_live_models():
+        if not _model_enabled(model.name, model_filters):
+            continue
         setups.extend(model.detector(primary.symbol, primary.timeframe, primary.candles, context, config))
 
-    best_by_key: dict[tuple[str, str], AlertPayload] = {}
+    best_by_key: dict[tuple[object, ...], AlertPayload] = {}
     for setup in setups:
         if not setup_passes_pre_model_filter(setup, pre_model):
             continue
@@ -137,11 +150,31 @@ def _build_strategy_alerts(
         payload.status = str(lifecycle.get("status") or payload.status or "setup_formed")
         payload.metadata.update(lifecycle)
         payload.metadata["live_filters_applied"] = bool(model_filters)
-        key = (payload.pattern, payload.trade_direction or "")
+        key = (
+            payload.trade_direction or "",
+            _rounded_zone(payload.entry_low),
+            _rounded_zone(payload.entry_high),
+            _rounded_zone(payload.invalidation),
+        )
         existing = best_by_key.get(key)
-        if existing is None or (payload.score or 0) > (existing.score or 0):
+        if existing is None or _payload_rank(payload) < _payload_rank(existing):
             best_by_key[key] = payload
     return list(best_by_key.values())
+
+
+def _payload_rank(payload: AlertPayload) -> tuple[int, int]:
+    return (MODEL_DEDUP_PRIORITY.get(payload.pattern, 100), -(payload.score or 0))
+
+
+def _rounded_zone(value: float | None) -> float | None:
+    return round(float(value), 5) if value is not None else None
+
+
+def _closed_htf_snapshot(snapshot: PrimitiveSnapshot) -> PrimitiveSnapshot | None:
+    closed = snapshot.candles[:-1]
+    if not closed:
+        return None
+    return build_primitive_snapshot(snapshot.symbol, snapshot.timeframe, closed)
 
 
 def _load_model_filters() -> dict[str, dict]:
@@ -162,6 +195,10 @@ def _load_model_filters() -> dict[str, dict]:
         return _model_filters_cache
     _model_filters_cache = payload.get("model_filters", payload)
     return _model_filters_cache
+
+
+def _model_enabled(model_name: str, model_filters: dict[str, dict]) -> bool:
+    return model_filters.get(model_name, {}).get("enabled", True) is not False
 
 
 def _score_primitive_alerts(
@@ -187,6 +224,7 @@ async def run_scanner() -> tuple[list[AlertPayload], list[dict[str, str]], dict[
 
     fetch_timeframes = sorted(
         set(TIMEFRAMES)
+        | set(STRATEGY_TIMEFRAMES)
         | {tf for tf in EXECUTION_HTF_MAP.values() if tf}
         | {tf for tf in MODEL_3_HTF_MAP.values() if tf}
         | {tf for tf in MODEL_3_LTF_MAP.values() if tf}
@@ -208,34 +246,42 @@ async def run_scanner() -> tuple[list[AlertPayload], list[dict[str, str]], dict[
         snapshots[(symbol, timeframe)] = build_primitive_snapshot(symbol, timeframe, candles)
 
     for symbol in SYMBOLS:
-        for timeframe in TIMEFRAMES:
+        for timeframe in sorted(set(TIMEFRAMES) | set(STRATEGY_TIMEFRAMES)):
             primary = snapshots.get((symbol, timeframe))
             if primary is None:
                 continue
             higher_tf = execution_htf_for(timeframe)
             lower_tf = MODEL_3_LTF_MAP.get(timeframe)
 
-            primitive_alerts = build_primitive_alerts(
-                swings=primary.swings,
-                sweeps=primary.sweeps,
-                raids=primary.raids,
-                structure_breaks=primary.structure_breaks,
-                fvgs=primary.fvgs[-2:],
-                ifvgs=primary.ifvgs[-2:],
-                order_blocks=primary.order_blocks,
-                breaker_blocks=primary.breaker_blocks,
-                equal_highs=primary.equal_highs,
-                equal_lows=primary.equal_lows,
-                key_levels=primary.key_levels[:1],
-                volume_signals=primary.volume_signals,
-                pd_zones=primary.pd_zones,
-                smt_divergences=[],
+            primitive_alerts = (
+                build_primitive_alerts(
+                    swings=primary.swings,
+                    sweeps=primary.sweeps,
+                    raids=primary.raids,
+                    structure_breaks=primary.structure_breaks,
+                    fvgs=primary.fvgs[-2:],
+                    ifvgs=primary.ifvgs[-2:],
+                    order_blocks=primary.order_blocks,
+                    breaker_blocks=primary.breaker_blocks,
+                    equal_highs=primary.equal_highs,
+                    equal_lows=primary.equal_lows,
+                    key_levels=primary.key_levels[:1],
+                    volume_signals=primary.volume_signals,
+                    pd_zones=primary.pd_zones,
+                    smt_divergences=[],
+                )
+                if timeframe in TIMEFRAMES
+                else []
             )
-            strategy_alerts = _build_strategy_alerts(
-                primary,
-                snapshots.get((symbol, higher_tf)) if higher_tf else None,
-                snapshots.get((symbol, lower_tf)) if lower_tf else None,
-                higher_tf,
+            strategy_alerts = (
+                _build_strategy_alerts(
+                    primary,
+                    snapshots.get((symbol, higher_tf)) if higher_tf else None,
+                    snapshots.get((symbol, lower_tf)) if lower_tf else None,
+                    higher_tf,
+                )
+                if timeframe in STRATEGY_TIMEFRAMES
+                else []
             )
             combined = primitive_alerts + strategy_alerts
             if not combined:
@@ -289,6 +335,7 @@ __all__ = [
     "MODEL_3_HTF_MAP",
     "MODEL_3_LTF_MAP",
     "PRIMITIVE_PATTERNS",
+    "STRATEGY_TIMEFRAMES",
     "STRATEGY_PATTERNS",
     "fetch_candles",
     "get_active_zones",

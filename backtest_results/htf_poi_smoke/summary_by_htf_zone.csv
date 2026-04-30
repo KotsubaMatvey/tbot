@@ -1,0 +1,4 @@
+model,htf_zone_type,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+ifvg_retest,FVG,2,2,2,0,12.265858,12.265858,0.0,13.077334,98.5,-1.0,0.0,0.0,0.0,1.0,2.0,1.0,,,0,1
+ifvg_retest,IFVG,5,5,3,0,6.545844,6.653925,0.4,2.246531,92.2,2.751015,0.4,0.4,0.4,0.2,1.666667,1.0,1.0,1.0,0,3
+turtle_soup,none,34,34,34,0,2.852344,1.771151,0.058824,8.382752,75.441176,0.124541,0.058824,0.323529,0.176471,0.647059,1.0,1.5,1.363636,1.833333,0,10

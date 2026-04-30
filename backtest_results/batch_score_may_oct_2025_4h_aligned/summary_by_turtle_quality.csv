@@ -1,0 +1,8 @@
+model,turtle_quality,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+breaker_block,none,26,26,11,10,8.660527,5.273829,0.346154,2.679307,80.615385,0.73721,0.346154,0.307692,0.269231,0.076923,6.444444,1.5,1.0,1.0,0,26
+ifvg_retest,none,24,24,23,0,35.123343,9.722848,0.375,6.69314,98.875,1.934527,0.375,0.416667,0.25,0.541667,3.652174,1.153846,1.1,1.0,0,18
+mitigation_block,none,45,45,45,0,1.979989,0.774549,0.288889,0.883132,75.244444,-0.5216,0.288889,0.2,0.022222,0.711111,1.0,3.5,1.555556,4.0,0,43
+reclaimed_ob,none,5,5,5,0,12.860001,12.01518,0.8,4.364048,83.2,2.254734,0.8,0.8,0.6,0.2,1.6,1.0,1.0,1.0,0,4
+rejection_block,none,44,44,44,0,4.985211,2.965326,0.704545,1.437243,80.704545,0.285839,0.704545,0.477273,0.227273,0.295455,1.0,1.076923,1.0,1.1,0,40
+turtle_soup,strong,66,66,66,0,2.717467,1.723747,0.151515,5.62812,72.651515,0.206846,0.151515,0.469697,0.257576,0.727273,1.0,3.5,3.677419,4.941176,0,25
+turtle_soup,valid,61,61,61,0,5.067264,4.022026,0.04918,10.308499,74.42623,0.010573,0.04918,0.442623,0.278689,0.901639,1.0,3.763636,2.074074,2.352941,0,18
