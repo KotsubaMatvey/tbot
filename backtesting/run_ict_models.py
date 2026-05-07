@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+from bisect import bisect_left, bisect_right
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,8 +15,10 @@ from backtesting.accumulator import ReplaySnapshotCache
 from backtesting.context import build_accumulated_strategy_context_for_replay
 from backtesting.data import HistoricalDataError, load_history_for
 from market_primitives.smt import detect_smt
+from strategies.ict_models.sessions import in_ny_windows
 from strategies.ict_models.registry import (
     ACTIVE_ICT_MODELS,
+    DEFAULT_MODELS,
     LEGACY_MODELS,
     RESEARCH_ONLY_MODELS,
     resolve_models,
@@ -63,24 +66,39 @@ EVENT_FIELDS = [
     "exit_reason",
     "risk",
     "risk_bps",
+    "commission_bps",
+    "slippage_bps",
+    "round_trip_cost_bps",
+    "execution_cost_r",
+    "gross_managed_outcome_r",
+    "net_managed_outcome_r",
     "same_bar_policy",
     "same_bar_ambiguous",
     "activated_trade",
     "invalidated_before_entry",
     "target_reached_before_entry",
     "session_window",
+    "session_date",
+    "session_label",
+    "session_type",
     "ny_time",
     "htf_mode",
     "htf_bias",
     "htf_location",
     "htf_zone_type",
     "htf_objective_type",
+    "htf_objective_level",
+    "htf_draw_direction",
+    "htf_objective_unreached",
     "htf_context_alignment",
+    "bias_alignment",
     "htf_score_modifier",
     "pd_array_type",
     "pd_array_age_bars",
     "p_d_value",
+    "is_in_p_d",
     "has_smt_confirmation",
+    "smt_detected",
     "smt_direction",
     "smt_pair",
     "smt_strength",
@@ -104,22 +122,39 @@ EVENT_FIELDS = [
     "sweep_extreme",
     "sweep_liquidity_quality",
     "sweep_level_age_bars",
+    "range_source",
+    "asian_range_window",
+    "asian_range_tz",
+    "asian_range_date",
+    "asian_range_start",
+    "asian_range_end",
+    "asian_range_high",
+    "asian_range_low",
+    "asian_range_width_bps",
+    "asian_sweep_breach_bps",
+    "asian_first_signal_only",
     "displacement_grade",
     "displacement_factor",
     "body_ratio",
     "range_expansion",
     "breach_displacement_grade",
     "turtle_quality",
+    "turtle_soup_min_stop_applied",
+    "turtle_soup_min_stop_bps",
     "time_to_confirmation_bars",
     "ltf_trigger_type",
     "fvg_low",
     "fvg_high",
     "fvg_ce",
+    "fvg_fill_depth",
     "ifvg_low",
     "ifvg_high",
     "ifvg_ce",
+    "ifvg_fill_depth",
+    "ifvg_min_retest_depth",
     "source_fvg_age_bars",
     "source_fvg_touches_before_inversion",
+    "silver_bullet_min_retest_depth",
     "ob_low",
     "ob_high",
     "breaker_low",
@@ -128,6 +163,12 @@ EVENT_FIELDS = [
     "trigger_to_retest_bars",
     "rejection_body_level",
     "rejection_wick_extreme",
+    "current_wick_extreme",
+    "rejection_zone_low",
+    "rejection_zone_high",
+    "rejection_body_sweep_bps",
+    "rejection_min_wick_fraction",
+    "body_liquidity_sweep",
     "mitigation_low",
     "mitigation_high",
     "time_to_retest_bars",
@@ -141,6 +182,7 @@ EVENT_FIELDS = [
     "mfe_r",
     "mae_r",
     "invalidated",
+    "invalidated_at",
     "target_hit",
     "tp1_hit",
     "tp2_hit",
@@ -189,9 +231,13 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--stop-mode", choices=["aggressive", "standard", "structural", "ce", "opposite_boundary", "mean_threshold", "block_extreme"], default=None)
     parser.add_argument("--target-mode", choices=["nearest_liquidity", "opposite_range", "fixed_r", "dol_hierarchy"], default=None)
     parser.add_argument("--same-bar-policy", choices=["conservative", "neutral", "optimistic"], default="conservative")
+    parser.add_argument("--start-date", default=None, help="YYYY-MM-DD inclusive UTC date to start scanning.")
+    parser.add_argument("--end-date", default=None, help="YYYY-MM-DD inclusive UTC date to stop scanning.")
     parser.add_argument("--tp1-r", type=float, default=1.0)
     parser.add_argument("--partial-close-fraction", type=float, default=0.5)
     parser.add_argument("--move-to-be-after-tp1", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--commission-bps", type=float, default=0.0, help="Per-side commission in basis points.")
+    parser.add_argument("--slippage-bps", type=float, default=0.0, help="Per-side slippage/spread estimate in basis points.")
     parser.add_argument("--context-mode", choices=["off", "aligned_only", "strict"], default="off")
     parser.add_argument("--forward-bars", type=int, default=20)
     parser.add_argument("--warmup-bars", type=int, default=100)
@@ -200,7 +246,15 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--turtle-soup-min-close-back-fraction", type=float, default=None)
     parser.add_argument("--turtle-soup-min-level-age-bars", type=int, default=None)
     parser.add_argument("--turtle-soup-max-confirmation-bars", type=int, default=None)
+    parser.add_argument("--turtle-soup-min-stop-bps", type=float, default=None)
     parser.add_argument("--turtle-soup-allowed-swing-significances", nargs="*", default=None)
+    parser.add_argument("--turtle-soup-session-windows", default=None)
+    parser.add_argument("--turtle-soup-range-source", default=None)
+    parser.add_argument("--turtle-soup-asian-range-window", default=None)
+    parser.add_argument("--turtle-soup-asian-range-tz", default=None)
+    parser.add_argument("--turtle-soup-asian-min-range-bps", type=float, default=None)
+    parser.add_argument("--turtle-soup-asian-min-breach-bps", type=float, default=None)
+    parser.add_argument("--turtle-soup-asian-first-signal-only", action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument("--turtle-soup-require-killzone", action="store_true")
     parser.add_argument("--turtle-soup-require-smt", action="store_true")
     parser.add_argument("--turtle-soup-require-mss-confirmation", action="store_true")
@@ -209,12 +263,17 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--min-ifvg-retest-bars", type=int, default=None)
     parser.add_argument("--ifvg-entry-mode", choices=["edge", "ce"], default=None)
     parser.add_argument("--ifvg-stop-mode", choices=["ce", "opposite_boundary"], default=None)
+    parser.add_argument("--ifvg-min-retest-depth", type=float, default=None)
     parser.add_argument("--ifvg-max-source-touches-before-inversion", type=int, default=None)
     parser.add_argument("--ifvg-max-source-age-bars", type=int, default=None)
     parser.add_argument("--ict2022-max-fvg-retest-bars", type=int, default=None)
+    parser.add_argument("--ict2022-session-windows", default=None)
+    parser.add_argument("--ict2022-require-strong-displacement", action=argparse.BooleanOptionalAction, default=None)
+    parser.add_argument("--ict2022-retest-must-occur-within-session", action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument("--breaker-max-trigger-to-retest-bars", type=int, default=None)
     parser.add_argument("--breaker-max-retest-count", type=int, default=None)
     parser.add_argument("--breaker-require-displacement", action="store_true")
+    parser.add_argument("--rejection-block-min-wick-fraction", type=float, default=None)
     parser.add_argument("--smt-pairs", nargs="*", default=["BTCUSDT:ETHUSDT", "ETHUSDT:SOLUSDT"])
     parser.add_argument("--smt-lookback-bars", type=int, default=50)
     parser.add_argument("--smt-max-time-delta-bars", type=int, default=10)
@@ -223,6 +282,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--silver-bullet-windows", default=None, help="Comma-separated NY windows, e.g. 10:00-11:00,14:00-15:00.")
     parser.add_argument("--silver-bullet-retest-must-occur-within-window", action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument("--silver-bullet-max-retest-bars", type=int, default=None)
+    parser.add_argument("--silver-bullet-min-retest-depth", type=float, default=None)
     parser.add_argument("--silver-bullet-use-ce-invalidation", action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument("--pre-model-filter", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--pre-model-allow-neutral-htf", action="store_true")
@@ -231,6 +291,8 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pre-model-require-killzone", action="store_true")
     parser.add_argument("--pre-model-require-htf-poi", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--pre-model-killzone-windows", default=None)
+    parser.add_argument("--scan-session-windows", default=None, help="NY windows to scan, e.g. 02:30-02:30,10:45-11:00.")
+    parser.add_argument("--scan-session-lag-bars", type=int, default=1, help="Also scan bars whose prior N bars were inside the scan window.")
     parser.add_argument("--out-dir", default="backtest_results/new_ict_models")
     return parser
 
@@ -260,14 +322,38 @@ def _symbols_from_smt_pairs(raw_pairs: list[str], requested: set[str]) -> set[st
     return symbols
 
 
+def _window_list(value: Any) -> list[str]:
+    if not value:
+        return []
+    if isinstance(value, str):
+        return [item.strip() for item in value.split(",") if item.strip()]
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _scan_session_window_matches(candles: list[Candle], idx: int, windows: list[str], lag_bars: int = 1) -> bool:
+    max_lag = max(0, int(lag_bars))
+    for offset in range(max_lag + 1):
+        check_idx = idx - offset
+        if check_idx < 0:
+            break
+        if in_ny_windows(int(candles[check_idx]["time"]), windows):
+            return True
+    return False
+
+
 def _run_symbol(symbol: str, timeframes: list[str], models: list[Any], store: dict[tuple[str, str], list[Candle]], args: argparse.Namespace) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     cache = ReplaySnapshotCache(store)
     seen: set[tuple[Any, ...]] = set()
+    accumulate_primary = _models_need_accumulated_primary(models)
     for timeframe in timeframes:
         candles = store.get((symbol, timeframe), [])
-        for idx in range(max(args.warmup_bars, 0), len(candles)):
+        scan_windows = _window_list(args.scan_session_windows)
+        start_idx, end_idx = _date_scan_bounds(candles, args.warmup_bars, args.start_date, args.end_date)
+        for idx in range(start_idx, end_idx):
             ts = int(candles[idx]["time"])
+            if scan_windows and not _scan_session_window_matches(candles, idx, scan_windows, args.scan_session_lag_bars):
+                continue
             visible = candles[max(0, idx + 1 - DETECTOR_CANDLE_WINDOW) : idx + 1]
             config = {k: v for k, v in vars(args).items() if v is not None}
             if args.turtle_soup_min_level_age_bars is not None:
@@ -285,6 +371,8 @@ def _run_symbol(symbol: str, timeframes: list[str], models: list[Any], store: di
                     timeframe=timeframe,
                     current_timestamp=ts,
                     snapshot_cache=cache,
+                    primary_visible=visible,
+                    accumulate_primary=accumulate_primary,
                     htf_mode="strict" if args.context_mode == "strict" else "soft",
                 )
             pre_model = evaluate_pre_model_filter(context, config)
@@ -300,7 +388,11 @@ def _run_symbol(symbol: str, timeframes: list[str], models: list[Any], store: di
                     if not setup_passes_pre_model_filter(setup, pre_model):
                         continue
                     merge_pre_model_metadata(setup, pre_model)
-                    if args.context_mode in {"aligned_only", "strict"} and not _context_aligned(setup, context):
+                    if args.context_mode in {"aligned_only", "strict"} and not _context_aligned(
+                        setup,
+                        context,
+                        require_htf_poi=args.pre_model_require_htf_poi,
+                    ):
                         continue
                     key = (spec.name, symbol, timeframe, setup.direction, setup.timestamp, round(setup.entry_low, 8), round(setup.entry_high, 8))
                     if key in seen:
@@ -314,9 +406,32 @@ def _run_symbol(symbol: str, timeframes: list[str], models: list[Any], store: di
     return rows
 
 
-def _context_aligned(setup: EntrySetup, context: object | None) -> bool:
+def _models_need_accumulated_primary(models: list[Any]) -> bool:
+    return any(getattr(spec, "name", None) != "silver_bullet" for spec in models)
+
+
+def _context_aligned(setup: EntrySetup, context: object | None, *, require_htf_poi: bool = True) -> bool:
     htf = getattr(context, "htf_context", None)
     if htf is None:
+        return False
+    if not require_htf_poi:
+        objective_unreached = bool(htf.objective_unreached or htf.objective.objective_unreached)
+        if (
+            setup.direction == "long"
+            and htf.bias.direction == "bullish"
+            and htf.objective.direction == "up"
+            and objective_unreached
+            and htf.dealing_range.location == "discount"
+        ):
+            return True
+        if (
+            setup.direction == "short"
+            and htf.bias.direction == "bearish"
+            and htf.objective.direction == "down"
+            and objective_unreached
+            and htf.dealing_range.location == "premium"
+        ):
+            return True
         return False
     return (setup.direction == "long" and htf.allows_long) or (setup.direction == "short" and htf.allows_short)
 
@@ -365,6 +480,37 @@ def _index_at_or_before(candles: list[Candle], timestamp: int) -> int | None:
     return match
 
 
+def _timestamp_in_date_range(timestamp: int, start_date: str | None, end_date: str | None) -> bool:
+    if start_date and timestamp < _date_to_ms(start_date):
+        return False
+    if end_date and timestamp > _date_to_ms(end_date, end_of_day=True):
+        return False
+    return True
+
+
+def _date_scan_bounds(candles: list[Candle], warmup_bars: int, start_date: str | None, end_date: str | None) -> tuple[int, int]:
+    start_idx = max(warmup_bars, 0)
+    end_idx = len(candles)
+    if not candles:
+        return start_idx, end_idx
+
+    timestamps = [int(candle["time"]) for candle in candles]
+    if start_date:
+        start_idx = max(start_idx, bisect_left(timestamps, _date_to_ms(start_date)))
+    if end_date:
+        end_idx = bisect_right(timestamps, _date_to_ms(end_date, end_of_day=True))
+    return start_idx, end_idx
+
+
+def _date_to_ms(value: str, *, end_of_day: bool = False) -> int:
+    dt = datetime.fromisoformat(value)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    if end_of_day and len(value) == 10:
+        dt = dt.replace(hour=23, minute=59, second=59, microsecond=999000)
+    return int(dt.timestamp() * 1000)
+
+
 def _event_row(
     setup: EntrySetup,
     model_name: str,
@@ -396,6 +542,8 @@ def _event_row(
         partial_close_fraction=float(getattr(args, "partial_close_fraction", 0.5) if args is not None else 0.5),
         move_to_be_after_tp1=bool(getattr(args, "move_to_be_after_tp1", True) if args is not None else True),
     )
+    execution = _execution_costs(entry, risk, outcome, args)
+    outcome = _with_execution_costs(outcome, execution)
     target_distance_r = abs(setup.target_hint - entry) / risk if setup.target_hint is not None and risk and risk > 0 else None
     decision = _decision_score(setup.direction, model_name, metadata, target_distance_r)
     row = {
@@ -419,17 +567,51 @@ def _event_row(
         "target_hint": setup.target_hint,
         "risk": risk,
         "risk_bps": metadata.get("risk_bps") or (risk / max(entry, 1e-9) * 10_000 if risk else None),
+        **execution,
         "same_bar_policy": same_bar_policy,
         "same_bar_ambiguous": outcome["same_bar_ambiguous"],
         "invalidated_before_entry": outcome["invalidated_before_entry"],
         "target_distance_r": target_distance_r,
         "time_to_entry_bars": outcome["time_to_entry_bars"],
         "metadata_json": json.dumps(metadata, ensure_ascii=True, sort_keys=True, default=str),
-        **{field: metadata.get(field) for field in EVENT_FIELDS if field not in {"model", "model_family", "direction", "symbol", "timeframe", "timestamp", "setup_timestamp", "detected_at", "entry_time", "entry_mode", "stop_mode", "target_mode", "entry_price", "entry_low", "entry_high", "stop_loss", "invalidation", "target_hint", "risk", "risk_bps", "same_bar_policy", "same_bar_ambiguous", "invalidated_before_entry", "target_reached_before_entry", "target_distance_r", "time_to_entry_bars", "bars_to_invalidation", "bars_to_1r", "bars_to_2r", "metadata_json", "mfe_r", "mae_r", "invalidated", "target_hit", "tp1_hit", "tp2_hit", "final_target_hit", "logical_invalidated", "managed_outcome_r", "managed_exit_reason", "target_before_invalidation", "hit_1r_before_invalidation", "hit_2r_before_invalidation"}},
+        **{field: metadata.get(field) for field in EVENT_FIELDS if field not in {"model", "model_family", "direction", "symbol", "timeframe", "timestamp", "setup_timestamp", "detected_at", "entry_time", "entry_mode", "stop_mode", "target_mode", "entry_price", "entry_low", "entry_high", "stop_loss", "invalidation", "target_hint", "risk", "risk_bps", "commission_bps", "slippage_bps", "round_trip_cost_bps", "execution_cost_r", "gross_managed_outcome_r", "net_managed_outcome_r", "same_bar_policy", "same_bar_ambiguous", "invalidated_before_entry", "target_reached_before_entry", "target_distance_r", "time_to_entry_bars", "bars_to_invalidation", "bars_to_1r", "bars_to_2r", "metadata_json", "mfe_r", "mae_r", "invalidated", "target_hit", "tp1_hit", "tp2_hit", "final_target_hit", "logical_invalidated", "managed_outcome_r", "managed_exit_reason", "target_before_invalidation", "hit_1r_before_invalidation", "hit_2r_before_invalidation"}},
         **decision,
         **outcome,
     }
     return row
+
+
+def _execution_costs(
+    entry: float,
+    risk: float | None,
+    outcome: dict[str, Any],
+    args: argparse.Namespace | None,
+) -> dict[str, Any]:
+    commission_bps = float(getattr(args, "commission_bps", 0.0) if args is not None else 0.0)
+    slippage_bps = float(getattr(args, "slippage_bps", 0.0) if args is not None else 0.0)
+    round_trip_bps = max(0.0, 2.0 * (commission_bps + slippage_bps))
+    if not outcome.get("activated_trade") or risk is None or risk <= 0:
+        execution_cost_r = 0.0
+    else:
+        execution_cost_r = (entry * round_trip_bps / 10_000.0) / risk
+    return {
+        "commission_bps": commission_bps,
+        "slippage_bps": slippage_bps,
+        "round_trip_cost_bps": round_trip_bps,
+        "execution_cost_r": round(execution_cost_r, 6),
+    }
+
+
+def _with_execution_costs(outcome: dict[str, Any], execution: dict[str, Any]) -> dict[str, Any]:
+    gross = outcome.get("managed_outcome_r")
+    if gross is None:
+        outcome["gross_managed_outcome_r"] = None
+        outcome["net_managed_outcome_r"] = None
+        return outcome
+    cost_r = float(execution.get("execution_cost_r") or 0.0)
+    outcome["gross_managed_outcome_r"] = gross
+    outcome["net_managed_outcome_r"] = round(float(gross) - cost_r, 6)
+    return outcome
 
 
 def _decision_score(direction: str, model_name: str, metadata: dict[str, Any], target_distance_r: float | None) -> dict[str, Any]:
@@ -733,12 +915,15 @@ def _evaluate(
             managed_exit_reason = "be_after_tp1" if moved_to_be and move_to_be_after_tp1 else "sl_hit"
             bars_to_invalidation = offset
             break
-    if managed_outcome is None and tp1_hit:
-        managed_outcome = partial * tp1_r
-        managed_exit_reason = "partial_open"
-    elif managed_outcome is None and not invalidated:
-        managed_outcome = mfe / risk
-        managed_exit_reason = "open_mark_to_mfe"
+    if managed_outcome is None:
+        close_r = _close_outcome_r(direction, active[-1], entry, risk)
+        if tp1_hit:
+            managed_outcome = partial * tp1_r + (1.0 - partial) * close_r
+            managed_exit_reason = "horizon_close_after_tp1"
+        else:
+            managed_outcome = close_r
+            managed_exit_reason = "horizon_close"
+        exit_reason = "horizon_close"
     return {
         "mfe_r": mfe / risk,
         "mae_r": mae / risk,
@@ -782,6 +967,13 @@ def _logical_hit(direction: str, candle: Candle, level: float | None) -> bool:
     return float(candle["close"]) <= level if direction == "long" else float(candle["close"]) >= level
 
 
+def _close_outcome_r(direction: str, candle: Candle, entry: float, risk: float) -> float:
+    close = float(candle["close"])
+    if direction == "long":
+        return (close - entry) / risk
+    return (entry - close) / risk
+
+
 def _bars_until_or_none(candles: list[Candle], timestamp: int) -> int | None:
     for idx, candle in enumerate(candles, start=1):
         if int(candle["time"]) >= timestamp:
@@ -798,6 +990,8 @@ def _summaries(events: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
         "summary_by_stop_mode": ("model", "stop_mode"),
         "summary_by_target_mode": ("model", "target_mode"),
         "summary_by_session_window": ("model", "session_window"),
+        "summary_by_session_day": ("model", "session_date", "session_window"),
+        "summary_by_session_label": ("model", "session_label"),
         "summary_by_same_bar_policy": ("model", "same_bar_policy"),
         "summary_by_model_family": ("model_family",),
         "summary_by_turtle_quality": ("model", "turtle_quality"),
@@ -830,8 +1024,10 @@ def _group(events: list[dict[str, Any]], fields: tuple[str, ...]) -> list[dict[s
                 "avg_rr": _avg_field(group, "target_distance_r"),
                 "avg_decision_score": _avg_field(group, "decision_score"),
                 "expectancy": _expectancy(group),
-                "managed_expectancy": _avg_field(group, "managed_outcome_r"),
-                "avg_managed_outcome_r": _avg_field(group, "managed_outcome_r"),
+                "gross_managed_expectancy": _avg_field(group, "gross_managed_outcome_r"),
+                "managed_expectancy": _avg_managed_outcome(group),
+                "avg_managed_outcome_r": _avg_managed_outcome(group),
+                "avg_execution_cost_r": _avg_field(group, "execution_cost_r"),
                 "target_before_invalidation_rate": round(sum(1 for e in group if e.get("target_before_invalidation")) / len(group), 6) if group else None,
                 "hit_1r_before_invalidation_rate": round(sum(1 for e in group if e.get("hit_1r_before_invalidation")) / len(group), 6) if group else None,
                 "hit_2r_before_invalidation_rate": round(sum(1 for e in group if e.get("hit_2r_before_invalidation")) / len(group), 6) if group else None,
@@ -850,6 +1046,17 @@ def _group(events: list[dict[str, Any]], fields: tuple[str, ...]) -> list[dict[s
 
 def _avg_field(group: list[dict[str, Any]], field: str) -> float | None:
     values = [float(item[field]) for item in group if item.get(field) is not None]
+    return round(sum(values) / len(values), 6) if values else None
+
+
+def _avg_managed_outcome(group: list[dict[str, Any]]) -> float | None:
+    values = []
+    for item in group:
+        value = item.get("net_managed_outcome_r")
+        if value is None:
+            value = item.get("managed_outcome_r")
+        if value is not None:
+            values.append(float(value))
     return round(sum(values) / len(values), 6) if values else None
 
 
@@ -893,7 +1100,7 @@ def _write_report(path: Path, events: list[dict[str, Any]], summaries: dict[str,
         "## Migration Summary",
         "- Old Entry Model 1/2/3 are archived in `strategies/legacy/`.",
         "- Old models are disabled by default.",
-        "- New registry default models are `turtle_soup`, `silver_bullet`, `ifvg_retest`.",
+        f"- New registry default models are `{', '.join(DEFAULT_MODELS)}`.",
         "",
         "## Backtest Config",
         f"- data_dir: {config.get('data_dir')}",
@@ -903,6 +1110,8 @@ def _write_report(path: Path, events: list[dict[str, Any]], summaries: dict[str,
         f"- same_bar_policy: {config.get('same_bar_policy')}",
         f"- context_mode: {config.get('context_mode')}",
         f"- forward_bars: {config.get('forward_bars')}",
+        f"- commission_bps: {config.get('commission_bps')}",
+        f"- slippage_bps: {config.get('slippage_bps')}",
         "- event-study alignment: `setup_timestamp`; R outcomes are measured from `entry_time` when it differs.",
         "",
         "## Overall Comparison",

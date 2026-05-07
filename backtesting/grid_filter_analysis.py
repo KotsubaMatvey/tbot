@@ -15,7 +15,9 @@ GRID_FIELDS = [
     "count",
     "filtered_out",
     "expectancy",
+    "gross_managed_expectancy",
     "managed_expectancy",
+    "profit_factor",
     "target_before_invalidation_rate",
     "hit_2r_before_invalidation_rate",
     "invalidation_rate",
@@ -89,7 +91,9 @@ def _grid_row(group: list[dict[str, Any]], filtered_out: int, rules: dict[str, A
         "count": len(group),
         "filtered_out": filtered_out,
         "expectancy": _expectancy(group),
-        "managed_expectancy": _avg(group, "managed_outcome_r"),
+        "gross_managed_expectancy": _avg(group, "gross_managed_outcome_r"),
+        "managed_expectancy": _avg_managed_outcome(group),
+        "profit_factor": _profit_factor(group),
         "target_before_invalidation_rate": _rate(group, "target_before_invalidation"),
         "hit_2r_before_invalidation_rate": _rate(group, "hit_2r_before_invalidation"),
         "invalidation_rate": _rate(group, "invalidated"),
@@ -112,6 +116,28 @@ def _avg(group: list[dict[str, Any]], field: str) -> float | None:
     values = [_float_or_none(item.get(field)) for item in group]
     values = [item for item in values if item is not None]
     return round(sum(values) / len(values), 6) if values else None
+
+
+def _avg_managed_outcome(group: list[dict[str, Any]]) -> float | None:
+    values = [_managed_outcome(item) for item in group]
+    values = [item for item in values if item is not None]
+    return round(sum(values) / len(values), 6) if values else None
+
+
+def _profit_factor(group: list[dict[str, Any]]) -> float | None:
+    outcomes = [_managed_outcome(item) for item in group]
+    wins = [item for item in outcomes if item is not None and item > 0]
+    losses = [abs(item) for item in outcomes if item is not None and item < 0]
+    if not wins or not losses:
+        return None
+    return round(sum(wins) / sum(losses), 6)
+
+
+def _managed_outcome(item: dict[str, Any]) -> float | None:
+    value = _float_or_none(item.get("net_managed_outcome_r"))
+    if value is not None:
+        return value
+    return _float_or_none(item.get("managed_outcome_r"))
 
 
 def _empty_filter(value: Any) -> bool:

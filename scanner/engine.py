@@ -29,7 +29,7 @@ from strategies import StrategyContext
 from strategies.htf_context import build_htf_context
 from strategies.ict_models.lifecycle import classify_setup_lifecycle
 from strategies.ict_models.model_filters import passes_model_filter, setup_filter_event
-from strategies.ict_models.registry import DEFAULT_MODELS, get_live_models
+from strategies.ict_models.registry import SELECTABLE_MODELS, get_live_models
 from strategies.pre_model_filter import evaluate_pre_model_filter, merge_pre_model_metadata, setup_passes_pre_model_filter
 from strategies.setup_utils import current_price
 from timeframes import EXECUTION_HTF_MAP, MODEL_3_HTF_MAP, MODEL_3_LTF_MAP, execution_htf_for
@@ -56,7 +56,7 @@ PRIMITIVE_PATTERNS = [
     "EQL",
     "SMT",
 ]
-STRATEGY_PATTERNS = list(DEFAULT_MODELS)
+STRATEGY_PATTERNS = list(SELECTABLE_MODELS)
 ALL_PATTERNS = PRIMITIVE_PATTERNS + STRATEGY_PATTERNS
 
 SMT_TIMEFRAMES = {"1m", "5m", "15m", "1h", "4h"}
@@ -134,9 +134,10 @@ def _build_strategy_alerts(
     if not pre_model.passed:
         return []
     for model in get_live_models():
+        model_rules = model_filters.get(model.name, {})
         if not _model_enabled(model.name, model_filters):
             continue
-        setups.extend(model.detector(primary.symbol, primary.timeframe, primary.candles, context, config))
+        setups.extend(model.detector(primary.symbol, primary.timeframe, primary.candles, context, _detector_config(config, model_rules)))
 
     best_by_key: dict[tuple[object, ...], AlertPayload] = {}
     for setup in setups:
@@ -199,6 +200,10 @@ def _load_model_filters() -> dict[str, dict]:
 
 def _model_enabled(model_name: str, model_filters: dict[str, dict]) -> bool:
     return model_filters.get(model_name, {}).get("enabled", True) is not False
+
+
+def _detector_config(base_config: dict, model_rules: dict) -> dict:
+    return {**base_config, **model_rules}
 
 
 def _score_primitive_alerts(

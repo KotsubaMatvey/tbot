@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 NY_TZ = "America/New_York"
 LONDON_OPEN = "02:00-05:00"
 NY_OPEN = "07:00-10:00"
+NY_PM_SESSION = "13:30-16:00"
 SILVER_BULLET_AM = "10:00-11:00"
 SILVER_BULLET_PM = "14:00-15:00"
 LONDON_TO_NY = "02:00-11:00"
@@ -37,6 +38,7 @@ __all__ = [
     "LONDON_OPEN",
     "LONDON_TO_NY",
     "NY_OPEN",
+    "NY_PM_SESSION",
     "SILVER_BULLET_AM",
     "SILVER_BULLET_PM",
     "in_ny_windows",

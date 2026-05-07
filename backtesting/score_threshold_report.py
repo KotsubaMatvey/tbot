@@ -24,8 +24,11 @@ REPORT_FIELDS = [
     "median_mfe_r",
     "avg_rr",
     "expectancy",
+    "gross_managed_expectancy",
     "managed_expectancy",
     "avg_managed_outcome_r",
+    "avg_execution_cost_r",
+    "profit_factor",
     "target_before_invalidation_rate",
     "hit_1r_before_invalidation_rate",
     "hit_2r_before_invalidation_rate",
@@ -145,8 +148,11 @@ def _summary_row(
         "median_mfe_r": round(float(median(mfes)), 6) if mfes else None,
         "avg_rr": _avg(group, "target_distance_r"),
         "expectancy": _expectancy(group),
-        "managed_expectancy": _avg(group, "managed_outcome_r"),
-        "avg_managed_outcome_r": _avg(group, "managed_outcome_r"),
+        "gross_managed_expectancy": _avg(group, "gross_managed_outcome_r"),
+        "managed_expectancy": _avg_managed_outcome(group),
+        "avg_managed_outcome_r": _avg_managed_outcome(group),
+        "avg_execution_cost_r": _avg(group, "execution_cost_r"),
+        "profit_factor": _profit_factor(group),
         "target_before_invalidation_rate": _rate(group, "target_before_invalidation"),
         "hit_1r_before_invalidation_rate": _rate(group, "hit_1r_before_invalidation"),
         "hit_2r_before_invalidation_rate": _rate(group, "hit_2r_before_invalidation"),
@@ -187,6 +193,30 @@ def _avg(group: list[dict[str, Any]], field: str) -> float | None:
     values = [_float_or_none(event.get(field)) for event in group]
     values = [value for value in values if value is not None]
     return round(sum(values) / len(values), 6) if values else None
+
+
+def _avg_managed_outcome(group: list[dict[str, Any]]) -> float | None:
+    values = [_managed_outcome(event) for event in group]
+    values = [value for value in values if value is not None]
+    return round(sum(values) / len(values), 6) if values else None
+
+
+def _profit_factor(group: list[dict[str, Any]]) -> float | None:
+    outcomes = [_managed_outcome(event) for event in group]
+    wins = [value for value in outcomes if value is not None and value > 0]
+    losses = [abs(value) for value in outcomes if value is not None and value < 0]
+    if not wins and not losses:
+        return None
+    if not losses:
+        return None
+    return round(sum(wins) / sum(losses), 6) if losses else None
+
+
+def _managed_outcome(event: dict[str, Any]) -> float | None:
+    value = _float_or_none(event.get("net_managed_outcome_r"))
+    if value is not None:
+        return value
+    return _float_or_none(event.get("managed_outcome_r"))
 
 
 def _rate(group: list[dict[str, Any]], field: str) -> float | None:

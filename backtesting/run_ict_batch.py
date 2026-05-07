@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from backtesting import grid_filter_analysis, run_ict_models, score_threshold_report
+from backtesting import grid_filter_analysis, run_ict_models, score_threshold_report, walk_forward_report
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -33,6 +33,31 @@ def main(argv: list[str] | None = None) -> int:
             result = grid_filter_analysis.main(grid_args)
             if result != 0:
                 return result
+        gates = config.get("walk_forward_gates")
+        if gates:
+            wf_args = [
+                "--events",
+                str(out_dir / "events.csv"),
+                "--threshold",
+                str(config.get("walk_forward_threshold", 70)),
+                "--min-total-trades",
+                str(gates.get("min_total_trades", 30)),
+                "--min-phase-trades",
+                str(gates.get("min_phase_trades", 10)),
+                "--min-managed-expectancy-r",
+                str(gates.get("min_managed_expectancy_r", 0.3)),
+                "--min-profit-factor",
+                str(gates.get("min_profit_factor", 1.3)),
+                "--max-drawdown-r",
+                str(gates.get("max_drawdown_r", 8.0)),
+                "--max-trades-per-session",
+                str(gates.get("max_trades_per_session", 1)),
+            ]
+            if config.get("model_filters"):
+                wf_args.extend(["--model-filters", str(config_path)])
+            result = walk_forward_report.main(wf_args)
+            if result != 0:
+                return result
     return 0
 
 
@@ -57,7 +82,7 @@ def build_run_args(config: dict[str, Any], run: dict[str, Any]) -> list[str]:
         value = run.get(name, config.get(name))
         if value is not None:
             args.extend([f"--{name.replace('_', '-')}", str(value)])
-    for name in ("tp1_r", "partial_close_fraction"):
+    for name in ("tp1_r", "partial_close_fraction", "commission_bps", "slippage_bps"):
         value = run.get(name, config.get(name))
         if value is not None:
             args.extend([f"--{name.replace('_', '-')}", str(value)])
@@ -68,22 +93,37 @@ def build_run_args(config: dict[str, Any], run: dict[str, Any]) -> list[str]:
         "entry_mode",
         "stop_mode",
         "target_mode",
+        "start_date",
+        "end_date",
         "turtle_soup_min_wick_fraction",
         "turtle_soup_min_wick_atr_ratio",
         "turtle_soup_min_close_back_fraction",
         "turtle_soup_min_level_age_bars",
         "turtle_soup_max_confirmation_bars",
+        "turtle_soup_min_stop_bps",
+        "turtle_soup_session_windows",
+        "turtle_soup_range_source",
+        "turtle_soup_asian_range_window",
+        "turtle_soup_asian_range_tz",
+        "turtle_soup_asian_min_range_bps",
+        "turtle_soup_asian_min_breach_bps",
         "min_ifvg_retest_bars",
         "max_ifvg_retest_bars",
         "ifvg_entry_mode",
         "ifvg_stop_mode",
+        "ifvg_min_retest_depth",
         "ifvg_max_source_touches_before_inversion",
         "ifvg_max_source_age_bars",
         "ict2022_max_fvg_retest_bars",
+        "ict2022_session_windows",
         "breaker_max_trigger_to_retest_bars",
         "breaker_max_retest_count",
+        "rejection_block_min_wick_fraction",
         "silver_bullet_windows",
         "silver_bullet_max_retest_bars",
+        "silver_bullet_min_retest_depth",
+        "scan_session_windows",
+        "scan_session_lag_bars",
     ):
         value = run.get(name, config.get(name))
         if value is not None:
@@ -100,12 +140,21 @@ def build_run_args(config: dict[str, Any], run: dict[str, Any]) -> list[str]:
     confirmation_fvg = run.get("turtle_soup_require_confirmation_fvg", config.get("turtle_soup_require_confirmation_fvg"))
     if confirmation_fvg is not None:
         args.append("--turtle-soup-require-confirmation-fvg" if confirmation_fvg else "--no-turtle-soup-require-confirmation-fvg")
+    asian_first_signal = run.get("turtle_soup_asian_first_signal_only", config.get("turtle_soup_asian_first_signal_only"))
+    if asian_first_signal is not None:
+        args.append("--turtle-soup-asian-first-signal-only" if asian_first_signal else "--no-turtle-soup-asian-first-signal-only")
     silver_retest_in_window = run.get("silver_bullet_retest_must_occur_within_window", config.get("silver_bullet_retest_must_occur_within_window"))
     if silver_retest_in_window is not None:
         args.append("--silver-bullet-retest-must-occur-within-window" if silver_retest_in_window else "--no-silver-bullet-retest-must-occur-within-window")
     silver_ce_invalidation = run.get("silver_bullet_use_ce_invalidation", config.get("silver_bullet_use_ce_invalidation"))
     if silver_ce_invalidation is not None:
         args.append("--silver-bullet-use-ce-invalidation" if silver_ce_invalidation else "--no-silver-bullet-use-ce-invalidation")
+    ict2022_retest_in_session = run.get("ict2022_retest_must_occur_within_session", config.get("ict2022_retest_must_occur_within_session"))
+    if ict2022_retest_in_session is not None:
+        args.append("--ict2022-retest-must-occur-within-session" if ict2022_retest_in_session else "--no-ict2022-retest-must-occur-within-session")
+    ict2022_strong = run.get("ict2022_require_strong_displacement", config.get("ict2022_require_strong_displacement"))
+    if ict2022_strong is not None:
+        args.append("--ict2022-require-strong-displacement" if ict2022_strong else "--no-ict2022-require-strong-displacement")
     pre_model_filter = run.get("pre_model_filter", config.get("pre_model_filter"))
     if pre_model_filter is False:
         args.append("--no-pre-model-filter")

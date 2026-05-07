@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 
 from market_primitives.fvg import detect_fvg
 
-from .common import buffered_stop, closed_candles, fixed_r_target, nearest_liquidity_target, setup
+from .common import buffered_stop, closed_candles, context_metadata, draw_on_liquidity_target, fixed_r_target, nearest_liquidity_target, setup
 from .sessions import SILVER_BULLET_AM, SILVER_BULLET_PM
 
 SILVER_BULLET_TZ = "America/New_York"
@@ -16,6 +16,7 @@ SILVER_BULLET_ENTRY_MODE = "edge"
 SILVER_BULLET_TARGET_MODE = "fixed_r"
 SILVER_BULLET_MAX_RETEST_BARS = 6
 SILVER_BULLET_RETEST_MUST_OCCUR_WITHIN_WINDOW = True
+SILVER_BULLET_MIN_RETEST_DEPTH = 0.15
 
 
 def detect_setups(
@@ -35,8 +36,10 @@ def detect_setups(
     if entry_mode not in {"edge", "ce"}:
         entry_mode = SILVER_BULLET_ENTRY_MODE
     target_mode = str(cfg.get("target_mode") or SILVER_BULLET_TARGET_MODE)
+    htf_mode = str(cfg.get("context_mode") or cfg.get("htf_mode") or "off")
     stop_bps = float(cfg.get("stop_buffer_bps") or 2)
     max_retest_bars = int(cfg.get("silver_bullet_max_retest_bars") or SILVER_BULLET_MAX_RETEST_BARS)
+    min_retest_depth = float(cfg.get("silver_bullet_min_retest_depth", SILVER_BULLET_MIN_RETEST_DEPTH))
     retest_must_be_in_window = bool(cfg.get("silver_bullet_retest_must_occur_within_window", SILVER_BULLET_RETEST_MUST_OCCUR_WITHIN_WINDOW))
     use_ce_invalidation = bool(cfg.get("silver_bullet_use_ce_invalidation", False))
     zone = ZoneInfo(tz_name)
@@ -46,7 +49,7 @@ def detect_setups(
     for gap in reversed(gaps):
         fvg_dt = datetime.fromtimestamp(gap.created_at / 1000, tz=ZoneInfo("UTC")).astimezone(zone)
         window = _matching_window(fvg_dt.timetz().replace(tzinfo=None), windows)
-        retest = _first_retest(closed, gap.created_at, gap.gap_low, gap.gap_high, max_retest_bars)
+        retest = _first_retest(closed, gap.created_at, gap.gap_low, gap.gap_high, gap.direction, max_retest_bars, min_retest_depth)
         if retest is None:
             continue
         retest_dt = datetime.fromtimestamp(int(retest["time"]) / 1000, tz=ZoneInfo("UTC")).astimezone(zone)
@@ -72,7 +75,14 @@ def detect_setups(
             side = "short"
             swing_stop = _nearest_swing_high(closed, int(retest["time"])) or gap.gap_high
             stop = buffered_stop(side, swing_stop, entry, stop_bps)
-        target = fixed_r_target(side, entry, stop) if target_mode == "fixed_r" else nearest_liquidity_target(closed, side, entry, stop)
+        htf_metadata = context_metadata(context, side, htf_mode, cfg)
+        target_metadata: dict[str, object] = {}
+        if target_mode == "fixed_r":
+            target = fixed_r_target(side, entry, stop)
+        elif target_mode == "dol_hierarchy":
+            target, target_metadata = draw_on_liquidity_target(closed, side, entry, stop, htf_metadata)
+        else:
+            target = nearest_liquidity_target(closed, side, entry, stop)
         item = setup(
             model_name="silver_bullet",
             direction=side,
@@ -87,11 +97,19 @@ def detect_setups(
             score=3,
             reason=f"Silver Bullet {gap.direction} FVG with constrained NY retest",
             metadata={
+                **htf_metadata,
+                **target_metadata,
                 "entry_mode": entry_mode,
                 "stop_mode": "swing_or_fvg",
                 "target_mode": target_mode,
                 "session_window": _format_window(window),
+                "session_date": signal_dt.strftime("%Y-%m-%d"),
+                "session_label": _session_label(window),
+                "session_type": _session_label(window),
                 "ny_time": signal_dt.strftime("%Y-%m-%d %H:%M"),
+                "bias_alignment": htf_metadata.get("htf_context_alignment"),
+                "is_in_p_d": htf_metadata.get("htf_location"),
+                "smt_detected": htf_metadata.get("has_smt_confirmation"),
                 "signal_time": signal_time,
                 "signal_ny_time": signal_dt.strftime("%Y-%m-%d %H:%M"),
                 "silver_bullet_fvg_source": fvg_source,
@@ -100,12 +118,14 @@ def detect_setups(
                 "fvg_low": gap.gap_low,
                 "fvg_high": gap.gap_high,
                 "fvg_ce": (gap.gap_low + gap.gap_high) / 2,
+                "fvg_fill_depth": _retest_depth(retest, gap.gap_low, gap.gap_high, gap.direction),
                 "silver_bullet_use_ce_invalidation": use_ce_invalidation,
                 "entry_time": int(retest["time"]),
                 "retest_time": int(retest["time"]),
                 "retest_ny_time": retest_dt.strftime("%Y-%m-%d %H:%M"),
                 "time_to_retest_bars": _bars_between(closed, gap.created_at, int(retest["time"])),
                 "silver_bullet_max_retest_bars": max_retest_bars,
+                "silver_bullet_min_retest_depth": min_retest_depth,
                 "silver_bullet_retest_must_occur_within_window": retest_must_be_in_window,
             },
         )
@@ -150,7 +170,28 @@ def _format_window(window: tuple[time, time]) -> str:
     return f"{window[0].strftime('%H:%M')}-{window[1].strftime('%H:%M')}"
 
 
-def _first_retest(candles: list[dict[str, float | int]], after: int, low: float, high: float, max_bars: int) -> dict[str, float | int] | None:
+def _session_label(window: tuple[time, time]) -> str:
+    start = window[0]
+    if start < time(5, 0):
+        return "london_open"
+    if start < time(10, 0):
+        return "ny_open"
+    if start < time(12, 0):
+        return "ny_am"
+    if start >= time(14, 0) and start < time(16, 0):
+        return "ny_pm"
+    return "custom"
+
+
+def _first_retest(
+    candles: list[dict[str, float | int]],
+    after: int,
+    low: float,
+    high: float,
+    direction: str,
+    max_bars: int,
+    min_depth: float,
+) -> dict[str, float | int] | None:
     checked = 0
     for candle in candles:
         if int(candle["time"]) <= after:
@@ -159,6 +200,8 @@ def _first_retest(candles: list[dict[str, float | int]], after: int, low: float,
         if checked > max_bars:
             return None
         if float(candle["low"]) <= high and float(candle["high"]) >= low:
+            if _retest_depth(candle, low, high, direction) < min_depth:
+                continue
             return candle
     return None
 
@@ -175,6 +218,15 @@ def _entry(low: float, high: float, direction: str, mode: str) -> float:
     if mode == "ce":
         return (low + high) / 2
     return high if direction == "bullish" else low
+
+
+def _retest_depth(candle: dict[str, float | int], low: float, high: float, direction: str) -> float:
+    width = max(high - low, 1e-9)
+    if direction == "bullish":
+        depth = (high - float(candle["low"])) / width
+    else:
+        depth = (float(candle["high"]) - low) / width
+    return min(1.0, max(0.0, depth))
 
 
 def _nearest_swing_low(candles: list[dict[str, float | int]], before: int) -> float | None:

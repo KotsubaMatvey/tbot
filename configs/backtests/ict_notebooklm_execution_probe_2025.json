@@ -29,7 +29,7 @@
   "ifvg_max_source_touches_before_inversion": 12,
   "ifvg_max_source_age_bars": 100,
   "ict2022_max_fvg_retest_bars": 20,
-  "silver_bullet_windows": "03:00-04:00,10:00-11:00,14:00-15:00",
+  "silver_bullet_windows": "10:00-11:00,14:00-15:00",
   "silver_bullet_max_retest_bars": 6,
   "silver_bullet_retest_must_occur_within_window": true,
   "silver_bullet_use_ce_invalidation": false,

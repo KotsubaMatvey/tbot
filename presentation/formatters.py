@@ -28,21 +28,32 @@ def build_strategy_alert_text(alert: AlertPayload) -> str:
         lines.append(f"{alert.symbol}  HTF {alert.context_timeframe} / LTF {alert.timeframe}")
     else:
         lines.append(f"{alert.symbol}  {alert.timeframe}")
-    lines.append(f"{alert.pattern}  {(alert.trade_direction or '').upper()}")
-    htf_bias = alert.metadata.get("htf_bias")
-    if htf_bias and htf_bias != "none":
-        htf_location = alert.metadata.get("htf_location", "unknown")
-        htf_zone = alert.metadata.get("htf_zone_type", "None")
-        htf_objective = alert.metadata.get("htf_objective_type", "none")
-        lines.append(f"HTF: {alert.context_timeframe or '-'} {htf_bias} {htf_location} {htf_zone} objective {htf_objective}")
+    setup_parts = [f"{alert.pattern}  {(alert.trade_direction or '').upper()}"]
     if alert.status:
-        lines.append(f"Status: {alert.status.replace('_', ' ').upper()}")
-    if alert.reason:
-        lines.append(alert.reason)
+        setup_parts.append(f"Status: {alert.status.replace('_', ' ').upper()}")
+    if alert.score is not None:
+        setup_parts.append(f"Score: {alert.score}/5")
+    lines.append(" | ".join(setup_parts))
+    plan = _ict_plan_line(alert)
+    if plan:
+        lines.append(plan)
+    else:
+        htf_summary = _htf_summary_line(alert)
+        if htf_summary:
+            lines.append(htf_summary)
+    risk_parts = []
+    stop_model = alert.metadata.get("stop_model")
+    if stop_model:
+        risk_parts.append(str(stop_model))
     if alert.entry_low is not None and alert.entry_high is not None:
-        lines.append(f"Entry zone: {fmt_price(alert.entry_low)} - {fmt_price(alert.entry_high)}")
+        risk_parts.append(f"Entry zone: {fmt_price(alert.entry_low)} - {fmt_price(alert.entry_high)}")
     if alert.invalidation is not None:
-        lines.append(f"Invalidation: {fmt_price(alert.invalidation)}")
+        risk_parts.append(f"Invalidation: {fmt_price(alert.invalidation)}")
+    rr = alert.metadata.get("rr_to_target")
+    if isinstance(rr, (int, float)):
+        risk_parts.append(f"RR {float(rr):.2f}R")
+    if risk_parts:
+        lines.append("Risk: " + " | ".join(risk_parts))
     tp1 = alert.metadata.get("tp1_price")
     tp2 = alert.metadata.get("tp2_price")
     if isinstance(tp1, (int, float)) or isinstance(tp2, (int, float)):
@@ -52,18 +63,58 @@ def build_strategy_alert_text(alert: AlertPayload) -> str:
         if isinstance(tp2, (int, float)):
             parts.append(f"TP2 {fmt_price(tp2)}")
         lines.append("Targets: " + " | ".join(parts))
-    rr = alert.metadata.get("rr_to_target")
-    stop_model = alert.metadata.get("stop_model")
-    if isinstance(rr, (int, float)) or stop_model:
-        rr_text = f"{float(rr):.2f}R" if isinstance(rr, (int, float)) else "n/a"
-        lines.append(f"Risk: {stop_model or 'physical_stop'} | RR {rr_text}")
     logical_price = alert.metadata.get("logical_invalidation_price")
     logical_model = alert.metadata.get("logical_invalidation_model")
     if isinstance(logical_price, (int, float)):
         lines.append(f"Logical invalidation: {logical_model or 'body_close'} {fmt_price(logical_price)}")
-    if alert.score is not None:
-        lines.append(f"Score: {alert.score}/5")
+    if alert.reason:
+        lines.append(f"Reason: {alert.reason}")
     return "\n".join(lines)
+
+
+def _htf_summary_line(alert: AlertPayload) -> str | None:
+    htf_bias = alert.metadata.get("htf_bias")
+    if not htf_bias or htf_bias == "none":
+        return None
+    parts = [f"HTF: {alert.context_timeframe or '-'}", str(htf_bias)]
+    htf_location = alert.metadata.get("htf_location")
+    if htf_location and htf_location != "unknown":
+        parts.append(str(htf_location))
+    htf_zone = alert.metadata.get("htf_zone_type")
+    if htf_zone and htf_zone != "None":
+        parts.append(f"POI {htf_zone}")
+    htf_objective = alert.metadata.get("htf_objective_type")
+    if htf_objective and htf_objective != "none":
+        parts.append(f"DOL {htf_objective}")
+    return " ".join(parts)
+
+
+def _ict_plan_line(alert: AlertPayload) -> str | None:
+    metadata = alert.metadata
+    bias = metadata.get("htf_bias")
+    if not bias or bias == "none":
+        return None
+    location = metadata.get("htf_location")
+    htf = f"HTF {bias}"
+    if location and location != "unknown":
+        htf = f"{htf} {location}"
+
+    draw = metadata.get("htf_draw_direction") or metadata.get("htf_objective")
+    objective_type = metadata.get("htf_objective_type") or "objective"
+    objective_level = metadata.get("htf_objective_level")
+    dol = f"DOL {draw or '-'} {objective_type}"
+    if isinstance(objective_level, (int, float)):
+        dol = f"{dol} {fmt_price(objective_level)}"
+
+    poi_type = metadata.get("htf_zone_type")
+    poi = str(poi_type or "POI")
+    zone_low = metadata.get("htf_zone_low")
+    zone_high = metadata.get("htf_zone_high")
+    if isinstance(zone_low, (int, float)) and isinstance(zone_high, (int, float)):
+        poi = f"{poi} {fmt_price(zone_low)}-{fmt_price(zone_high)}"
+
+    direction = (alert.trade_direction or "").upper()
+    return f"ICT plan: {htf} -> {dol} -> POI {poi} -> {direction} entry"
 
 
 def build_chart_caption(symbol: str, timeframe: str, alerts: Iterable[AlertPayload]) -> str:

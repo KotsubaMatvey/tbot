@@ -11,6 +11,7 @@ ENABLED_BY_DEFAULT = False
 RESEARCH_ONLY = True
 REJECTION_ENTRY_MODE = "body_level"
 REJECTION_STOP_MODE = "wick_extreme"
+REJECTION_MIN_WICK_FRACTION = 0.20
 
 
 def detect_setups(
@@ -26,6 +27,7 @@ def detect_setups(
         return []
     htf_mode = str(cfg.get("context_mode") or cfg.get("htf_mode") or "off")
     require_killzone = bool(cfg.get("rejection_block_require_killzone", False))
+    min_wick_fraction = _float_cfg(cfg, "rejection_block_min_wick_fraction", REJECTION_MIN_WICK_FRACTION)
     stop_bps = float(cfg.get("stop_buffer_bps") or 2)
     scan = closed[-120:]
     current = scan[-1]
@@ -35,7 +37,16 @@ def detect_setups(
     results = []
     current_idx = len(scan) - 1
 
-    high = next((item for item in reversed(highs) if item.body_level is not None and _short_retest_valid(scan, item.index, current_idx, float(item.body_level), float(item.level))), None)
+    high = next(
+        (
+            item
+            for item in reversed(highs)
+            if item.body_level is not None
+            and _upper_wick_fraction(scan[item.index]) >= min_wick_fraction
+            and _short_retest_valid(scan, item.index, current_idx, float(item.body_level), float(item.level))
+        ),
+        None,
+    )
     if high is not None:
         body_level = float(high.body_level)
         wick_extreme = float(high.level)
@@ -67,6 +78,11 @@ def detect_setups(
                 "rejection_body_level": body_level,
                 "rejection_wick_extreme": wick_extreme,
                 "current_wick_extreme": float(current["high"]),
+                "rejection_zone_low": body_level,
+                "rejection_zone_high": wick_extreme,
+                "rejection_body_sweep_bps": _distance_bps(body_level, float(current["high"])),
+                "rejection_min_wick_fraction": min_wick_fraction,
+                "body_liquidity_sweep": True,
                 "source_swing_time": high.timestamp,
                 "source_swing_significance": high.significance,
                 "rejection_wick_fraction": _upper_wick_fraction(scan[high.index]),
@@ -75,7 +91,16 @@ def detect_setups(
         if item:
             results.append(item)
 
-    low = next((item for item in reversed(lows) if item.body_level is not None and _long_retest_valid(scan, item.index, current_idx, float(item.body_level), float(item.level))), None)
+    low = next(
+        (
+            item
+            for item in reversed(lows)
+            if item.body_level is not None
+            and _lower_wick_fraction(scan[item.index]) >= min_wick_fraction
+            and _long_retest_valid(scan, item.index, current_idx, float(item.body_level), float(item.level))
+        ),
+        None,
+    )
     if low is not None:
         body_level = float(low.body_level)
         wick_extreme = float(low.level)
@@ -107,6 +132,11 @@ def detect_setups(
                 "rejection_body_level": body_level,
                 "rejection_wick_extreme": wick_extreme,
                 "current_wick_extreme": float(current["low"]),
+                "rejection_zone_low": wick_extreme,
+                "rejection_zone_high": body_level,
+                "rejection_body_sweep_bps": _distance_bps(body_level, float(current["low"])),
+                "rejection_min_wick_fraction": min_wick_fraction,
+                "body_liquidity_sweep": True,
                 "source_swing_time": low.timestamp,
                 "source_swing_significance": low.significance,
                 "rejection_wick_fraction": _lower_wick_fraction(scan[low.index]),
@@ -150,6 +180,15 @@ def _upper_wick_fraction(candle: dict[str, float | int]) -> float:
 def _lower_wick_fraction(candle: dict[str, float | int]) -> float:
     body_low = min(float(candle["open"]), float(candle["close"]))
     return max(0.0, body_low - float(candle["low"])) / max(float(candle["high"]) - float(candle["low"]), 1e-9)
+
+
+def _distance_bps(level: float, extreme: float) -> float:
+    return abs(extreme - level) / max(level, 1e-9) * 10_000
+
+
+def _float_cfg(cfg: dict[str, Any], key: str, default: float) -> float:
+    value = cfg.get(key, default)
+    return float(value) if value is not None else default
 
 
 __all__ = ["ENABLED_BY_DEFAULT", "RESEARCH_ONLY", "detect_setups"]

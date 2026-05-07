@@ -1,0 +1,29 @@
+{
+  "execution_costs": {
+    "commission_bps": 4.0,
+    "slippage_bps": 1.0,
+    "note": "Per-side futures taker-style estimate; walk-forward reports subtract the round trip from managed R."
+  },
+  "walk_forward_gates": {
+    "min_total_trades": 30,
+    "min_phase_trades": 10,
+    "min_managed_expectancy_r": 0.3,
+    "min_profit_factor": 1.3,
+    "max_drawdown_r": 8.0,
+    "max_trades_per_session": 1
+  },
+  "data_requirements": {
+    "required_start": "2024-01-01",
+    "required_end": "2026-04-30",
+    "min_coverage_pct": 95.0,
+    "max_gap_bars": 3.0,
+    "symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT"],
+    "timeframes": ["1m", "5m", "15m", "1h", "4h", "1d"]
+  },
+  "forward_log_requirements": {
+    "min_signals": 20,
+    "min_fill_rate": 0.7,
+    "max_avg_slippage_bps": 2.0,
+    "min_avg_net_outcome_r": 0.0
+  }
+}

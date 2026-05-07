@@ -1,42 +1,100 @@
 {
   "model_filters": {
+    "silver_bullet": {
+      "enabled": true,
+      "allowed_symbols": ["BTCUSDT"],
+      "allowed_timeframes": ["15m"],
+      "min_target_distance_r": 2.0,
+      "require_session_window": true,
+      "require_htf_draw": true,
+      "require_bias_alignment": true,
+      "require_premium_discount_alignment": true,
+      "allowed_htf_context_alignments": ["aligned"],
+      "silver_bullet_windows": ["10:00-11:00", "14:00-15:00"],
+      "silver_bullet_max_retest_bars": 1,
+      "silver_bullet_min_retest_depth": 0.15,
+      "silver_bullet_retest_must_occur_within_window": true,
+      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"]
+    },
     "ifvg_retest": {
-      "enabled": false,
+      "enabled": true,
+      "allowed_symbols": ["BTCUSDT"],
       "allowed_timeframes": ["4h"],
       "min_target_distance_r": 3.0,
+      "require_htf_draw": true,
+      "require_bias_alignment": true,
+      "require_premium_discount_alignment": true,
+      "allowed_htf_context_alignments": ["aligned"],
       "allowed_displacement_grades": ["valid", "strong"],
       "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"],
-      "research_note": "Strict 5-15 IFVG annual sample produced almost no activated trades after the spec update."
+      "research_note": "Enabled only on 4h because strict 5-15 IFVG annual sample produced almost no activated trades after the spec update."
+    },
+    "ict2022_mss_fvg": {
+      "enabled": false,
+      "allowed_timeframes": ["5m", "15m"],
+      "min_target_distance_r": 2.0,
+      "require_htf_draw": true,
+      "require_bias_alignment": true,
+      "require_premium_discount_alignment": true,
+      "allowed_htf_context_alignments": ["aligned"],
+      "ict2022_require_killzone": true,
+      "ict2022_session_windows": ["02:00-05:00", "07:00-10:00", "13:30-16:00"],
+      "ict2022_retest_must_occur_within_session": false,
+      "ict2022_max_fvg_retest_bars": 3,
+      "ict2022_require_strong_displacement": false,
+      "allowed_displacement_grades": ["strong"],
+      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"],
+      "research_note": "Prepared as session fallback, but disabled live after BTC 5m/15m May-Jun smoke produced zero events; retest may occur after sweep/MSS session if target was not reached first."
+    },
+    "turtle_soup": {
+      "enabled": false,
+      "allowed_timeframes": ["5m", "15m"],
+      "min_target_distance_r": 2.0,
+      "require_htf_draw": true,
+      "require_bias_alignment": true,
+      "require_premium_discount_alignment": true,
+      "allowed_htf_context_alignments": ["aligned"],
+      "target_mode": "dol_hierarchy",
+      "turtle_soup_require_killzone": true,
+      "turtle_soup_session_windows": ["02:00-05:00", "07:00-10:00", "13:30-16:00"],
+      "turtle_soup_min_wick_fraction": 0.10,
+      "turtle_soup_min_close_back_fraction": 0.05,
+      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"],
+      "research_note": "Prepared as a session fallback, but disabled live until sweep+MSS/FVG filters show positive expectancy."
+    },
+    "breaker_block": {
+      "enabled": true,
+      "allowed_symbols": ["BTCUSDT"],
+      "allowed_timeframes": ["30m", "1h"],
+      "min_target_distance_r": 2.0,
+      "require_htf_draw": true,
+      "require_bias_alignment": true,
+      "require_premium_discount_alignment": true,
+      "allowed_htf_context_alignments": ["aligned"],
+      "allowed_displacement_grades": ["valid", "strong"],
+      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"]
     },
     "reclaimed_ob": {
       "enabled": true,
+      "allowed_symbols": ["BTCUSDT"],
       "allowed_timeframes": ["4h"],
       "allowed_htf_zone_types": ["FVG", "Breaker"],
       "require_htf_inside_poi": true,
+      "require_htf_draw": true,
+      "require_bias_alignment": true,
+      "require_premium_discount_alignment": true,
+      "allowed_htf_context_alignments": ["aligned"],
       "min_target_distance_r": 1.0,
-      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location"]
+      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location"],
+      "research_note": "Low-frequency continuation model; not a default user model."
     },
     "rejection_block": {
       "enabled": false,
-      "allowed_timeframes": ["1h"],
-      "min_target_distance_r": 2.0,
-      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"],
-      "research_note": "Full-2025 annual baseline is negative across BTC/ETH/SOL after swing-limit RB rewrite."
-    },
-    "turtle_soup": {
-      "enabled": false
-    },
-    "silver_bullet": {
-      "enabled": false
-    },
-    "ict2022_mss_fvg": {
-      "enabled": false
-    },
-    "breaker_block": {
-      "enabled": false
+      "research_note": "Research-only after NotebookLM spec; full-2025 annual baseline was negative after swing-limit RB rewrite."
     },
     "mitigation_block": {
-      "enabled": false
+      "enabled": false,
+      "research_note": "Research-only lowest-frequency model."
     }
   }
 }

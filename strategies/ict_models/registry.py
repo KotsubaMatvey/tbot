@@ -56,7 +56,8 @@ LEGACY_MODELS: dict[str, ICTModelSpec] = {
     "legacy_model3": ICTModelSpec("legacy_model3", "Legacy Entry Model 3", _legacy_adapter(detect_legacy_model_3), "legacy", legacy=True),
 }
 
-DEFAULT_MODELS = ["ifvg_retest", "reclaimed_ob", "rejection_block"]
+DEFAULT_MODELS = ["silver_bullet", "ifvg_retest", "ict2022_mss_fvg", "turtle_soup"]
+SELECTABLE_MODELS = [*DEFAULT_MODELS, "breaker_block", "reclaimed_ob"]
 
 _OLD_ALIASES = {"model1": "legacy_model1", "entry_model_1": "legacy_model1", "model2": "legacy_model2", "entry_model_2": "legacy_model2", "model3": "legacy_model3", "entry_model_3": "legacy_model3"}
 
@@ -76,8 +77,12 @@ def get_default_models() -> list[ICTModelSpec]:
     return [get_model(name) for name in DEFAULT_MODELS]
 
 
+def get_selectable_models() -> list[ICTModelSpec]:
+    return [get_model(name) for name in SELECTABLE_MODELS]
+
+
 def get_live_models() -> list[ICTModelSpec]:
-    return list(ACTIVE_ICT_MODELS.values()) + list(RESEARCH_ONLY_MODELS.values())
+    return get_selectable_models()
 
 
 def list_active_models() -> list[str]:
@@ -116,9 +121,11 @@ __all__ = [
     "DEFAULT_MODELS",
     "LEGACY_MODELS",
     "RESEARCH_ONLY_MODELS",
+    "SELECTABLE_MODELS",
     "get_default_models",
     "get_live_models",
     "get_model",
+    "get_selectable_models",
     "list_active_models",
     "list_legacy_models",
     "list_research_models",

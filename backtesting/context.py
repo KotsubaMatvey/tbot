@@ -3,7 +3,7 @@ from __future__ import annotations
 from backtesting import Candle
 from backtesting.accumulator import ReplaySnapshotCache
 from scanner.snapshots import build_primitive_snapshot
-from strategies import StrategyContext
+from strategies import PrimitiveSnapshot, StrategyContext
 from strategies.htf_context import build_htf_context
 from strategies.setup_utils import current_price, timeframe_to_ms
 from timeframes import MODEL_3_LTF_MAP, execution_htf_for
@@ -91,6 +91,8 @@ def build_accumulated_strategy_context_for_replay(
     timeframe: str,
     current_timestamp: int,
     snapshot_cache: ReplaySnapshotCache,
+    primary_visible: list[Candle] | None = None,
+    accumulate_primary: bool = True,
     higher_timeframe: str | None = None,
     lower_timeframe: str | None = None,
     htf_mode: str = "strict",
@@ -104,7 +106,12 @@ def build_accumulated_strategy_context_for_replay(
     model3_min_rr_to_objective: float = 1.5,
     model3_source_zone: str = "any",
 ) -> StrategyContext | None:
-    primary = snapshot_cache.get_snapshot(symbol, timeframe, current_timestamp)
+    if accumulate_primary:
+        primary = snapshot_cache.get_snapshot(symbol, timeframe, current_timestamp)
+    elif primary_visible:
+        primary = PrimitiveSnapshot(symbol=symbol, timeframe=timeframe, candles=primary_visible)
+    else:
+        primary = None
     if primary is None:
         return None
 

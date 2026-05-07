@@ -41,6 +41,17 @@ def _timeframe_enabled_for_user(alert: AlertPayload, timeframe: str, user: dict)
     return alert.alert_kind == "strategy" or timeframe in user.get("timeframes", set())
 
 
+def _digest_alert_detail(alert: AlertPayload) -> str:
+    if alert.alert_kind != "strategy":
+        return alert.detail
+    parts = [f"{alert.pattern} {(alert.trade_direction or '').upper()}"]
+    if alert.status:
+        parts.append(alert.status.replace("_", " ").upper())
+    if alert.score is not None:
+        parts.append(f"{alert.score}/5")
+    return " | ".join(part for part in parts if part.strip())
+
+
 async def scanner_loop(application: Application) -> None:
     global _last_reset_date
     logger.info("Scanner loop started")
@@ -139,7 +150,7 @@ async def _send_digest(application: Application, users: list[dict]) -> None:
             for timeframe in sorted(zones.get(symbol, {})):
                 for alert in zones.get(symbol, {}).get(timeframe, []):
                     if _timeframe_enabled_for_user(alert, timeframe, user) and _alert_enabled_for_user(alert, user):
-                        symbol_lines.append(f"  {timeframe}  {alert.detail}")
+                        symbol_lines.append(f"  {timeframe}  {_digest_alert_detail(alert)}")
                         has_alerts = True
             if len(symbol_lines) > 1:
                 lines.extend(symbol_lines)

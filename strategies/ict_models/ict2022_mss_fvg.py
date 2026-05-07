@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from datetime import datetime, time
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from .common import buffered_stop, closed_candles, context_metadata, nearest_liquidity_target, setup
-from .sessions import LONDON_OPEN, NY_OPEN, in_ny_windows
+from .sessions import LONDON_OPEN, NY_OPEN, NY_PM_SESSION, NY_TZ, in_ny_windows
 
 ICT2022_REQUIRE_HTF = False
 ICT2022_REQUIRE_DISPLACEMENT = True
@@ -28,6 +30,9 @@ def detect_setups(
     require_strong_displacement = bool(cfg.get("ict2022_require_strong_displacement", True))
     require_body_close = bool(cfg.get("ict2022_require_body_close", True))
     require_killzone = bool(cfg.get("ict2022_require_killzone", ICT2022_REQUIRE_KILLZONE))
+    session_windows = _window_list(cfg.get("ict2022_session_windows") or [LONDON_OPEN, NY_OPEN, NY_PM_SESSION])
+    require_same_session = bool(cfg.get("ict2022_require_same_session", True))
+    retest_must_be_in_session = bool(cfg.get("ict2022_retest_must_occur_within_session", False))
     max_sweep_age_bars = int(cfg.get("ict2022_max_sweep_age_bars", 20))
     max_fvg_retest_bars = int(cfg.get("ict2022_max_fvg_retest_bars", 20))
     htf_mode = str(cfg.get("context_mode") or cfg.get("htf_mode") or "off")
@@ -59,10 +64,13 @@ def detect_setups(
         sweep_age = _bars_between(snapshot.candles, sweep.timestamp, structure.timestamp)
         if sweep_age is not None and sweep_age > max_sweep_age_bars:
             continue
-        if require_killzone and not (
-            in_ny_windows(sweep.timestamp, [LONDON_OPEN, NY_OPEN]) and in_ny_windows(structure.timestamp, [LONDON_OPEN, NY_OPEN])
-        ):
-            continue
+        sweep_window = _matching_window(sweep.timestamp, session_windows)
+        structure_window = _matching_window(structure.timestamp, session_windows)
+        if require_killzone:
+            if sweep_window is None or structure_window is None:
+                continue
+            if require_same_session and sweep_window != structure_window:
+                continue
         fvg = next((g for g in snapshot.fvgs if g.direction == direction and g.created_at >= structure.timestamp and not g.invalidated), None)
         if fvg is None:
             continue
@@ -70,11 +78,18 @@ def detect_setups(
         if retest_idx is None:
             continue
         retest = snapshot.candles[retest_idx]
+        retest_window = _matching_window(int(retest["time"]), session_windows)
+        if retest_must_be_in_session and retest_window != (structure_window or sweep_window):
+            continue
+        session_window = retest_window or structure_window or sweep_window
         ce = (fvg.gap_low + fvg.gap_high) / 2
         entry = fvg.gap_high if side == "long" and entry_mode == "edge" else fvg.gap_low if side == "short" and entry_mode == "edge" else ce
         stop = buffered_stop(side, sweep.wick_extreme, entry, stop_bps)
         metadata = context_metadata(context, side, htf_mode, cfg)
-        target = _target_from_context(metadata, side) or nearest_liquidity_target(closed_candles(candles), side, entry, stop)
+        context_target = _target_from_context(metadata, side)
+        target = context_target or nearest_liquidity_target(closed_candles(candles), side, entry, stop)
+        if _target_reached_before_retest(snapshot.candles, fvg.created_at, int(retest["time"]), side, target):
+            continue
         item = setup(
             model_name="ict2022_mss_fvg",
             direction=side,
@@ -90,10 +105,14 @@ def detect_setups(
             reason="ICT 2022 sweep, MSS and displacement FVG",
             metadata={
                 **metadata,
+                **_session_metadata(int(retest["time"]), session_window),
                 "entry_mode": entry_mode,
                 "stop_mode": ICT2022_STOP_MODE,
-                "target_mode": "htf_external_liquidity" if _target_from_context(metadata, side) is not None else ICT2022_TARGET_MODE,
-                "session_filter": "london_or_ny_open" if require_killzone else "off",
+                "target_mode": "htf_external_liquidity" if context_target is not None else ICT2022_TARGET_MODE,
+                "target_reached_before_entry_policy": "skip_before_retest",
+                "session_filter": "configured" if require_killzone else "off",
+                "ict2022_session_windows": ",".join(session_windows),
+                "ict2022_retest_must_occur_within_session": retest_must_be_in_session,
                 "sweep_time": sweep.timestamp,
                 "sweep_age_bars": sweep_age,
                 "sweep_level": sweep.liquidity_level,
@@ -131,6 +150,28 @@ def _target_from_context(metadata: dict[str, object], side: str) -> float | None
     return None
 
 
+def _target_reached_before_retest(
+    candles: list[dict[str, float | int]],
+    after: int,
+    before: int,
+    side: str,
+    target: float | None,
+) -> bool:
+    if target is None:
+        return False
+    for candle in candles:
+        ts = int(candle["time"])
+        if ts <= after:
+            continue
+        if ts >= before:
+            return False
+        if side == "long" and float(candle["high"]) >= target:
+            return True
+        if side == "short" and float(candle["low"]) <= target:
+            return True
+    return False
+
+
 def _first_retest_index(candles: list[dict[str, float | int]], after: int, low: float, high: float, max_bars: int) -> int | None:
     checked = 0
     for idx, candle in enumerate(candles):
@@ -154,6 +195,46 @@ def _bars_between(candles: list[dict[str, float | int]], start: int, end: int) -
     if start_idx is None or end_idx is None:
         return None
     return max(0, end_idx - start_idx)
+
+
+def _window_list(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [item.strip() for item in value.split(",") if item.strip()]
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _matching_window(timestamp: int, windows: list[str]) -> str | None:
+    return next((window for window in windows if in_ny_windows(timestamp, window)), None)
+
+
+def _session_metadata(timestamp: int, window: str | None) -> dict[str, object]:
+    if window is None:
+        return {}
+    dt = datetime.fromtimestamp(timestamp / 1000, tz=ZoneInfo("UTC")).astimezone(ZoneInfo(NY_TZ))
+    return {
+        "session_window": window,
+        "session_date": dt.strftime("%Y-%m-%d"),
+        "session_label": _session_label(window),
+        "ny_time": dt.strftime("%Y-%m-%d %H:%M"),
+    }
+
+
+def _session_label(window: str) -> str:
+    start = _parse_time(window.split("-", 1)[0])
+    if start < time(5, 0):
+        return "london_open"
+    if start < time(10, 0):
+        return "ny_open"
+    if start < time(12, 0):
+        return "ny_am"
+    if start >= time(14, 0) and start < time(16, 0):
+        return "ny_pm"
+    return "custom"
+
+
+def _parse_time(value: str) -> time:
+    hour, minute = value.split(":", 1)
+    return time(int(hour), int(minute))
 
 
 __all__ = ["detect_setups"]

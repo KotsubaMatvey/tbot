@@ -18,6 +18,7 @@ from .common import buffered_stop, closed_candles, context_metadata, draw_on_liq
 IFVG_ENTRY_MODE = "edge"
 IFVG_STOP_MODE = "ce"
 IFVG_REQUIRE_DISPLACEMENT = True
+IFVG_MIN_RETEST_DEPTH = 0.15
 
 
 def detect_setups(
@@ -42,6 +43,7 @@ def detect_setups(
     max_retest = int(cfg.get("max_ifvg_retest_bars") or MAX_IFVG_RETEST_BARS)
     require_displacement = bool(cfg.get("ifvg_require_displacement", IFVG_REQUIRE_DISPLACEMENT))
     reject_retest_close_beyond_ce = bool(cfg.get("ifvg_reject_retest_close_beyond_ce", True))
+    min_retest_depth = float(cfg.get("ifvg_min_retest_depth", IFVG_MIN_RETEST_DEPTH))
     max_source_touches = int(cfg.get("ifvg_max_source_touches_before_inversion", 12))
     max_source_age = int(cfg.get("ifvg_max_source_age_bars", 100))
     htf_mode = str(cfg.get("context_mode") or cfg.get("htf_mode") or "off")
@@ -71,7 +73,7 @@ def detect_setups(
         displacement_grade = _ifvg_displacement_grade(disp)
         if require_displacement and displacement_grade == "weak":
             continue
-        retest_idx = _retest_index(closed, breach_idx, gap.gap_low, gap.gap_high, min_retest, max_retest)
+        retest_idx = _retest_index(closed, breach_idx, gap.gap_low, gap.gap_high, min_retest, max_retest, side, min_retest_depth)
         if retest_idx is None:
             continue
         ce = (gap.gap_low + gap.gap_high) / 2
@@ -122,9 +124,11 @@ def detect_setups(
                 "ifvg_ce_breached_by_retest_close": _ce_breached_by_close(retest, ce, side),
                 "ifvg_min_retest_bars": min_retest,
                 "ifvg_max_retest_bars": max_retest,
+                "ifvg_min_retest_depth": min_retest_depth,
                 "source_fvg_touches_before_inversion": _source_touches_before_breach(closed, gap, breach_idx),
                 "time_to_retest_bars": retest_idx - breach_idx,
                 "retest_depth": _retest_depth(retest, gap.gap_low, gap.gap_high, side),
+                "ifvg_fill_depth": _retest_depth(retest, gap.gap_low, gap.gap_high, side),
                 "displacement_grade": displacement_grade,
                 "breach_displacement_factor": disp.displacement_factor,
                 "breach_displacement_grade": displacement_grade,
@@ -167,10 +171,21 @@ def _breach_index(candles: list[dict[str, float | int]], gap: object) -> int | N
     return None
 
 
-def _retest_index(candles: list[dict[str, float | int]], breach_idx: int, low: float, high: float, min_bars: int, max_bars: int) -> int | None:
+def _retest_index(
+    candles: list[dict[str, float | int]],
+    breach_idx: int,
+    low: float,
+    high: float,
+    min_bars: int,
+    max_bars: int,
+    side: str,
+    min_depth: float,
+) -> int | None:
     for idx in range(breach_idx + 1, min(len(candles), breach_idx + 1 + max_bars)):
         candle = candles[idx]
         if float(candle["low"]) <= high and float(candle["high"]) >= low:
+            if _retest_depth(candle, low, high, side) < min_depth:
+                continue
             return idx if idx - breach_idx >= min_bars else None
     return None
 
@@ -212,7 +227,8 @@ def _context_target_reached_before_retest(
 
 def _retest_depth(candle: dict[str, float | int], low: float, high: float, side: str) -> float:
     width = max(high - low, 1e-9)
-    return (high - float(candle["low"])) / width if side == "long" else (float(candle["high"]) - low) / width
+    depth = (high - float(candle["low"])) / width if side == "long" else (float(candle["high"]) - low) / width
+    return min(1.0, max(0.0, depth))
 
 
 def _source_touches_before_breach(candles: list[dict[str, float | int]], gap: object, breach_idx: int) -> int:

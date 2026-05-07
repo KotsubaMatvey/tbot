@@ -173,8 +173,11 @@ def context_metadata(context: object | None, side: str, htf_mode: str, config: d
     metadata = htf_metadata(htf)
     metadata["htf_mode"] = htf_mode
     metadata["htf_score_modifier"] = round(htf_score_modifier(htf, side, htf_mode), 4)
+    metadata["bias_alignment"] = metadata.get("htf_context_alignment")
+    metadata["is_in_p_d"] = metadata.get("htf_location")
     smt = _smt_for_side(config or {}, side)
     metadata["has_smt_confirmation"] = smt is not None
+    metadata["smt_detected"] = smt is not None
     if smt is not None:
         metadata["smt_direction"] = smt.direction
         metadata["smt_pair"] = smt.metadata.get("smt_pair")

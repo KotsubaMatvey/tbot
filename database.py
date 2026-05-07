@@ -7,13 +7,12 @@ import sqlite3
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from strategies.ict_models.registry import DEFAULT_MODELS, SELECTABLE_MODELS
+
 DB_PATH = os.path.join(os.path.dirname(__file__), "users.db")
 
-DEFAULT_ENTRY_MODELS = [
-    "ifvg_retest",
-    "reclaimed_ob",
-    "rejection_block",
-]
+DEFAULT_ENTRY_MODELS = list(DEFAULT_MODELS)
+SELECTABLE_ENTRY_MODELS = list(SELECTABLE_MODELS)
 DEFAULT_TRADE_DIRECTIONS = ["long", "short"]
 
 _USER_COLUMNS: dict[str, str] = {
@@ -29,7 +28,7 @@ _USER_COLUMNS: dict[str, str] = {
     "is_owner": "INTEGER DEFAULT 0",
     "sessions_alerts": "INTEGER DEFAULT 0",
     "charts_enabled": "INTEGER DEFAULT 0",
-    "entry_models": """TEXT DEFAULT '["ifvg_retest", "reclaimed_ob", "rejection_block"]'""",
+    "entry_models": """TEXT DEFAULT '["silver_bullet", "ifvg_retest", "ict2022_mss_fvg", "turtle_soup"]'""",
     "trade_directions": """TEXT DEFAULT '["long", "short"]'""",
 }
 _JSON_COLUMNS = {"symbols", "patterns", "timeframes", "entry_models", "trade_directions"}
@@ -229,7 +228,7 @@ def _load_json_set(raw: str | None, default: list[str] | None = None) -> set[str
 
 def _normalize_entry_models(models: set[str]) -> set[str]:
     legacy = {"Entry Model 1", "Entry Model 2", "Entry Model 3", "model1", "model2", "model3"}
-    allowed = set(DEFAULT_ENTRY_MODELS)
+    allowed = set(SELECTABLE_ENTRY_MODELS)
     if not models or models & legacy:
         return set(DEFAULT_ENTRY_MODELS)
     normalized = {model for model in models if model in allowed}
@@ -261,6 +260,7 @@ def _has_live_access_row(row: sqlite3.Row) -> bool:
 __all__ = [
     "DB_PATH",
     "DEFAULT_ENTRY_MODELS",
+    "SELECTABLE_ENTRY_MODELS",
     "DEFAULT_TRADE_DIRECTIONS",
     "get_all_active_users",
     "get_conn",

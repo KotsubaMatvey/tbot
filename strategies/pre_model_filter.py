@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from strategies.ict_models.sessions import LONDON_OPEN, NY_OPEN, in_ny_windows
+from strategies.ict_models.sessions import LONDON_OPEN, NY_OPEN, NY_PM_SESSION, in_ny_windows
 
 
 @dataclass(slots=True)
@@ -52,7 +52,7 @@ def evaluate_pre_model_filter(context: object | None, config: dict[str, Any] | N
 
     if cfg.get("pre_model_require_killzone"):
         timestamp = _current_timestamp(context)
-        windows = _window_list(cfg.get("pre_model_killzone_windows") or [LONDON_OPEN, NY_OPEN])
+        windows = _window_list(cfg.get("pre_model_killzone_windows") or [LONDON_OPEN, NY_OPEN, NY_PM_SESSION])
         if timestamp is None or not in_ny_windows(timestamp, windows):
             allowed.clear()
             reasons.append("outside_killzone")
