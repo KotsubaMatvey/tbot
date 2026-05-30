@@ -1,0 +1,65 @@
+{
+  "data_dir": "data/history_crypto_2022-01-01_2026-04-20",
+  "funding_data_dir": "data/history_crypto_2022-01-01_2026-04-20",
+  "symbols": ["BTCUSDT", "ETHUSDT"],
+  "models": ["ict2022_mss_fvg"],
+  "smt_pairs": [],
+  "thresholds": [0],
+  "grid_filters": false,
+  "context_mode": "strict",
+  "pre_model_filter": false,
+  "pre_model_require_htf_poi": false,
+  "forward_bars": 32,
+  "warmup_bars": 150,
+  "tp1_r": 1.0,
+  "partial_close_fraction": 0.5,
+  "move_to_be_after_tp1": true,
+  "commission_bps": 4.0,
+  "slippage_bps": 1.0,
+  "entry_mode": "edge",
+  "ict2022_session_windows": "02:00-05:00,07:00-10:00,13:30-16:00",
+  "ict2022_max_fvg_retest_bars": 3,
+  "ict2022_require_strong_displacement": true,
+  "ict2022_retest_must_occur_within_session": true,
+  "scan_session_windows": "02:00-05:00,07:00-10:00,13:30-16:00",
+  "scan_session_lag_bars": 0,
+  "walk_forward_threshold": 0,
+  "walk_forward_gates": {
+    "min_total_trades": 30,
+    "min_phase_trades": 10,
+    "min_managed_expectancy_r": 0.3,
+    "min_profit_factor": 1.3,
+    "max_drawdown_r": 8.0,
+    "max_trades_per_session": 1
+  },
+  "runs": [
+    {
+      "name": "ict2022_btc_eth_oos_1h_funding",
+      "timeframes": ["1h"],
+      "start_date": "2022-01-01",
+      "end_date": "2024-11-05",
+      "out_dir": "backtest_results/ict2022_crypto_funding_oos_2022-01-01_2024-11-05_1h"
+    },
+    {
+      "name": "ict2022_btc_eth_oos_30m_funding",
+      "timeframes": ["30m"],
+      "start_date": "2022-01-01",
+      "end_date": "2024-11-05",
+      "out_dir": "backtest_results/ict2022_crypto_funding_oos_2022-01-01_2024-11-05_30m"
+    },
+    {
+      "name": "ict2022_btc_eth_late_1h_funding",
+      "timeframes": ["1h"],
+      "start_date": "2024-11-06",
+      "end_date": "2026-04-20",
+      "out_dir": "backtest_results/ict2022_crypto_funding_late_2024-11-06_2026-04-20_1h"
+    },
+    {
+      "name": "ict2022_btc_eth_late_30m_funding",
+      "timeframes": ["30m"],
+      "start_date": "2024-11-06",
+      "end_date": "2026-04-20",
+      "out_dir": "backtest_results/ict2022_crypto_funding_late_2024-11-06_2026-04-20_30m"
+    }
+  ]
+}

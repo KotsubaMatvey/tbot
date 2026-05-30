@@ -59,7 +59,7 @@ PRIMITIVE_PATTERNS = [
 STRATEGY_PATTERNS = list(SELECTABLE_MODELS)
 ALL_PATTERNS = PRIMITIVE_PATTERNS + STRATEGY_PATTERNS
 
-SMT_TIMEFRAMES = {"1m", "5m", "15m", "1h", "4h"}
+SMT_TIMEFRAMES = {"1m", "5m", "15m", "30m", "1h", "4h"}
 SMT_PAIRS = [("BTCUSDT", "ETHUSDT"), ("ETHUSDT", "SOLUSDT")]
 
 _sem = asyncio.Semaphore(5)
@@ -116,6 +116,7 @@ def _build_strategy_alerts(
     higher: PrimitiveSnapshot | None,
     lower: PrimitiveSnapshot | None,
     htf_timeframe: str | None,
+    smt_divergences: list | None = None,
 ) -> list[AlertPayload]:
     closed_higher = _closed_htf_snapshot(higher) if higher is not None else None
     context = StrategyContext(
@@ -129,7 +130,12 @@ def _build_strategy_alerts(
     )
     setups = []
     model_filters = _load_model_filters()
-    config = {"context_mode": ENTRY_MODEL_HTF_MODE, "htf_mode": ENTRY_MODEL_HTF_MODE}
+    config = {
+        "context_mode": ENTRY_MODEL_HTF_MODE,
+        "htf_mode": ENTRY_MODEL_HTF_MODE,
+        "smt_divergences": list(smt_divergences or []),
+        "has_smt_confirmation": bool(smt_divergences),
+    }
     pre_model = evaluate_pre_model_filter(context, config)
     if not pre_model.passed:
         return []
@@ -206,6 +212,20 @@ def _detector_config(base_config: dict, model_rules: dict) -> dict:
     return {**base_config, **model_rules}
 
 
+def _build_smt_map(all_candles: dict[tuple[str, str], list[dict]]) -> dict[tuple[str, str], list]:
+    smt_by_key: dict[tuple[str, str], list] = {}
+    for symbol_a, symbol_b in SMT_PAIRS:
+        for timeframe in sorted(SMT_TIMEFRAMES):
+            candles_a = all_candles.get((symbol_a, timeframe))
+            candles_b = all_candles.get((symbol_b, timeframe))
+            if not candles_a or not candles_b:
+                continue
+            divergences = detect_smt(candles_a, candles_b, symbol_a, symbol_b, timeframe)
+            if divergences:
+                smt_by_key.setdefault((symbol_a, timeframe), []).extend(divergences)
+    return smt_by_key
+
+
 def _score_primitive_alerts(
     symbol: str,
     timeframe: str,
@@ -250,6 +270,8 @@ async def run_scanner() -> tuple[list[AlertPayload], list[dict[str, str]], dict[
     for (symbol, timeframe), candles in all_candles.items():
         snapshots[(symbol, timeframe)] = build_primitive_snapshot(symbol, timeframe, candles)
 
+    smt_by_key = _build_smt_map(all_candles)
+
     for symbol in SYMBOLS:
         for timeframe in sorted(set(TIMEFRAMES) | set(STRATEGY_TIMEFRAMES)):
             primary = snapshots.get((symbol, timeframe))
@@ -284,6 +306,7 @@ async def run_scanner() -> tuple[list[AlertPayload], list[dict[str, str]], dict[
                     snapshots.get((symbol, higher_tf)) if higher_tf else None,
                     snapshots.get((symbol, lower_tf)) if lower_tf else None,
                     higher_tf,
+                    smt_by_key.get((symbol, timeframe), []),
                 )
                 if timeframe in STRATEGY_TIMEFRAMES
                 else []
@@ -294,20 +317,11 @@ async def run_scanner() -> tuple[list[AlertPayload], list[dict[str, str]], dict[
             _score_primitive_alerts(symbol, timeframe, primary, combined)
             alerts_by_symbol[symbol][timeframe] = combined
 
-    for symbol_a, symbol_b in SMT_PAIRS:
-        if symbol_a not in SYMBOLS or symbol_b not in SYMBOLS:
-            continue
-        for timeframe in TIMEFRAMES:
-            if timeframe not in SMT_TIMEFRAMES:
-                continue
-            candles_a = all_candles.get((symbol_a, timeframe))
-            candles_b = all_candles.get((symbol_b, timeframe))
-            if not candles_a or not candles_b:
-                continue
-            divergences = detect_smt(candles_a, candles_b, symbol_a, symbol_b, timeframe)
+    for (symbol, timeframe), divergences in smt_by_key.items():
+        if timeframe in TIMEFRAMES:
             for divergence in divergences:
                 alert = from_smt_divergence(divergence)
-                alerts_by_symbol.setdefault(symbol_a, {}).setdefault(timeframe, []).append(alert)
+                alerts_by_symbol.setdefault(symbol, {}).setdefault(timeframe, []).append(alert)
 
     active_zones: dict[str, dict[str, list[AlertPayload]]] = {}
     grouped_for_confluence: dict[str, dict[str, list[AlertPayload]]] = defaultdict(dict)

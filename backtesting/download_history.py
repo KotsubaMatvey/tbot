@@ -23,6 +23,7 @@ async def main_async(argv: list[str] | None = None) -> int:
     parser.add_argument("--start", help="UTC start datetime/date, e.g. 2024-11-06 or 2024-11-06T00:00:00Z.")
     parser.add_argument("--end", help="UTC end datetime/date, e.g. 2026-04-20 or 2026-04-20T23:59:59Z.")
     parser.add_argument("--timeout", type=float, default=120.0, help="HTTP session timeout in seconds.")
+    parser.add_argument("--include-funding", action="store_true", help="Also save USD-M perpetual funding history for costed backtests.")
     args = parser.parse_args(argv)
 
     limit = min(max(args.limit, 1), MAX_BINANCE_LIMIT)
@@ -41,6 +42,11 @@ async def main_async(argv: list[str] | None = None) -> int:
                 path = out_dir / f"{symbol}_{timeframe}.csv"
                 write_csv(path, candles)
                 print(f"Wrote {len(candles)} candles: {path}")
+            if args.include_funding:
+                funding = await fetch_funding(session, symbol, limit, start_ms, end_ms)
+                path = out_dir / f"{symbol}_funding.csv"
+                write_funding_csv(path, funding)
+                print(f"Wrote {len(funding)} funding rows: {path}")
     return 0
 
 
@@ -107,11 +113,66 @@ async def fetch_klines(
     ]
 
 
+async def fetch_funding(
+    session: aiohttp.ClientSession,
+    symbol: str,
+    limit: int,
+    start_ms: int | None,
+    end_ms: int | None,
+) -> list[dict[str, float | int]]:
+    rows: dict[int, dict[str, float | int]] = {}
+    cursor = start_ms
+    while True:
+        params: dict[str, str | int] = {"symbol": symbol.upper(), "limit": limit}
+        if cursor is not None:
+            params["startTime"] = cursor
+        if end_ms is not None:
+            params["endTime"] = end_ms
+        async with session.get(f"{BINANCE_FUTURES_API}/fapi/v1/fundingRate", params=params) as response:
+            payload: Any = await response.json()
+            if response.status != 200:
+                raise RuntimeError(f"Binance error {response.status} for {symbol} funding: {payload}")
+        if not isinstance(payload, list):
+            raise RuntimeError(f"Unexpected Binance funding payload for {symbol}: {payload}")
+        if not payload:
+            break
+        for item in payload:
+            normalized = normalize_funding(item)
+            rows[int(normalized["time"])] = normalized
+        if cursor is None or len(payload) < limit:
+            break
+        next_cursor = int(payload[-1]["fundingTime"]) + 1
+        if end_ms is not None and next_cursor > end_ms:
+            break
+        if next_cursor <= cursor:
+            break
+        cursor = next_cursor
+        await asyncio.sleep(0.05)
+    return [rows[timestamp] for timestamp in sorted(rows)]
+
+
+def normalize_funding(item: dict[str, Any]) -> dict[str, float | int]:
+    normalized: dict[str, float | int] = {
+        "time": int(item["fundingTime"]),
+        "funding_rate": float(item["fundingRate"]),
+    }
+    if item.get("markPrice"):
+        normalized["mark_price"] = float(item["markPrice"])
+    return normalized
+
+
 def write_csv(path: Path, candles: list[dict[str, float | int]]) -> None:
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=["time", "open", "high", "low", "close", "volume"])
         writer.writeheader()
         writer.writerows(candles)
+
+
+def write_funding_csv(path: Path, funding: list[dict[str, float | int]]) -> None:
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=["time", "funding_rate", "mark_price"])
+        writer.writeheader()
+        writer.writerows(funding)
 
 
 def parse_time_ms(value: str, *, is_end: bool) -> int:

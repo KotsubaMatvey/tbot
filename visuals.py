@@ -18,23 +18,27 @@ from presentation.types import AlertPayload
 
 logger = logging.getLogger(__name__)
 
-_BACKGROUND = "#f0f0f0"
-_GRID = "#cfcfcf"
-_TEXT = "#3b3b3d"
-_BULL = "#39ADA2"
-_BEAR = "#2f2f31"
-_BULL_VOLUME = "#afd6db"
-_BEAR_VOLUME = "#c9cdce"
-_BULL_VOLUME_EDGE = "#4b9fb0"
-_BEAR_VOLUME_EDGE = "#8c99a3"
-_PRICE_LABEL = "#e85a54"
-_BULL_ZONE_FILL = "#39ADA2"
-_BULL_ZONE_LINE = "#4b9fb0"
-_BEAR_ZONE_FILL = "#b4b0b2"
-_BEAR_ZONE_LINE = "#7b7679"
-_INVALIDATION = "#8c99a3"
-_ZONE_ALPHA = 0.16
-_LABEL_ALPHA = 0.10
+_BACKGROUND = "#111315"
+_GRID = "#242a30"
+_BORDER = "#2d333a"
+_TEXT = "#e4e7eb"
+_MUTED_TEXT = "#8e96a3"
+_BULL = "#b7bbc2"
+_BEAR = "#747982"
+_BULL_VOLUME = "#898e96"
+_BEAR_VOLUME = "#555a62"
+_BULL_VOLUME_EDGE = "#a4aab3"
+_BEAR_VOLUME_EDGE = "#707680"
+_PRICE_LABEL = "#cbd2da"
+_BULL_ZONE_FILL = "#00dfe6"
+_BULL_ZONE_LINE = "#00dfe6"
+_BEAR_ZONE_FILL = "#d500d7"
+_BEAR_ZONE_LINE = "#d500d7"
+_INVALIDATION = "#737b87"
+_LONG_MARKER = "#00e2e8"
+_SHORT_MARKER = "#d500d7"
+_ZONE_ALPHA = 0.045
+_LABEL_ALPHA = 0.15
 
 _ELEMENT_COLORS = {
     "FVG": {"bull": ("#00D084", "#1DE9A6"), "bear": ("#FF4D5E", "#FF7A86")},
@@ -56,6 +60,7 @@ _ELEMENT_COLORS = {
 
 _STYLE = mpf.make_mpf_style(
     base_mpf_style="default",
+    y_on_right=False,
     marketcolors=mpf.make_marketcolors(
         up=_BULL,
         down=_BEAR,
@@ -66,20 +71,21 @@ _STYLE = mpf.make_mpf_style(
     ),
     facecolor=_BACKGROUND,
     figcolor=_BACKGROUND,
-    gridstyle="dotted",
+    gridstyle="-",
     gridcolor=_GRID,
     rc={
         "font.family": "DejaVu Sans",
-        "axes.edgecolor": _BACKGROUND,
+        "axes.edgecolor": _BORDER,
         "axes.labelcolor": _TEXT,
         "axes.titlecolor": _TEXT,
-        "xtick.color": _TEXT,
-        "ytick.color": _TEXT,
+        "xtick.color": _MUTED_TEXT,
+        "ytick.color": _MUTED_TEXT,
         "figure.facecolor": _BACKGROUND,
         "axes.facecolor": _BACKGROUND,
-        "grid.alpha": 0.9,
-        "grid.linewidth": 0.5,
+        "grid.alpha": 0.72,
+        "grid.linewidth": 0.65,
         "axes.grid": True,
+        "axes.axisbelow": True,
     },
 )
 
@@ -110,15 +116,18 @@ def _direction_is_bullish(alert: AlertPayload) -> bool:
 
 def _zone_colors(alert: AlertPayload) -> tuple[str, str, float]:
     key = "bull" if _direction_is_bullish(alert) else "bear"
+    if alert.alert_kind == "strategy":
+        color = _BULL_ZONE_LINE if key == "bull" else _BEAR_ZONE_LINE
+        return color, color, _ZONE_ALPHA
     palette = _ELEMENT_COLORS.get(alert.pattern)
     if palette is None and alert.pattern.startswith("legacy_"):
         palette = _ELEMENT_COLORS.get("ict2022_mss_fvg")
     if palette is not None:
         fill, line = palette[key]
-        return fill, line, _ZONE_ALPHA if alert.alert_kind == "strategy" else 0.12
+        return fill, line, 0.065
     if _direction_is_bullish(alert):
-        return _BULL_ZONE_FILL, _BULL_ZONE_LINE, 0.14 if alert.alert_kind == "strategy" else 0.10
-    return _BEAR_ZONE_FILL, _BEAR_ZONE_LINE, 0.16 if alert.alert_kind == "strategy" else 0.11
+        return _BULL_ZONE_FILL, _BULL_ZONE_LINE, 0.065
+    return _BEAR_ZONE_FILL, _BEAR_ZONE_LINE, 0.065
 
 
 def _draw_patterns(ax, frame: pd.DataFrame, patterns: list[AlertPayload], n: int) -> None:
@@ -177,9 +186,31 @@ def _draw_entry_marker(ax, frame: pd.DataFrame, pattern: AlertPayload) -> None:
     price_range = max(float(frame["High"].max() - frame["Low"].min()), 1e-9)
     offset = price_range * 0.025
     if _direction_is_bullish(pattern):
-        ax.scatter(index, float(candle["Low"]) - offset, marker="^", s=42, color="#16a34a", edgecolors="white", linewidths=0.45, zorder=6)
+        marker_price = float(candle["Low"])
+        marker_y = marker_price - offset
+        marker = "^"
+        color = _LONG_MARKER
+        text_offset = -14
+        vertical_alignment = "top"
     else:
-        ax.scatter(index, float(candle["High"]) + offset, marker="v", s=42, color="#dc2626", edgecolors="white", linewidths=0.45, zorder=6)
+        marker_price = float(candle["High"])
+        marker_y = marker_price + offset
+        marker = "v"
+        color = _SHORT_MARKER
+        text_offset = 10
+        vertical_alignment = "bottom"
+    ax.scatter(index, marker_y, marker=marker, s=62, color=color, edgecolors=_BACKGROUND, linewidths=0.8, zorder=6)
+    ax.annotate(
+        f"{marker_price:,.2f}",
+        xy=(index, marker_y),
+        xytext=(0, text_offset),
+        textcoords="offset points",
+        ha="center",
+        va=vertical_alignment,
+        fontsize=7.5,
+        color=_TEXT,
+        zorder=7,
+    )
 
 
 def _entry_index(frame: pd.DataFrame, pattern: AlertPayload) -> int | None:
@@ -231,33 +262,50 @@ def _zone_tag(ax, n: int, level: float, text: str, color: str, *, va: str = "cen
 
 
 def _draw_price_label(ax, frame: pd.DataFrame) -> None:
-    last_close = frame["Close"].iloc[-1]
+    last_close = float(frame["Close"].iloc[-1])
+    ax.axhline(last_close, color=_MUTED_TEXT, linewidth=0.8, linestyle=(0, (4, 3)), alpha=0.9, zorder=2)
     ax.annotate(
-        f" {last_close:,.1f} ",
-        xy=(len(frame) - 0.45, last_close),
-        ha="left",
+        f"{last_close:,.2f}",
+        xy=(0, last_close),
+        xycoords=("axes fraction", "data"),
+        xytext=(-8, 0),
+        textcoords="offset points",
+        ha="right",
         va="center",
-        fontsize=8,
-        color="white",
-        bbox={"boxstyle": "round,pad=0.28", "facecolor": _PRICE_LABEL, "edgecolor": "none"},
+        fontsize=8.5,
+        color=_TEXT,
+        bbox={"boxstyle": "round,pad=0.28", "facecolor": _BACKGROUND, "edgecolor": _PRICE_LABEL, "linewidth": 0.8},
+        clip_on=False,
+        zorder=8,
     )
 
 
 def _style_axes(price_ax, volume_ax) -> None:
     for axis in (price_ax, volume_ax):
         axis.set_facecolor(_BACKGROUND)
-        axis.grid(True, linestyle=":", linewidth=0.5, color=_GRID)
+        axis.grid(True, linestyle="-", linewidth=0.65, color=_GRID, alpha=0.72)
         for spine in axis.spines.values():
-            spine.set_visible(False)
-        axis.tick_params(axis="both", colors=_TEXT, labelsize=8, length=0)
+            spine.set_visible(True)
+            spine.set_color(_BORDER)
+            spine.set_linewidth(0.7)
+        axis.tick_params(axis="both", colors=_MUTED_TEXT, labelsize=8.5, length=0, pad=6)
 
 
-def _style_volume_bars(volume_ax, frame: pd.DataFrame) -> None:
+def _style_volume_bars(volume_ax, frame: pd.DataFrame, patterns: list[AlertPayload]) -> None:
     for patch, candle in zip(volume_ax.patches, frame.itertuples()):
         is_bull = candle.Close >= candle.Open
         patch.set_facecolor(_BULL_VOLUME if is_bull else _BEAR_VOLUME)
         patch.set_edgecolor(_BULL_VOLUME_EDGE if is_bull else _BEAR_VOLUME_EDGE)
         patch.set_linewidth(0.35)
+    for pattern in patterns:
+        if pattern.alert_kind != "strategy":
+            continue
+        index = _entry_index(frame, pattern)
+        if index is None or index >= len(volume_ax.patches):
+            continue
+        color = _LONG_MARKER if _direction_is_bullish(pattern) else _SHORT_MARKER
+        volume_ax.patches[index].set_facecolor(color)
+        volume_ax.patches[index].set_edgecolor(color)
 
 
 def _render(frame: pd.DataFrame, patterns: list[AlertPayload], symbol: str, timeframe: str) -> io.BytesIO:
@@ -267,13 +315,13 @@ def _render(frame: pd.DataFrame, patterns: list[AlertPayload], symbol: str, time
         style=_STYLE,
         volume=True,
         volume_panel=1,
-        panel_ratios=(5, 1),
+        panel_ratios=(3.5, 1.15),
         returnfig=True,
-        figsize=(12.4, 6.1),
+        figsize=(8.8, 9.4),
         tight_layout=True,
         xrotation=0,
         datetime_format=_datetime_format(timeframe),
-        scale_padding={"left": 0.08, "right": 1.1, "top": 0.22, "bottom": 0.35},
+        scale_padding={"left": 0.22, "right": 0.45, "top": 0.55, "bottom": 0.35},
     )
     price_ax = axes[0]
     volume_ax = axes[2]
@@ -285,14 +333,15 @@ def _render(frame: pd.DataFrame, patterns: list[AlertPayload], symbol: str, time
         _draw_patterns(price_ax, frame, visible_patterns, len(frame))
     _draw_price_label(price_ax, frame)
     _style_axes(price_ax, volume_ax)
-    _style_volume_bars(volume_ax, frame)
-    price_ax.set_title(f"{symbol}  {timeframe}", loc="left", fontsize=10, color=_TEXT, pad=8, fontweight="normal")
-    price_ax.set_ylabel("")
-    volume_ax.set_ylabel("")
+    _style_volume_bars(volume_ax, frame, visible_patterns)
+    display_symbol = symbol.removesuffix("USDT")
+    price_ax.set_title(f"{display_symbol}  {timeframe}", loc="center", fontsize=15, color=_TEXT, pad=18, fontweight="normal")
+    price_ax.set_ylabel("USDT", color=_MUTED_TEXT, fontsize=9, labelpad=10)
+    volume_ax.set_ylabel("Volume", color=_MUTED_TEXT, fontsize=9, labelpad=10)
 
     buffer = io.BytesIO()
     fig.patch.set_facecolor(_BACKGROUND)
-    fig.savefig(buffer, format="png", dpi=130, bbox_inches="tight", facecolor=_BACKGROUND)
+    fig.savefig(buffer, format="png", dpi=130, bbox_inches="tight", facecolor=_BACKGROUND, edgecolor=_BACKGROUND)
     buffer.seek(0)
     plt.close(fig)
     return buffer

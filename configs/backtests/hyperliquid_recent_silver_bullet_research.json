@@ -1,0 +1,56 @@
+{
+  "data_dir": "data/history_hyperliquid_recent_2026-02-10_2026-05-25",
+  "symbols": ["XYZ100"],
+  "models": ["silver_bullet"],
+  "thresholds": [0],
+  "grid_filters": false,
+  "context_mode": "off",
+  "pre_model_filter": false,
+  "forward_bars": 32,
+  "warmup_bars": 100,
+  "tp1_r": 1.0,
+  "partial_close_fraction": 0.5,
+  "move_to_be_after_tp1": true,
+  "commission_bps": 9.0,
+  "slippage_bps": 2.0,
+  "entry_mode": "edge",
+  "target_mode": "fixed_r",
+  "silver_bullet_windows": "10:00-11:00,14:00-15:00",
+  "silver_bullet_max_retest_bars": 1,
+  "silver_bullet_min_retest_depth": 0.15,
+  "silver_bullet_retest_must_occur_within_window": true,
+  "silver_bullet_use_ce_invalidation": false,
+  "start_date": "2026-04-04",
+  "end_date": "2026-05-24",
+  "walk_forward_threshold": 0,
+  "walk_forward_gates": {
+    "min_total_trades": 30,
+    "min_phase_trades": 10,
+    "min_managed_expectancy_r": 0.3,
+    "min_profit_factor": 1.3,
+    "max_drawdown_r": 8.0,
+    "max_trades_per_session": 1
+  },
+  "runs": [
+    {
+      "name": "xyz100_silver_bullet_15m_recent",
+      "symbols": ["XYZ100"],
+      "timeframes": ["15m"],
+      "out_dir": "backtest_results/hyperliquid_recent_xyz100_silver_bullet_15m"
+    },
+    {
+      "name": "sp500_silver_bullet_15m_recent",
+      "symbols": ["SP500"],
+      "timeframes": ["15m"],
+      "out_dir": "backtest_results/hyperliquid_recent_sp500_silver_bullet_15m"
+    },
+    {
+      "name": "btc_silver_bullet_15m_recent_control",
+      "symbols": ["BTC"],
+      "timeframes": ["15m"],
+      "commission_bps": 4.5,
+      "slippage_bps": 1.0,
+      "out_dir": "backtest_results/hyperliquid_recent_btc_silver_bullet_15m"
+    }
+  ]
+}

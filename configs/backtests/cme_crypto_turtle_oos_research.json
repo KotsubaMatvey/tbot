@@ -1,0 +1,87 @@
+{
+  "data_dir": "data/history_oos_2022-01-01_2024-11-05",
+  "symbols": ["BTCUSDT"],
+  "models": ["turtle_soup"],
+  "smt_pairs": ["BTCUSDT:ETHUSDT", "MNQ:MES", "MES:MNQ"],
+  "thresholds": [0],
+  "grid_filters": false,
+  "context_mode": "off",
+  "pre_model_filter": false,
+  "forward_bars": 24,
+  "warmup_bars": 100,
+  "tp1_r": 1.0,
+  "partial_close_fraction": 0.5,
+  "move_to_be_after_tp1": true,
+  "commission_bps": 4.0,
+  "slippage_bps": 1.0,
+  "target_mode": "fixed_r",
+  "entry_mode": "close",
+  "turtle_soup_range_source": "asian_range",
+  "turtle_soup_require_killzone": true,
+  "turtle_soup_require_smt": true,
+  "turtle_soup_require_smt_on_sweep": true,
+  "turtle_soup_asian_first_signal_only": true,
+  "scan_session_windows": "07:00-10:00",
+  "start_date": "2022-01-01",
+  "end_date": "2024-11-05",
+  "walk_forward_threshold": 0,
+  "walk_forward_gates": {
+    "min_total_trades": 30,
+    "min_phase_trades": 10,
+    "min_managed_expectancy_r": 0.3,
+    "min_profit_factor": 1.3,
+    "max_drawdown_r": 8.0,
+    "max_trades_per_session": 1
+  },
+  "model_filters": {
+    "turtle_soup": {
+      "allowed_symbols": ["BTCUSDT", "MNQ", "MES"],
+      "allowed_timeframes": ["30m"],
+      "allowed_session_labels": ["ny_open"],
+      "allowed_range_sources": ["asian_range"],
+      "require_smt": true
+    }
+  },
+  "runs": [
+    {
+      "name": "btc_30m_crypto_control_oos",
+      "symbols": ["BTCUSDT"],
+      "timeframes": ["30m"],
+      "scan_session_windows": "08:30-12:00",
+      "turtle_soup_session_windows": "08:30-12:00",
+      "turtle_soup_asian_range_window": "00:00-08:00",
+      "turtle_soup_asian_range_tz": "UTC",
+      "turtle_soup_asian_min_range_bps": 20,
+      "turtle_soup_asian_min_breach_bps": 1,
+      "out_dir": "backtest_results/cme_crypto_turtle_oos_btc_control_30m"
+    },
+    {
+      "name": "mnq_30m_ny_asian_smt_oos",
+      "data_dir": "data/history_cme_oos_2022-01-01_2024-11-06",
+      "symbols": ["MNQ"],
+      "timeframes": ["30m"],
+      "commission_bps": 0.0,
+      "slippage_bps": 0.0,
+      "commission_points": 0.5,
+      "slippage_points": 0.25,
+      "turtle_soup_session_windows": "07:00-10:00",
+      "turtle_soup_asian_range_window": "20:00-00:00",
+      "turtle_soup_asian_range_tz": "America/New_York",
+      "out_dir": "backtest_results/cme_crypto_turtle_oos_mnq_30m"
+    },
+    {
+      "name": "mes_30m_ny_asian_smt_oos",
+      "data_dir": "data/history_cme_oos_2022-01-01_2024-11-06",
+      "symbols": ["MES"],
+      "timeframes": ["30m"],
+      "commission_bps": 0.0,
+      "slippage_bps": 0.0,
+      "commission_points": 0.2,
+      "slippage_points": 0.25,
+      "turtle_soup_session_windows": "07:00-10:00",
+      "turtle_soup_asian_range_window": "20:00-00:00",
+      "turtle_soup_asian_range_tz": "America/New_York",
+      "out_dir": "backtest_results/cme_crypto_turtle_oos_mes_30m"
+    }
+  ]
+}

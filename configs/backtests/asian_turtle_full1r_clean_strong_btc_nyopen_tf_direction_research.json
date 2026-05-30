@@ -1,0 +1,75 @@
+{
+  "data_dir": "data/history_crypto_2022-01-01_2026-04-20",
+  "symbols": ["BTCUSDT"],
+  "models": ["turtle_soup"],
+  "smt_pairs": ["BTCUSDT:ETHUSDT"],
+  "thresholds": [0],
+  "grid_filters": false,
+  "context_mode": "off",
+  "pre_model_filter": false,
+  "forward_bars": 24,
+  "warmup_bars": 100,
+  "tp1_r": 1.0,
+  "partial_close_fraction": 1.0,
+  "move_to_be_after_tp1": true,
+  "commission_bps": 4.0,
+  "slippage_bps": 1.0,
+  "target_mode": "dol_hierarchy",
+  "entry_mode": "close",
+  "turtle_soup_range_source": "asian_range",
+  "turtle_soup_require_killzone": true,
+  "turtle_soup_require_smt": true,
+  "turtle_soup_require_smt_on_sweep": true,
+  "turtle_soup_session_windows": "07:00-10:00",
+  "turtle_soup_asian_range_window": "00:00-08:00",
+  "turtle_soup_asian_range_tz": "UTC",
+  "turtle_soup_asian_min_range_bps": 20,
+  "turtle_soup_asian_min_breach_bps": 1,
+  "turtle_soup_asian_first_signal_only": false,
+  "turtle_soup_asian_reject_prior_failed_sweep": true,
+  "scan_session_windows": "07:00-10:00",
+  "dedupe_session": true,
+  "dedupe_session_timeframe_priority": ["1h", "30m"],
+  "walk_forward_threshold": 0,
+  "walk_forward_gates": {
+    "min_total_trades": 30,
+    "min_phase_trades": 10,
+    "min_managed_expectancy_r": 0.3,
+    "min_profit_factor": 1.3,
+    "max_drawdown_r": 8.0,
+    "max_trades_per_session": 1
+  },
+  "model_filters": {
+    "turtle_soup": {
+      "allowed_symbols": ["BTCUSDT"],
+      "allowed_timeframes": ["30m", "1h"],
+      "allowed_timeframe_directions": ["1h:long", "1h:short", "30m:short"],
+      "allowed_session_labels": ["ny_open"],
+      "allowed_range_sources": ["asian_range"],
+      "allowed_target_models": ["draw_on_liquidity", "external_liq_bsl_ssl"],
+      "allowed_turtle_qualities": ["strong"],
+      "max_dol_priority": 2,
+      "max_asian_failed_sweep_count_before_reclaim": 0,
+      "require_smt": true
+    }
+  },
+  "runs": [
+    {
+      "name": "oos_2022_2024_btc_30m_short_1h_both",
+      "data_dir": "data/history_oos_2022-01-01_2024-11-05",
+      "timeframes": ["30m", "1h"],
+      "out_dir": "backtest_results/asian_turtle_full1r_clean_strong_btc_nyopen_tfdir_oos_2022-01-01_2024-11-05_30m_1h"
+    },
+    {
+      "name": "control_2024_2026_btc_30m_short_1h_both",
+      "data_dir": "data/history_2024-11-06_2026-04-20",
+      "timeframes": ["30m", "1h"],
+      "out_dir": "backtest_results/asian_turtle_full1r_clean_strong_btc_nyopen_tfdir_control_2024-11-06_2026-04-20_30m_1h"
+    },
+    {
+      "name": "full_2022_2026_btc_30m_short_1h_both",
+      "timeframes": ["30m", "1h"],
+      "out_dir": "backtest_results/asian_turtle_full1r_clean_strong_btc_nyopen_tfdir_full_2022-01-01_2026-04-20_30m_1h"
+    }
+  ]
+}

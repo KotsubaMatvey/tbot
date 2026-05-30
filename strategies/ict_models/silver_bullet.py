@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 from market_primitives.fvg import detect_fvg
 
 from .common import buffered_stop, closed_candles, context_metadata, draw_on_liquidity_target, fixed_r_target, nearest_liquidity_target, setup
-from .sessions import SILVER_BULLET_AM, SILVER_BULLET_PM
+from .sessions import SILVER_BULLET_AM, SILVER_BULLET_LONDON, SILVER_BULLET_PM
 
 SILVER_BULLET_TZ = "America/New_York"
 SILVER_BULLET_START = "10:00"
@@ -49,21 +49,14 @@ def detect_setups(
     for gap in reversed(gaps):
         fvg_dt = datetime.fromtimestamp(gap.created_at / 1000, tz=ZoneInfo("UTC")).astimezone(zone)
         window = _matching_window(fvg_dt.timetz().replace(tzinfo=None), windows)
+        if window is None:
+            continue
         retest = _first_retest(closed, gap.created_at, gap.gap_low, gap.gap_high, gap.direction, max_retest_bars, min_retest_depth)
         if retest is None:
             continue
         retest_dt = datetime.fromtimestamp(int(retest["time"]) / 1000, tz=ZoneInfo("UTC")).astimezone(zone)
-        retest_window = _matching_window(retest_dt.timetz().replace(tzinfo=None), windows)
         signal_time = gap.created_at
         signal_dt = fvg_dt
-        fvg_source = "created_in_window"
-        if window is None:
-            if retest_window is None:
-                continue
-            window = retest_window
-            signal_time = int(retest["time"])
-            signal_dt = retest_dt
-            fvg_source = "first_retest_in_window"
         if retest_must_be_in_window and _matching_window(retest_dt.timetz().replace(tzinfo=None), [window]) is None:
             continue
         entry = _entry(gap.gap_low, gap.gap_high, gap.direction, entry_mode)
@@ -112,7 +105,7 @@ def detect_setups(
                 "smt_detected": htf_metadata.get("has_smt_confirmation"),
                 "signal_time": signal_time,
                 "signal_ny_time": signal_dt.strftime("%Y-%m-%d %H:%M"),
-                "silver_bullet_fvg_source": fvg_source,
+                "silver_bullet_fvg_source": "created_in_window",
                 "fvg_time": gap.created_at,
                 "fvg_ny_time": fvg_dt.strftime("%Y-%m-%d %H:%M"),
                 "fvg_low": gap.gap_low,
@@ -146,7 +139,7 @@ def _windows(raw: object, cfg: dict[str, Any]) -> list[tuple[time, time]]:
             start = _parse_time(str(cfg.get("silver_bullet_start") or SILVER_BULLET_START))
             end = _parse_time(str(cfg.get("silver_bullet_end") or SILVER_BULLET_END))
             return [(start, end)]
-        raw = f"{SILVER_BULLET_AM},{SILVER_BULLET_PM}"
+        raw = f"{SILVER_BULLET_LONDON},{SILVER_BULLET_AM},{SILVER_BULLET_PM}"
     if isinstance(raw, str):
         chunks = [item.strip() for item in raw.split(",") if item.strip()]
     else:

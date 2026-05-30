@@ -13,7 +13,7 @@ from typing import Any
 from backtesting import Candle
 from backtesting.accumulator import ReplaySnapshotCache
 from backtesting.context import build_accumulated_strategy_context_for_replay
-from backtesting.data import HistoricalDataError, load_history_for
+from backtesting.data import HistoricalDataError, load_funding_for, load_history_for
 from market_primitives.smt import detect_smt
 from strategies.ict_models.sessions import in_ny_windows
 from strategies.ict_models.registry import (
@@ -40,6 +40,7 @@ EVENT_FIELDS = [
     "setup_timestamp",
     "detected_at",
     "entry_time",
+    "exit_time",
     "entry_mode",
     "stop_mode",
     "stop_model",
@@ -63,13 +64,22 @@ EVENT_FIELDS = [
     "partial_close_fraction",
     "be_trigger_r",
     "moved_to_be",
+    "tp1_time",
     "exit_reason",
     "risk",
     "risk_bps",
     "commission_bps",
     "slippage_bps",
     "round_trip_cost_bps",
+    "commission_points",
+    "slippage_points",
+    "round_trip_cost_points",
     "execution_cost_r",
+    "funding_rows",
+    "funding_rate_sum",
+    "funding_cost_r",
+    "funding_notional_price_mode",
+    "total_cost_r",
     "gross_managed_outcome_r",
     "net_managed_outcome_r",
     "same_bar_policy",
@@ -102,6 +112,7 @@ EVENT_FIELDS = [
     "smt_direction",
     "smt_pair",
     "smt_strength",
+    "smt_timestamp",
     "decision_score",
     "score_bucket",
     "htf_alignment_score",
@@ -141,6 +152,8 @@ EVENT_FIELDS = [
     "turtle_quality",
     "turtle_soup_min_stop_applied",
     "turtle_soup_min_stop_bps",
+    "asian_failed_sweep_count_before_reclaim",
+    "asian_reject_prior_failed_sweep",
     "time_to_confirmation_bars",
     "ltf_trigger_type",
     "fvg_low",
@@ -207,13 +220,14 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     try:
         store = _load_store(Path(args.data_dir), args.symbols, args.timeframes, args.context_mode, args.smt_pairs)
+        funding_store = _load_funding_store(Path(args.funding_data_dir), args.symbols) if args.funding_data_dir else {}
     except HistoricalDataError as exc:
         print(f"Error: {exc}")
         return 2
 
     events: list[dict[str, Any]] = []
     for symbol in args.symbols:
-        events.extend(_run_symbol(symbol, args.timeframes, models, store, args))
+        events.extend(_run_symbol(symbol, args.timeframes, models, store, funding_store, args))
     summaries = _summaries(events)
     _write_outputs(Path(args.out_dir), events, summaries, vars(args), [m.name for m in models])
     print(f"Backtest complete: events={len(events)} out_dir={args.out_dir}")
@@ -238,6 +252,9 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--move-to-be-after-tp1", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--commission-bps", type=float, default=0.0, help="Per-side commission in basis points.")
     parser.add_argument("--slippage-bps", type=float, default=0.0, help="Per-side slippage/spread estimate in basis points.")
+    parser.add_argument("--commission-points", type=float, default=0.0, help="Per-side fixed execution commission expressed in instrument price points.")
+    parser.add_argument("--slippage-points", type=float, default=0.0, help="Per-side slippage/spread estimate expressed in instrument price points.")
+    parser.add_argument("--funding-data-dir", default=None, help="Directory containing SYMBOL_funding.csv hourly funding history.")
     parser.add_argument("--context-mode", choices=["off", "aligned_only", "strict"], default="off")
     parser.add_argument("--forward-bars", type=int, default=20)
     parser.add_argument("--warmup-bars", type=int, default=100)
@@ -255,8 +272,10 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--turtle-soup-asian-min-range-bps", type=float, default=None)
     parser.add_argument("--turtle-soup-asian-min-breach-bps", type=float, default=None)
     parser.add_argument("--turtle-soup-asian-first-signal-only", action=argparse.BooleanOptionalAction, default=None)
+    parser.add_argument("--turtle-soup-asian-reject-prior-failed-sweep", action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument("--turtle-soup-require-killzone", action="store_true")
     parser.add_argument("--turtle-soup-require-smt", action="store_true")
+    parser.add_argument("--turtle-soup-require-smt-on-sweep", action="store_true")
     parser.add_argument("--turtle-soup-require-mss-confirmation", action="store_true")
     parser.add_argument("--turtle-soup-require-confirmation-fvg", action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument("--max-ifvg-retest-bars", type=int, default=None)
@@ -310,6 +329,10 @@ def _load_store(data_dir: Path, symbols: list[str], timeframes: list[str], conte
     return store
 
 
+def _load_funding_store(data_dir: Path, symbols: list[str]) -> dict[str, list[dict[str, float | int]]]:
+    return {symbol: load_funding_for(data_dir, symbol) or [] for symbol in symbols}
+
+
 def _symbols_from_smt_pairs(raw_pairs: list[str], requested: set[str]) -> set[str]:
     symbols: set[str] = set()
     for raw in raw_pairs or []:
@@ -341,7 +364,14 @@ def _scan_session_window_matches(candles: list[Candle], idx: int, windows: list[
     return False
 
 
-def _run_symbol(symbol: str, timeframes: list[str], models: list[Any], store: dict[tuple[str, str], list[Candle]], args: argparse.Namespace) -> list[dict[str, Any]]:
+def _run_symbol(
+    symbol: str,
+    timeframes: list[str],
+    models: list[Any],
+    store: dict[tuple[str, str], list[Candle]],
+    funding_store: dict[str, list[dict[str, float | int]]],
+    args: argparse.Namespace,
+) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     cache = ReplaySnapshotCache(store)
     seen: set[tuple[Any, ...]] = set()
@@ -402,7 +432,18 @@ def _run_symbol(symbol: str, timeframes: list[str], models: list[Any], store: di
                     if event_idx is None:
                         continue
                     event_window = candles[event_idx + 1 : event_idx + 1 + args.forward_bars]
-                    rows.append(_event_row(setup, spec.name, spec.model_family, args.same_bar_policy, event_window, detected_at=ts, args=args))
+                    rows.append(
+                        _event_row(
+                            setup,
+                            spec.name,
+                            spec.model_family,
+                            args.same_bar_policy,
+                            event_window,
+                            detected_at=ts,
+                            args=args,
+                            funding_rates=funding_store.get(symbol, []),
+                        )
+                    )
     return rows
 
 
@@ -443,10 +484,10 @@ def _smt_divergences(symbol: str, timeframe: str, visible: list[Candle], store: 
         if ":" not in raw:
             continue
         primary, secondary = (part.strip().upper() for part in raw.split(":", 1))
-        if symbol not in {primary, secondary}:
+        if symbol != primary:
             continue
-        primary_candles = visible[-smt_window:] if symbol == primary else _candles_until(store.get((primary, timeframe), []), timestamp, smt_window)
-        secondary_candles = visible[-smt_window:] if symbol == secondary else _candles_until(store.get((secondary, timeframe), []), timestamp, smt_window)
+        primary_candles = visible[-smt_window:]
+        secondary_candles = _candles_until(store.get((secondary, timeframe), []), timestamp, smt_window)
         if not primary_candles or not secondary_candles:
             continue
         results.extend(
@@ -520,6 +561,7 @@ def _event_row(
     *,
     detected_at: int | None = None,
     args: argparse.Namespace | None = None,
+    funding_rates: list[dict[str, float | int]] | None = None,
 ) -> dict[str, Any]:
     metadata = dict(setup.metadata)
     entry = setup.entry_price if setup.entry_price is not None else (setup.entry_low + setup.entry_high) / 2
@@ -543,7 +585,13 @@ def _event_row(
         move_to_be_after_tp1=bool(getattr(args, "move_to_be_after_tp1", True) if args is not None else True),
     )
     execution = _execution_costs(entry, risk, outcome, args)
-    outcome = _with_execution_costs(outcome, execution)
+    funding = _funding_costs(setup.direction, entry, risk, entry_time, outcome, funding_rates or [])
+    costs = {
+        **execution,
+        **funding,
+        "total_cost_r": round(float(execution["execution_cost_r"]) + float(funding["funding_cost_r"]), 6),
+    }
+    outcome = _with_execution_costs(outcome, costs)
     target_distance_r = abs(setup.target_hint - entry) / risk if setup.target_hint is not None and risk and risk > 0 else None
     decision = _decision_score(setup.direction, model_name, metadata, target_distance_r)
     row = {
@@ -556,6 +604,7 @@ def _event_row(
         "setup_timestamp": setup.timestamp,
         "detected_at": detected_at,
         "entry_time": entry_time,
+        "exit_time": outcome.get("exit_time"),
         "entry_mode": metadata.get("entry_mode"),
         "stop_mode": metadata.get("stop_mode"),
         "target_mode": metadata.get("target_mode"),
@@ -567,14 +616,14 @@ def _event_row(
         "target_hint": setup.target_hint,
         "risk": risk,
         "risk_bps": metadata.get("risk_bps") or (risk / max(entry, 1e-9) * 10_000 if risk else None),
-        **execution,
+        **costs,
         "same_bar_policy": same_bar_policy,
         "same_bar_ambiguous": outcome["same_bar_ambiguous"],
         "invalidated_before_entry": outcome["invalidated_before_entry"],
         "target_distance_r": target_distance_r,
         "time_to_entry_bars": outcome["time_to_entry_bars"],
         "metadata_json": json.dumps(metadata, ensure_ascii=True, sort_keys=True, default=str),
-        **{field: metadata.get(field) for field in EVENT_FIELDS if field not in {"model", "model_family", "direction", "symbol", "timeframe", "timestamp", "setup_timestamp", "detected_at", "entry_time", "entry_mode", "stop_mode", "target_mode", "entry_price", "entry_low", "entry_high", "stop_loss", "invalidation", "target_hint", "risk", "risk_bps", "commission_bps", "slippage_bps", "round_trip_cost_bps", "execution_cost_r", "gross_managed_outcome_r", "net_managed_outcome_r", "same_bar_policy", "same_bar_ambiguous", "invalidated_before_entry", "target_reached_before_entry", "target_distance_r", "time_to_entry_bars", "bars_to_invalidation", "bars_to_1r", "bars_to_2r", "metadata_json", "mfe_r", "mae_r", "invalidated", "target_hit", "tp1_hit", "tp2_hit", "final_target_hit", "logical_invalidated", "managed_outcome_r", "managed_exit_reason", "target_before_invalidation", "hit_1r_before_invalidation", "hit_2r_before_invalidation"}},
+        **{field: metadata.get(field) for field in EVENT_FIELDS if field not in {"model", "model_family", "direction", "symbol", "timeframe", "timestamp", "setup_timestamp", "detected_at", "entry_time", "exit_time", "entry_mode", "stop_mode", "target_mode", "entry_price", "entry_low", "entry_high", "stop_loss", "invalidation", "target_hint", "risk", "risk_bps", "commission_bps", "slippage_bps", "round_trip_cost_bps", "commission_points", "slippage_points", "round_trip_cost_points", "execution_cost_r", "funding_rows", "funding_rate_sum", "funding_cost_r", "funding_notional_price_mode", "total_cost_r", "gross_managed_outcome_r", "net_managed_outcome_r", "same_bar_policy", "same_bar_ambiguous", "invalidated_before_entry", "target_reached_before_entry", "target_distance_r", "time_to_entry_bars", "bars_to_invalidation", "bars_to_1r", "bars_to_2r", "metadata_json", "mfe_r", "mae_r", "invalidated", "target_hit", "tp1_hit", "tp1_time", "tp2_hit", "final_target_hit", "logical_invalidated", "managed_outcome_r", "managed_exit_reason", "target_before_invalidation", "hit_1r_before_invalidation", "hit_2r_before_invalidation"}},
         **decision,
         **outcome,
     }
@@ -589,16 +638,75 @@ def _execution_costs(
 ) -> dict[str, Any]:
     commission_bps = float(getattr(args, "commission_bps", 0.0) if args is not None else 0.0)
     slippage_bps = float(getattr(args, "slippage_bps", 0.0) if args is not None else 0.0)
+    commission_points = float(getattr(args, "commission_points", 0.0) if args is not None else 0.0)
+    slippage_points = float(getattr(args, "slippage_points", 0.0) if args is not None else 0.0)
     round_trip_bps = max(0.0, 2.0 * (commission_bps + slippage_bps))
+    round_trip_points = max(0.0, 2.0 * (commission_points + slippage_points))
     if not outcome.get("activated_trade") or risk is None or risk <= 0:
         execution_cost_r = 0.0
     else:
-        execution_cost_r = (entry * round_trip_bps / 10_000.0) / risk
+        execution_cost_r = ((entry * round_trip_bps / 10_000.0) + round_trip_points) / risk
     return {
         "commission_bps": commission_bps,
         "slippage_bps": slippage_bps,
         "round_trip_cost_bps": round_trip_bps,
+        "commission_points": commission_points,
+        "slippage_points": slippage_points,
+        "round_trip_cost_points": round_trip_points,
         "execution_cost_r": round(execution_cost_r, 6),
+    }
+
+
+def _funding_costs(
+    direction: str,
+    entry: float,
+    risk: float | None,
+    entry_time: int,
+    outcome: dict[str, Any],
+    funding_rates: list[dict[str, float | int]],
+) -> dict[str, Any]:
+    exit_time = outcome.get("exit_time")
+    if not outcome.get("activated_trade") or risk is None or risk <= 0 or not isinstance(exit_time, int):
+        return {
+            "funding_rows": 0,
+            "funding_rate_sum": 0.0,
+            "funding_cost_r": 0.0,
+            "funding_notional_price_mode": "entry_proxy",
+        }
+    tp1_time = outcome.get("tp1_time")
+    partial = float(outcome.get("partial_close_fraction") or 0.0)
+    signed_rate_sum = 0.0
+    signed_payment_points = 0.0
+    matched_rows = 0
+    mark_price_rows = 0
+    for row in funding_rates:
+        timestamp = int(row["time"])
+        if timestamp <= entry_time or timestamp > exit_time:
+            continue
+        remaining = 1.0
+        if isinstance(tp1_time, int) and timestamp > tp1_time:
+            remaining = 1.0 - partial
+        rate = float(row["funding_rate"]) * remaining
+        direction_rate = rate if direction == "long" else -rate
+        notional_price = float(row.get("mark_price", entry))
+        if "mark_price" in row:
+            mark_price_rows += 1
+        signed_rate_sum += direction_rate
+        signed_payment_points += notional_price * direction_rate
+        matched_rows += 1
+    funding_cost_r = signed_payment_points / risk
+    price_mode = (
+        "settlement_mark_price"
+        if matched_rows and mark_price_rows == matched_rows
+        else "mixed_mark_and_entry_proxy"
+        if mark_price_rows
+        else "entry_proxy"
+    )
+    return {
+        "funding_rows": matched_rows,
+        "funding_rate_sum": round(signed_rate_sum, 10),
+        "funding_cost_r": round(funding_cost_r, 6),
+        "funding_notional_price_mode": price_mode,
     }
 
 
@@ -608,7 +716,7 @@ def _with_execution_costs(outcome: dict[str, Any], execution: dict[str, Any]) ->
         outcome["gross_managed_outcome_r"] = None
         outcome["net_managed_outcome_r"] = None
         return outcome
-    cost_r = float(execution.get("execution_cost_r") or 0.0)
+    cost_r = float(execution.get("total_cost_r", execution.get("execution_cost_r", 0.0)) or 0.0)
     outcome["gross_managed_outcome_r"] = gross
     outcome["net_managed_outcome_r"] = round(float(gross) - cost_r, 6)
     return outcome
@@ -749,11 +857,13 @@ def _empty_outcome() -> dict[str, Any]:
         "invalidated_before_entry": False,
         "target_reached_before_entry": False,
         "activated_trade": False,
+        "exit_time": None,
         "time_to_entry_bars": None,
         "bars_to_invalidation": None,
         "bars_to_1r": None,
         "bars_to_2r": None,
         "tp1_hit": False,
+        "tp1_time": None,
         "tp2_hit": False,
         "final_target_hit": False,
         "logical_invalidated": False,
@@ -822,6 +932,7 @@ def _evaluate(
     hit_1r = False
     hit_2r = False
     tp1_hit = False
+    tp1_time = None
     tp2_hit = False
     final_target_hit = False
     logical_invalidated = False
@@ -829,6 +940,7 @@ def _evaluate(
     managed_outcome: float | None = None
     managed_exit_reason = None
     exit_reason = None
+    exit_time = None
     bars_to_1r = None
     bars_to_2r = None
     bars_to_invalidation = None
@@ -861,11 +973,13 @@ def _evaluate(
                 hit_1r = hit_1r or hit_1r_now
                 hit_2r = hit_2r or hit_2r_now
                 tp1_hit = tp1_hit or tp1_reached
+                tp1_time = int(candle["time"]) if tp1_reached else tp1_time
                 tp2_hit = tp2_hit or tp2_reached
                 final_target_hit = final_target_hit or final_reached
                 exit_reason = "tp_hit"
                 managed_outcome = partial * tp1_r + (1.0 - partial) * target_rr if tp1_reached else target_rr
                 managed_exit_reason = "final_target_hit"
+                exit_time = int(candle["time"])
                 bars_to_1r = bars_to_1r or (offset if hit_1r_now else None)
                 bars_to_2r = bars_to_2r or (offset if hit_2r_now else None)
                 break
@@ -875,6 +989,7 @@ def _evaluate(
             managed_outcome = partial * tp1_r if moved_to_be else -1.0
             managed_exit_reason = "be_after_tp1" if moved_to_be and not logical_hit else exit_reason
             bars_to_invalidation = offset
+            exit_time = int(candle["time"])
             if policy == "neutral":
                 target_hit = True
                 target_before = False
@@ -886,6 +1001,8 @@ def _evaluate(
             hit_2r = True
             bars_to_2r = offset
         if tp1_reached:
+            if not tp1_hit:
+                tp1_time = int(candle["time"])
             tp1_hit = True
             moved_to_be = True
         if tp2_reached:
@@ -899,6 +1016,7 @@ def _evaluate(
             target_rr = abs(target - entry) / risk
             managed_outcome = partial * tp1_r + (1.0 - partial) * target_rr if tp1_hit else target_rr
             managed_exit_reason = "final_target_hit"
+            exit_time = int(candle["time"])
             break
         if logical_hit:
             invalidated = True
@@ -907,6 +1025,7 @@ def _evaluate(
             managed_outcome = partial * tp1_r if moved_to_be else -1.0
             managed_exit_reason = "logical_invalidation_after_tp1" if moved_to_be else "logical_invalidation"
             bars_to_invalidation = offset
+            exit_time = int(candle["time"])
             break
         if stop_hit:
             invalidated = True
@@ -914,6 +1033,7 @@ def _evaluate(
             managed_outcome = partial * tp1_r if moved_to_be else -1.0
             managed_exit_reason = "be_after_tp1" if moved_to_be and move_to_be_after_tp1 else "sl_hit"
             bars_to_invalidation = offset
+            exit_time = int(candle["time"])
             break
     if managed_outcome is None:
         close_r = _close_outcome_r(direction, active[-1], entry, risk)
@@ -924,6 +1044,7 @@ def _evaluate(
             managed_outcome = close_r
             managed_exit_reason = "horizon_close"
         exit_reason = "horizon_close"
+        exit_time = int(active[-1]["time"])
     return {
         "mfe_r": mfe / risk,
         "mae_r": mae / risk,
@@ -936,11 +1057,13 @@ def _evaluate(
         "invalidated_before_entry": invalidated_before_entry,
         "target_reached_before_entry": target_reached_before_entry,
         "activated_trade": True,
+        "exit_time": exit_time,
         "time_to_entry_bars": _bars_until_or_none(future, entry_time),
         "bars_to_invalidation": bars_to_invalidation,
         "bars_to_1r": bars_to_1r,
         "bars_to_2r": bars_to_2r,
         "tp1_hit": tp1_hit,
+        "tp1_time": tp1_time,
         "tp2_hit": tp2_hit,
         "final_target_hit": final_target_hit,
         "logical_invalidated": logical_invalidated,
@@ -984,6 +1107,7 @@ def _bars_until_or_none(candles: list[Candle], timestamp: int) -> int | None:
 def _summaries(events: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     specs = {
         "summary_by_model": ("model",),
+        "summary_by_symbol": ("model", "symbol"),
         "summary_by_direction": ("model", "direction"),
         "summary_by_timeframe": ("model", "timeframe"),
         "summary_by_entry_mode": ("model", "entry_mode"),
@@ -995,6 +1119,7 @@ def _summaries(events: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
         "summary_by_same_bar_policy": ("model", "same_bar_policy"),
         "summary_by_model_family": ("model_family",),
         "summary_by_turtle_quality": ("model", "turtle_quality"),
+        "summary_by_asian_failed_sweep_count": ("model", "asian_failed_sweep_count_before_reclaim"),
         "summary_by_htf_location": ("model", "htf_location"),
         "summary_by_htf_zone": ("model", "htf_zone_type"),
         "summary_by_displacement": ("model", "displacement_grade"),
@@ -1007,7 +1132,7 @@ def _summaries(events: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
 def _group(events: list[dict[str, Any]], fields: tuple[str, ...]) -> list[dict[str, Any]]:
     buckets: dict[tuple[Any, ...], list[dict[str, Any]]] = defaultdict(list)
     for event in events:
-        buckets[tuple(event.get(field) or "none" for field in fields)].append(event)
+        buckets[tuple(_group_value(event.get(field)) for field in fields)].append(event)
     rows = []
     for key, group in sorted(buckets.items(), key=lambda item: tuple(str(v) for v in item[0])):
         mfes = [float(e["mfe_r"]) for e in group if e.get("mfe_r") is not None]
@@ -1028,6 +1153,8 @@ def _group(events: list[dict[str, Any]], fields: tuple[str, ...]) -> list[dict[s
                 "managed_expectancy": _avg_managed_outcome(group),
                 "avg_managed_outcome_r": _avg_managed_outcome(group),
                 "avg_execution_cost_r": _avg_field(group, "execution_cost_r"),
+                "avg_funding_cost_r": _avg_field(group, "funding_cost_r"),
+                "avg_total_cost_r": _avg_field(group, "total_cost_r"),
                 "target_before_invalidation_rate": round(sum(1 for e in group if e.get("target_before_invalidation")) / len(group), 6) if group else None,
                 "hit_1r_before_invalidation_rate": round(sum(1 for e in group if e.get("hit_1r_before_invalidation")) / len(group), 6) if group else None,
                 "hit_2r_before_invalidation_rate": round(sum(1 for e in group if e.get("hit_2r_before_invalidation")) / len(group), 6) if group else None,
@@ -1042,6 +1169,12 @@ def _group(events: list[dict[str, Any]], fields: tuple[str, ...]) -> list[dict[s
         )
         rows.append(row)
     return rows
+
+
+def _group_value(value: Any) -> Any:
+    if value is None or value == "":
+        return "none"
+    return value
 
 
 def _avg_field(group: list[dict[str, Any]], field: str) -> float | None:
@@ -1112,10 +1245,16 @@ def _write_report(path: Path, events: list[dict[str, Any]], summaries: dict[str,
         f"- forward_bars: {config.get('forward_bars')}",
         f"- commission_bps: {config.get('commission_bps')}",
         f"- slippage_bps: {config.get('slippage_bps')}",
+        f"- commission_points: {config.get('commission_points')}",
+        f"- slippage_points: {config.get('slippage_points')}",
+        f"- funding_data_dir: {config.get('funding_data_dir')}",
         "- event-study alignment: `setup_timestamp`; R outcomes are measured from `entry_time` when it differs.",
         "",
         "## Overall Comparison",
         _markdown_table(summaries.get("summary_by_model", [])),
+        "",
+        "## Symbol Analysis",
+        _markdown_table(summaries.get("summary_by_symbol", [])),
         "",
         "## Entry Mode Analysis",
         _markdown_table(summaries.get("summary_by_entry_mode", [])),
@@ -1128,6 +1267,12 @@ def _write_report(path: Path, events: list[dict[str, Any]], summaries: dict[str,
         "",
         "## Model Family",
         _markdown_table(summaries.get("summary_by_model_family", [])),
+        "",
+        "## Turtle Quality",
+        _markdown_table(summaries.get("summary_by_turtle_quality", [])),
+        "",
+        "## Asian Failed Sweep Count",
+        _markdown_table(summaries.get("summary_by_asian_failed_sweep_count", [])),
         "",
         "## HTF Location",
         _markdown_table(summaries.get("summary_by_htf_location", [])),

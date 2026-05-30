@@ -22,6 +22,8 @@ SUMMARY_FIELDS = [
     "max_drawdown_r",
     "win_rate",
     "avg_execution_cost_r",
+    "avg_funding_cost_r",
+    "avg_total_cost_r",
     "session_overtrade_count",
     "passed",
     "failed_gates",
@@ -40,6 +42,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--min-profit-factor", type=float, default=1.3)
     parser.add_argument("--max-drawdown-r", type=float, default=8.0)
     parser.add_argument("--max-trades-per-session", type=int, default=1)
+    parser.add_argument("--dedupe-session", action="store_true", help="Keep one selected trade per symbol/session before quality gates.")
+    parser.add_argument("--dedupe-session-selection", choices=["timeframe_first", "first", "highest_score"], default="timeframe_first")
+    parser.add_argument("--dedupe-session-timeframe-priority", default="", help="Comma-separated timeframe priority for session dedupe, e.g. 1h,30m.")
     parser.add_argument(
         "--phase",
         action="append",
@@ -62,6 +67,9 @@ def main(argv: list[str] | None = None) -> int:
         min_profit_factor=args.min_profit_factor,
         max_drawdown_r=args.max_drawdown_r,
         max_trades_per_session=args.max_trades_per_session,
+        dedupe_session=args.dedupe_session,
+        dedupe_session_selection=args.dedupe_session_selection,
+        dedupe_session_timeframe_priority=_csv_list(args.dedupe_session_timeframe_priority),
     )
 
     out_dir = Path(args.out_dir) if args.out_dir else events_path.parent
@@ -84,10 +92,16 @@ def summarize_walk_forward(
     min_profit_factor: float = 1.3,
     max_drawdown_r: float = 8.0,
     max_trades_per_session: int = 1,
+    dedupe_session: bool = False,
+    dedupe_session_selection: str = "timeframe_first",
+    dedupe_session_timeframe_priority: list[str] | None = None,
 ) -> list[dict[str, Any]]:
-    phases = phases or _auto_phases(events)
-    phase_rows = [_summary_for_phase(name, _events_in_range(events, start, end), start, end, max_trades_per_session) for name, start, end in phases]
-    overall = _summary_for_phase("overall", events, _min_date(events), _max_date(events), max_trades_per_session)
+    trades = [event for event in events if _bool(event.get("activated_trade"))]
+    if dedupe_session:
+        trades = _dedupe_session_trades(trades, dedupe_session_timeframe_priority or [], dedupe_session_selection)
+    phases = phases or _auto_phases(trades)
+    phase_rows = [_summary_for_phase(name, _events_in_range(trades, start, end), start, end, max_trades_per_session) for name, start, end in phases]
+    overall = _summary_for_phase("overall", trades, _min_date(trades), _max_date(trades), max_trades_per_session)
     failures = []
     if int(overall["count"] or 0) < min_total_trades:
         failures.append("min_total_trades")
@@ -125,6 +139,8 @@ def _summary_for_phase(
         "max_drawdown_r": _max_drawdown(outcomes),
         "win_rate": _win_rate(outcomes),
         "avg_execution_cost_r": _avg_field(events, "execution_cost_r"),
+        "avg_funding_cost_r": _avg_field(events, "funding_cost_r"),
+        "avg_total_cost_r": _avg_field(events, "total_cost_r"),
         "session_overtrade_count": _session_overtrade_count(events, max_trades_per_session),
         "passed": False,
         "failed_gates": "",
@@ -232,6 +248,36 @@ def _session_overtrade_count(events: list[dict[str, Any]], max_trades_per_sessio
     return sum(1 for count in counts.values() if count > max_trades_per_session)
 
 
+def _dedupe_session_trades(events: list[dict[str, Any]], timeframe_priority: list[str], selection: str) -> list[dict[str, Any]]:
+    priority = {timeframe: index for index, timeframe in enumerate(timeframe_priority)}
+    selected: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for event in events:
+        key = _session_key(event)
+        current = selected.get(key)
+        if current is None or _dedupe_sort_key(event, priority, selection) < _dedupe_sort_key(current, priority, selection):
+            selected[key] = event
+    return sorted(selected.values(), key=lambda event: (_event_date(event) or "", _float_or_none(event.get("timestamp")) or 0.0))
+
+
+def _session_key(event: dict[str, Any]) -> tuple[str, str, str]:
+    return (
+        str(event.get("symbol") or ""),
+        _event_date(event) or "",
+        str(event.get("session_window") or "none"),
+    )
+
+
+def _dedupe_sort_key(event: dict[str, Any], priority: dict[str, int], selection: str) -> tuple[float, float]:
+    timestamp = _float_or_none(event.get("timestamp") or event.get("detected_at"))
+    if selection == "first":
+        return (0.0, timestamp or 0.0)
+    if selection == "highest_score":
+        score = _float_or_none(event.get("decision_score"))
+        return (-(score if score is not None else float("-inf")), timestamp or 0.0)
+    timeframe = str(event.get("timeframe") or "")
+    return (float(priority.get(timeframe, len(priority))), timestamp or 0.0)
+
+
 def _managed_outcome(event: dict[str, Any]) -> float | None:
     value = _float_or_none(event.get("net_managed_outcome_r"))
     if value is not None:
@@ -289,6 +335,10 @@ def _float_or_none(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _csv_list(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
 
 
 def _read_csv(path: Path) -> list[dict[str, Any]]:

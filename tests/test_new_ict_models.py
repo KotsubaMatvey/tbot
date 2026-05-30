@@ -6,11 +6,18 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
-from backtesting.run_ict_models import EVENT_FIELDS, _candles_until, _context_aligned, _date_scan_bounds, _decision_score, _evaluate, _execution_costs, _models_need_accumulated_primary, _scan_session_window_matches, _timestamp_in_date_range, _with_execution_costs
+from backtesting.run_ict_models import EVENT_FIELDS, _candles_until, _context_aligned, _date_scan_bounds, _decision_score, _evaluate, _execution_costs, _funding_costs, _models_need_accumulated_primary, _scan_session_window_matches, _smt_divergences, _summaries, _timestamp_in_date_range, _with_execution_costs
 from backtesting.run_ict_batch import build_run_args
+from backtesting.download_databento_history import frame_to_candles, main as download_databento_main
+from backtesting.download_history import normalize_funding as normalize_binance_funding
+from backtesting.download_hyperliquid_history import normalize_candle as normalize_hyperliquid_candle, normalize_funding as normalize_hyperliquid_funding, output_symbol as hyperliquid_output_symbol
+from backtesting.algorithm_barrier_audit import audit_result_tree, audit_run_dir, summarize_by_model
+from backtesting.exit_policy_audit import summarize_exit_policies
 from backtesting.score_threshold_report import summarize_thresholds
 from backtesting.grid_filter_analysis import summarize_grid
+from backtesting.ict2022_diagnostic_report import ICT2022DiagnosticConfig, diagnose_side
 from backtesting.walk_forward_report import summarize_walk_forward
 from backtesting.data_coverage_report import summarize_coverage
 from backtesting.forward_log_report import summarize_forward_logs
@@ -23,7 +30,7 @@ from handlers.trading import trading_keyboard
 from market_primitives.common import BreakerBlock, FairValueGap, LiquiditySweep, OrderBlock, StructureBreak
 from market_primitives.smt import detect_smt
 from presentation.alert_builders import from_entry_setup
-from scanner.engine import STRATEGY_PATTERNS, _detector_config, _model_enabled
+from scanner.engine import SMT_TIMEFRAMES, STRATEGY_PATTERNS, _build_smt_map, _build_strategy_alerts, _detector_config, _model_enabled
 from strategies.htf_context import HTFBias, HTFContext, HTFDealingRange, HTFObjective, HTFZone
 from strategies.ict_models import registry
 from strategies.ict_models.breaker_block import detect_setups as detect_breaker_block
@@ -34,7 +41,7 @@ from strategies.ict_models.model_filters import passes_model_filter, setup_filte
 from strategies.ict_models.reclaimed_ob import detect_setups as detect_reclaimed_ob
 from strategies.ict_models.rejection_block import detect_setups as detect_rejection_block
 from strategies.ict_models.silver_bullet import detect_setups as detect_silver_bullet
-from strategies.ict_models.turtle_soup import detect_setups as detect_turtle_soup
+from strategies.ict_models.turtle_soup import _range_candles_before, detect_setups as detect_turtle_soup
 from strategies.pre_model_filter import evaluate_pre_model_filter
 from strategies.types import EntrySetup, PrimitiveSnapshot, StrategyContext, default_components
 from visuals import _CANDLE_COUNT, _datetime_format, _entry_index
@@ -78,10 +85,46 @@ class NewICTModelTests(unittest.TestCase):
         self.assertEqual(config["context_mode"], "strict")
         self.assertEqual(config["silver_bullet_windows"], ["02:30-02:30", "10:45-11:00"])
 
-    def test_live_silver_bullet_uses_notebooklm_am_pm_windows(self) -> None:
+    def test_live_scanner_builds_primary_smt_context_on_candidate_timeframe(self) -> None:
+        divergence = SimpleNamespace(direction="bullish", timestamp=3)
+        all_candles = {
+            ("BTCUSDT", "30m"): [candle(1, 100, 101, 99, 100)],
+            ("ETHUSDT", "30m"): [candle(1, 50, 51, 49, 50)],
+        }
+
+        with patch("scanner.engine.detect_smt", return_value=[divergence]) as detector:
+            smt_by_key = _build_smt_map(all_candles)
+
+        self.assertIn("30m", SMT_TIMEFRAMES)
+        self.assertEqual(smt_by_key[("BTCUSDT", "30m")], [divergence])
+        self.assertNotIn(("ETHUSDT", "30m"), smt_by_key)
+        detector.assert_called_once()
+
+    def test_live_scanner_passes_paired_smt_context_to_model_detector(self) -> None:
+        observed: dict = {}
+        divergence = SimpleNamespace(direction="bullish", timestamp=3)
+
+        def detector(symbol, timeframe, candles, context, config):
+            observed.update(config)
+            return []
+
+        primary = PrimitiveSnapshot("BTCUSDT", "30m", [candle(1, 100, 101, 99, 100)])
+        model = SimpleNamespace(name="turtle_soup", detector=detector)
+        with patch("scanner.engine._load_model_filters", return_value={"turtle_soup": {"enabled": True}}):
+            with patch("scanner.engine.get_live_models", return_value=[model]):
+                with patch("scanner.engine.evaluate_pre_model_filter", return_value=SimpleNamespace(passed=True)):
+                    alerts = _build_strategy_alerts(primary, None, None, None, [divergence])
+
+        self.assertEqual(alerts, [])
+        self.assertEqual(observed["smt_divergences"], [divergence])
+        self.assertTrue(observed["has_smt_confirmation"])
+
+    def test_live_silver_bullet_preserves_research_rules_but_is_disabled_after_failed_validation(self) -> None:
         config = json.loads(Path("configs/live_model_filters_2025.json").read_text(encoding="utf-8"))
         rules = config["model_filters"]["silver_bullet"]
 
+        self.assertFalse(rules["enabled"])
+        self.assertFalse(_model_enabled("silver_bullet", config["model_filters"]))
         self.assertEqual(rules["silver_bullet_windows"], ["10:00-11:00", "14:00-15:00"])
         self.assertEqual(rules["allowed_symbols"], ["BTCUSDT"])
         self.assertEqual(rules["silver_bullet_max_retest_bars"], 1)
@@ -90,21 +133,29 @@ class NewICTModelTests(unittest.TestCase):
         self.assertTrue(rules["require_bias_alignment"])
         self.assertTrue(rules["require_premium_discount_alignment"])
 
-    def test_live_enabled_models_require_htf_quality_gates(self) -> None:
+    def test_unvalidated_live_candidates_are_disabled_but_keep_htf_quality_gates(self) -> None:
         config = json.loads(Path("configs/live_model_filters_2025.json").read_text(encoding="utf-8"))
         filters = config["model_filters"]
 
-        for model_name in ("silver_bullet", "ifvg_retest", "breaker_block", "reclaimed_ob"):
+        for model_name in ("ifvg_retest", "breaker_block", "reclaimed_ob"):
             rules = filters[model_name]
-            self.assertTrue(rules["enabled"])
+            self.assertFalse(rules["enabled"])
+            self.assertFalse(_model_enabled(model_name, filters))
             self.assertEqual(rules["allowed_symbols"], ["BTCUSDT"])
             self.assertTrue(rules["require_htf_draw"])
             self.assertTrue(rules["require_bias_alignment"])
             self.assertTrue(rules["require_premium_discount_alignment"])
             self.assertEqual(rules["allowed_htf_context_alignments"], ["aligned"])
 
+    def test_live_scanner_has_no_model_without_passed_validation(self) -> None:
+        config = json.loads(Path("configs/live_model_filters_2025.json").read_text(encoding="utf-8"))
+        filters = config["model_filters"]
+
+        enabled = [model.name for model in registry.get_live_models() if _model_enabled(model.name, filters)]
+        self.assertEqual(enabled, [])
+
     def test_backtest_exports_live_filter_htf_fields(self) -> None:
-        for field in ("htf_draw_direction", "htf_objective_level", "htf_objective_unreached"):
+        for field in ("htf_draw_direction", "htf_objective_level", "htf_objective_unreached", "smt_timestamp", "exit_time", "funding_cost_r", "total_cost_r"):
             self.assertIn(field, EVENT_FIELDS)
 
     def test_live_turtle_soup_is_prepared_session_fallback_but_disabled(self) -> None:
@@ -115,8 +166,10 @@ class NewICTModelTests(unittest.TestCase):
         self.assertEqual(rules["allowed_timeframes"], ["5m", "15m"])
         self.assertEqual(rules["target_mode"], "dol_hierarchy")
         self.assertTrue(rules["turtle_soup_require_killzone"])
+        self.assertTrue(rules["turtle_soup_require_smt"])
+        self.assertTrue(rules["turtle_soup_require_smt_on_sweep"])
         self.assertEqual(rules["turtle_soup_session_windows"], ["02:00-05:00", "07:00-10:00", "13:30-16:00"])
-        self.assertFalse(rules.get("require_smt", False))
+        self.assertTrue(rules["require_smt"])
 
     def test_live_ict2022_is_prepared_session_fallback_but_disabled(self) -> None:
         config = json.loads(Path("configs/live_model_filters_2025.json").read_text(encoding="utf-8"))
@@ -494,6 +547,49 @@ class NewICTModelTests(unittest.TestCase):
         self.assertEqual(setup.metadata["logical_invalidation_model"], "sweep_extreme")
         self.assertEqual(setup.metadata["logical_invalidation_price"], setup.metadata["sweep_extreme"])
 
+    def test_turtle_soup_required_smt_must_match_signal_direction(self) -> None:
+        candles = [
+            candle(1, 101, 102, 100, 101),
+            candle(2, 101, 102, 98, 99),
+            candle(3, 99, 103, 99, 102),
+            candle(4, 102, 104, 101, 103),
+            candle(5, 103, 104, 102, 103),
+            candle(6, 103, 104, 97, 99),
+            candle(7, 99, 100, 98, 99),
+        ]
+        bearish_smt = SimpleNamespace(direction="bearish")
+        bullish_smt = SimpleNamespace(
+            direction="bullish",
+            metadata={"smt_pair": "BTCUSDT:ETHUSDT"},
+            symbol="BTCUSDT",
+            secondary_symbol="ETHUSDT",
+            strength=1.0,
+            timestamp=6,
+        )
+        common = {"turtle_min_swing_age": 1, "turtle_soup_require_smt": True}
+
+        missing = detect_turtle_soup("BTCUSDT", "5m", candles, config=common)
+        wrong_side = detect_turtle_soup("BTCUSDT", "5m", candles, config={**common, "smt_divergences": [bearish_smt]})
+        confirmed = detect_turtle_soup("BTCUSDT", "5m", candles, config={**common, "smt_divergences": [bullish_smt]})
+        on_sweep = detect_turtle_soup(
+            "BTCUSDT",
+            "5m",
+            candles,
+            config={**common, "turtle_soup_require_smt_on_sweep": True, "smt_divergences": [bullish_smt]},
+        )
+        stale = detect_turtle_soup(
+            "BTCUSDT",
+            "5m",
+            candles,
+            config={**common, "turtle_soup_require_smt_on_sweep": True, "smt_divergences": [SimpleNamespace(**{**bullish_smt.__dict__, "timestamp": 5})]},
+        )
+
+        self.assertEqual(missing, [])
+        self.assertFalse(any(item.direction == "long" for item in wrong_side))
+        self.assertTrue(any(item.direction == "long" for item in confirmed))
+        self.assertTrue(any(item.direction == "long" for item in on_sweep))
+        self.assertEqual(stale, [])
+
     def test_turtle_soup_can_target_htf_draw_on_liquidity(self) -> None:
         candles = [
             candle(1, 101, 102, 100, 101),
@@ -595,6 +691,104 @@ class NewICTModelTests(unittest.TestCase):
         self.assertEqual(setup.metadata["asian_range_low"], 100)
         self.assertEqual(setup.metadata["session_label"], "ny_open")
 
+    def test_turtle_soup_asian_range_can_reject_delayed_failed_sweep(self) -> None:
+        candles = [
+            candle(ts(2026, 4, 20, 0, 0), 105, 108, 102, 106),
+            candle(ts(2026, 4, 20, 2, 0), 106, 110, 101, 107),
+            candle(ts(2026, 4, 20, 4, 0), 107, 109, 100, 104),
+            candle(ts(2026, 4, 20, 8, 0), 104, 107, 103, 105),
+            candle(ts(2026, 4, 20, 13, 30), 105, 106, 98, 99),
+            candle(ts(2026, 4, 20, 14, 0), 99, 103, 97, 101),
+            candle(ts(2026, 4, 20, 14, 30), 101, 103, 100, 102),
+        ]
+        base = {
+            "turtle_soup_range_source": "asian_range",
+            "turtle_soup_require_killzone": True,
+            "turtle_soup_session_windows": ["08:30-12:00"],
+            "target_mode": "fixed_r",
+            "turtle_soup_asian_min_range_bps": 0,
+            "turtle_soup_asian_first_signal_only": False,
+        }
+
+        accepted = detect_turtle_soup("BTCUSDT", "30m", candles, config=base)
+        rejected = detect_turtle_soup(
+            "BTCUSDT",
+            "30m",
+            candles,
+            config={**base, "turtle_soup_asian_reject_prior_failed_sweep": True},
+        )
+
+        self.assertEqual(len(accepted), 1)
+        self.assertEqual(accepted[0].metadata["asian_failed_sweep_count_before_reclaim"], 1)
+        self.assertEqual(rejected, [])
+
+    def test_turtle_soup_asian_range_honors_directional_smt_requirement(self) -> None:
+        candles = [
+            candle(ts(2026, 4, 20, 0, 0), 105, 108, 102, 106),
+            candle(ts(2026, 4, 20, 2, 0), 106, 110, 101, 107),
+            candle(ts(2026, 4, 20, 4, 0), 107, 109, 100, 104),
+            candle(ts(2026, 4, 20, 8, 0), 104, 107, 103, 105),
+            candle(ts(2026, 4, 20, 14, 0), 105, 106, 98, 101),
+            candle(ts(2026, 4, 20, 14, 30), 101, 103, 100, 102),
+        ]
+        bullish_smt = SimpleNamespace(
+            direction="bullish",
+            metadata={"smt_pair": "BTCUSDT:ETHUSDT"},
+            symbol="BTCUSDT",
+            secondary_symbol="ETHUSDT",
+            strength=1.0,
+            timestamp=ts(2026, 4, 20, 14, 0),
+        )
+        base = {
+            "turtle_soup_range_source": "asian_range",
+            "turtle_soup_require_killzone": True,
+            "turtle_soup_require_smt": True,
+            "turtle_soup_session_windows": ["08:30-12:00"],
+            "target_mode": "fixed_r",
+        }
+
+        missing = detect_turtle_soup("BTCUSDT", "30m", candles, config=base)
+        wrong_side = detect_turtle_soup("BTCUSDT", "30m", candles, config={**base, "smt_divergences": [SimpleNamespace(direction="bearish")]})
+        confirmed = detect_turtle_soup("BTCUSDT", "30m", candles, config={**base, "smt_divergences": [bullish_smt]})
+        on_sweep = detect_turtle_soup(
+            "BTCUSDT",
+            "30m",
+            candles,
+            config={**base, "turtle_soup_require_smt_on_sweep": True, "smt_divergences": [bullish_smt]},
+        )
+        stale = detect_turtle_soup(
+            "BTCUSDT",
+            "30m",
+            candles,
+            config={**base, "turtle_soup_require_smt_on_sweep": True, "smt_divergences": [SimpleNamespace(**{**bullish_smt.__dict__, "timestamp": ts(2026, 4, 20, 13, 30)})]},
+        )
+
+        self.assertEqual(missing, [])
+        self.assertEqual(wrong_side, [])
+        self.assertEqual(len(confirmed), 1)
+        self.assertTrue(confirmed[0].metadata["has_smt_confirmation"])
+        self.assertEqual(len(on_sweep), 1)
+        self.assertEqual(stale, [])
+
+    def test_turtle_soup_asian_range_supports_overnight_ny_window(self) -> None:
+        candles = [
+            candle(ts(2025, 1, 2, 1, 0), 100, 101, 99, 100),
+            candle(ts(2025, 1, 2, 4, 0), 100, 102, 99, 101),
+            candle(ts(2025, 1, 2, 5, 0), 101, 103, 100, 102),
+        ]
+
+        selected, start, end, range_date = _range_candles_before(
+            candles,
+            ts(2025, 1, 2, 14, 30),
+            "20:00-00:00",
+            "America/New_York",
+        )
+
+        self.assertEqual(selected, candles)
+        self.assertEqual(start, ts(2025, 1, 2, 1, 0))
+        self.assertEqual(end, ts(2025, 1, 2, 5, 0))
+        self.assertEqual(range_date, "2025-01-01")
+
     def test_turtle_soup_can_apply_min_stop_bps(self) -> None:
         candles = [
             candle(ts(2026, 4, 20, 0, 0), 105, 108, 102, 106),
@@ -647,6 +841,33 @@ class NewICTModelTests(unittest.TestCase):
         )
 
         self.assertEqual(setups, [])
+
+    def test_turtle_soup_labels_1330_window_as_ny_pm(self) -> None:
+        candles = [
+            candle(ts(2026, 4, 20, 0, 0), 105, 108, 102, 106),
+            candle(ts(2026, 4, 20, 2, 0), 106, 110, 101, 107),
+            candle(ts(2026, 4, 20, 4, 0), 107, 109, 100, 104),
+            candle(ts(2026, 4, 20, 8, 0), 104, 107, 103, 105),
+            candle(ts(2026, 4, 20, 17, 30), 105, 106, 98, 101),
+            candle(ts(2026, 4, 20, 18, 0), 101, 103, 100, 102),
+        ]
+
+        setups = detect_turtle_soup(
+            "BTCUSDT",
+            "30m",
+            candles,
+            config={
+                "turtle_soup_range_source": "asian_range",
+                "turtle_soup_require_killzone": True,
+                "turtle_soup_session_windows": ["13:30-16:00"],
+                "target_mode": "fixed_r",
+                "turtle_soup_asian_min_range_bps": 0,
+                "turtle_soup_asian_first_signal_only": False,
+            },
+        )
+
+        self.assertEqual(len(setups), 1)
+        self.assertEqual(setups[0].metadata["session_label"], "ny_pm")
 
     def test_turtle_soup_require_killzone_rejects_outside_session(self) -> None:
         candles = [
@@ -742,6 +963,21 @@ class NewICTModelTests(unittest.TestCase):
         self.assertEqual(setups[0].metadata["session_window"], "14:00-15:00")
         self.assertEqual(setups[0].metadata["session_label"], "ny_pm")
 
+    def test_silver_bullet_accepts_london_window(self) -> None:
+        candles = [
+            candle(ts(2026, 4, 20, 7, 0), 99, 100, 98, 99),
+            candle(ts(2026, 4, 20, 7, 3), 99, 101, 99, 100),
+            candle(ts(2026, 4, 20, 7, 5), 106, 108, 105, 107),
+            candle(ts(2026, 4, 20, 7, 10), 107, 107, 104, 105),
+            candle(ts(2026, 4, 20, 7, 15), 105, 106, 104, 105),
+        ]
+
+        setups = detect_silver_bullet("BTCUSDT", "5m", candles)
+
+        self.assertTrue(setups)
+        self.assertEqual(setups[0].metadata["session_window"], "03:00-04:00")
+        self.assertEqual(setups[0].metadata["session_label"], "london_open")
+
     def test_silver_bullet_preserves_htf_draw_metadata(self) -> None:
         candles = [
             candle(ts(2026, 4, 20, 14, 0), 99, 100, 98, 99),
@@ -812,7 +1048,7 @@ class NewICTModelTests(unittest.TestCase):
 
         self.assertEqual(setups, [])
 
-    def test_silver_bullet_accepts_first_retest_of_prior_fvg_inside_window(self) -> None:
+    def test_silver_bullet_rejects_prior_fvg_first_retested_inside_window(self) -> None:
         candles = [
             candle(ts(2026, 4, 20, 13, 40), 99, 100, 98, 99),
             candle(ts(2026, 4, 20, 13, 45), 109, 110, 99, 109),
@@ -825,10 +1061,7 @@ class NewICTModelTests(unittest.TestCase):
 
         setups = detect_silver_bullet("BTCUSDT", "5m", candles)
 
-        self.assertTrue(setups)
-        self.assertEqual(setups[0].timestamp, ts(2026, 4, 20, 14, 5))
-        self.assertEqual(setups[0].metadata["fvg_time"], ts(2026, 4, 20, 13, 50))
-        self.assertEqual(setups[0].metadata["silver_bullet_fvg_source"], "first_retest_in_window")
+        self.assertEqual(setups, [])
 
     def test_silver_bullet_ignores_fvg_outside_window(self) -> None:
         candles = [
@@ -1275,6 +1508,93 @@ class NewICTModelTests(unittest.TestCase):
 
         self.assertEqual(setups, [])
 
+    def test_ict2022_diagnostic_identifies_retest_timing_gate(self) -> None:
+        candles = [
+            candle(1, 100, 101, 99, 100),
+            candle(2, 100, 102, 99, 101),
+            candle(3, 101, 102, 101, 102),
+            candle(4, 102, 104, 102, 103),
+            candle(5, 103, 104, 100.5, 101),
+        ]
+        snapshot = PrimitiveSnapshot(
+            symbol="BTCUSDT",
+            timeframe="30m",
+            candles=candles,
+            sweeps=[
+                LiquiditySweep(
+                    symbol="BTCUSDT",
+                    timeframe="30m",
+                    direction="bullish",
+                    timestamp=1,
+                    liquidity_level=99,
+                    wick_extreme=98,
+                    close_back_inside=100,
+                    source_swing_index=0,
+                    clean=True,
+                )
+            ],
+            structure_breaks=[
+                StructureBreak(
+                    symbol="BTCUSDT",
+                    timeframe="30m",
+                    break_type="BOS",
+                    direction="bullish",
+                    timestamp=2,
+                    broken_level=101,
+                    close_price=102,
+                    source_swing_index=0,
+                    strength=1.0,
+                    displacement_grade="valid",
+                    close_beyond_structure=True,
+                )
+            ],
+            fvgs=[
+                FairValueGap(
+                    symbol="BTCUSDT",
+                    timeframe="30m",
+                    direction="bullish",
+                    created_at=3,
+                    gap_low=100,
+                    gap_high=101,
+                    mitigated=False,
+                    invalidated=False,
+                    mitigated_at=None,
+                    invalidated_at=None,
+                    fill_ratio=0,
+                )
+            ],
+        )
+
+        fast_retest = diagnose_side(
+            snapshot,
+            "long",
+            ICT2022DiagnosticConfig(
+                session_windows=[],
+                max_fvg_retest_bars=1,
+                require_killzone=False,
+                require_strong_displacement=False,
+                retest_must_occur_within_session=False,
+            ),
+        )
+        relaxed_retest = diagnose_side(
+            snapshot,
+            "long",
+            ICT2022DiagnosticConfig(
+                session_windows=[],
+                max_fvg_retest_bars=3,
+                require_killzone=False,
+                require_strong_displacement=False,
+                retest_must_occur_within_session=False,
+            ),
+        )
+
+        self.assertEqual(fast_retest["active_fvg_after_mss"], 1)
+        self.assertEqual(fast_retest["retest_any"], 1)
+        self.assertEqual(fast_retest["retest_within_limit"], 0)
+        self.assertEqual(fast_retest["candidate"], 0)
+        self.assertEqual(relaxed_retest["retest_within_limit"], 1)
+        self.assertEqual(relaxed_retest["candidate"], 1)
+
     def test_breaker_block_default_requires_displacement(self) -> None:
         candles = [
             candle(1, 100, 101, 99, 100),
@@ -1545,6 +1865,27 @@ class NewICTModelTests(unittest.TestCase):
 
         self.assertTrue(any(item.direction == "bullish" for item in divergences))
 
+    def test_backtest_smt_only_confirms_primary_symbol_of_pair(self) -> None:
+        visible = [candle(idx, 100, 101, 99, 100) for idx in range(1, 11)]
+        store = {
+            ("BTCUSDT", "30m"): visible,
+            ("ETHUSDT", "30m"): visible,
+            ("SOLUSDT", "30m"): visible,
+        }
+        args = SimpleNamespace(
+            smt_pairs=["BTCUSDT:ETHUSDT", "ETHUSDT:SOLUSDT"],
+            smt_lookback_bars=50,
+            smt_max_time_delta_bars=10,
+            smt_min_divergence_bps=5.0,
+            smt_min_correlation=0.7,
+        )
+
+        with patch("backtesting.run_ict_models.detect_smt", return_value=[]) as detector:
+            _smt_divergences("ETHUSDT", "30m", visible, store, args, 10)
+
+        detector.assert_called_once()
+        self.assertEqual(detector.call_args.args[2:5], ("ETHUSDT", "SOLUSDT", "30m"))
+
     def test_candles_until_can_limit_recent_history(self) -> None:
         candles = [candle(idx, 100, 101, 99, 100) for idx in range(1, 6)]
 
@@ -1663,6 +2004,113 @@ class NewICTModelTests(unittest.TestCase):
         self.assertEqual(net["gross_managed_outcome_r"], 1.5)
         self.assertEqual(net["net_managed_outcome_r"], 1.45)
 
+    def test_execution_point_costs_support_cme_runs(self) -> None:
+        outcome = {"activated_trade": True, "managed_outcome_r": 1.5}
+        costs = _execution_costs(20_000, 10, outcome, SimpleNamespace(commission_points=0.425, slippage_points=0.25))
+
+        net = _with_execution_costs(outcome, costs)
+
+        self.assertEqual(costs["round_trip_cost_points"], 1.35)
+        self.assertEqual(costs["execution_cost_r"], 0.135)
+        self.assertEqual(net["net_managed_outcome_r"], 1.365)
+
+    def test_hyperliquid_funding_costs_apply_direction_and_partial_close(self) -> None:
+        outcome = {"activated_trade": True, "managed_outcome_r": 1.5, "exit_time": 4, "tp1_time": 2, "partial_close_fraction": 0.5}
+        hourly = [
+            {"time": 2, "funding_rate": 0.001},
+            {"time": 3, "funding_rate": 0.001},
+            {"time": 4, "funding_rate": 0.001},
+        ]
+
+        long_cost = _funding_costs("long", 100, 2, 1, outcome, hourly)
+        short_cost = _funding_costs("short", 100, 2, 1, outcome, hourly)
+        net = _with_execution_costs(dict(outcome), {"execution_cost_r": 0.05, "total_cost_r": 0.15})
+
+        self.assertEqual(long_cost["funding_rows"], 3)
+        self.assertEqual(long_cost["funding_rate_sum"], 0.002)
+        self.assertEqual(long_cost["funding_cost_r"], 0.1)
+        self.assertEqual(short_cost["funding_cost_r"], -0.1)
+        self.assertEqual(net["net_managed_outcome_r"], 1.35)
+
+    def test_binance_funding_costs_use_settlement_mark_price(self) -> None:
+        outcome = {"activated_trade": True, "managed_outcome_r": 1.5, "exit_time": 3, "tp1_time": None, "partial_close_fraction": 0.0}
+        funding = [
+            {"time": 2, "funding_rate": 0.001, "mark_price": 110.0},
+            {"time": 3, "funding_rate": -0.001, "mark_price": 90.0},
+        ]
+
+        cost = _funding_costs("long", 100, 2, 1, outcome, funding)
+
+        self.assertEqual(cost["funding_rate_sum"], 0.0)
+        self.assertEqual(cost["funding_cost_r"], 0.01)
+        self.assertEqual(cost["funding_notional_price_mode"], "settlement_mark_price")
+
+    def test_databento_ohlcv_resamples_into_existing_candle_format(self) -> None:
+        import pandas as pd
+
+        frame = pd.DataFrame(
+            [
+                {"open": 20000, "high": 20001, "low": 19999, "close": 20000.5, "volume": 2},
+                {"open": 20000.5, "high": 20003, "low": 20000, "close": 20002, "volume": 3},
+                {"open": 20002, "high": 20004, "low": 20001, "close": 20003, "volume": 4},
+            ],
+            index=pd.to_datetime(["2025-01-02T14:30:00Z", "2025-01-02T14:31:00Z", "2025-01-02T14:35:00Z"]),
+        )
+
+        candles = frame_to_candles(frame, "5min")
+
+        self.assertEqual(len(candles), 2)
+        self.assertEqual(candles[0]["open"], 20000.0)
+        self.assertEqual(candles[0]["high"], 20003.0)
+        self.assertEqual(candles[0]["close"], 20002.0)
+        self.assertEqual(candles[0]["volume"], 5.0)
+        self.assertEqual(candles[1]["open"], 20002.0)
+
+    def test_databento_estimate_only_uses_metadata_without_downloading(self) -> None:
+        calls: list[dict] = []
+
+        def get_cost(**kwargs):
+            calls.append(kwargs)
+            return 1.25
+
+        client = SimpleNamespace(metadata=SimpleNamespace(get_cost=get_cost))
+        fake_module = SimpleNamespace(Historical=lambda: client)
+        with patch.dict("sys.modules", {"databento": fake_module}):
+            result = download_databento_main(
+                ["--estimate-only", "--symbols", "MNQ", "MES", "--timeframes", "30m", "--start", "2022-01-01", "--end", "2024-11-06"]
+            )
+
+        self.assertEqual(result, 0)
+        self.assertEqual([item["symbols"] for item in calls], ["MNQ.v.0", "MES.v.0"])
+        self.assertTrue(all(item["schema"] == "ohlcv-1m" for item in calls))
+
+    def test_hyperliquid_hip3_candles_use_safe_local_symbol_and_existing_shape(self) -> None:
+        item = {"t": 1, "o": "100.0", "h": "101.0", "l": "99.0", "c": "100.5", "v": "12.25"}
+        funding = {"time": 2, "fundingRate": "-0.00001", "premium": "-0.0003"}
+
+        self.assertEqual(hyperliquid_output_symbol("xyz:XYZ100"), "XYZ100")
+        self.assertEqual(hyperliquid_output_symbol("BTC"), "BTC")
+        self.assertEqual(
+            normalize_hyperliquid_candle(item),
+            {"time": 1, "open": 100.0, "high": 101.0, "low": 99.0, "close": 100.5, "volume": 12.25},
+        )
+        self.assertEqual(
+            normalize_hyperliquid_funding(funding),
+            {"time": 2, "funding_rate": -0.00001, "premium": -0.0003},
+        )
+
+    def test_binance_funding_uses_official_history_response_shape(self) -> None:
+        funding = {"fundingTime": 2, "fundingRate": "-0.00001", "markPrice": "100.25"}
+
+        self.assertEqual(
+            normalize_binance_funding(funding),
+            {"time": 2, "funding_rate": -0.00001, "mark_price": 100.25},
+        )
+        self.assertEqual(
+            normalize_binance_funding({"fundingTime": 3, "fundingRate": "0.00001", "markPrice": ""}),
+            {"time": 3, "funding_rate": 0.00001},
+        )
+
     def test_score_threshold_report_prefers_net_managed_outcome(self) -> None:
         report = summarize_thresholds(
             [
@@ -1673,6 +2121,8 @@ class NewICTModelTests(unittest.TestCase):
                     "gross_managed_outcome_r": "1.5",
                     "net_managed_outcome_r": "1.45",
                     "execution_cost_r": "0.05",
+                    "funding_cost_r": "0.01",
+                    "total_cost_r": "0.06",
                     "activated_trade": "True",
                     "target_before_invalidation": "True",
                     "target_distance_r": "2",
@@ -1687,6 +2137,133 @@ class NewICTModelTests(unittest.TestCase):
         self.assertEqual(row["gross_managed_expectancy"], 1.5)
         self.assertEqual(row["managed_expectancy"], 1.45)
         self.assertEqual(row["avg_execution_cost_r"], 0.05)
+        self.assertEqual(row["avg_funding_cost_r"], 0.01)
+        self.assertEqual(row["avg_total_cost_r"], 0.06)
+
+    def test_exit_policy_audit_estimates_costed_1r_and_2r_policies(self) -> None:
+        report = summarize_exit_policies(
+            [
+                {
+                    "model": "turtle_soup",
+                    "activated_trade": "True",
+                    "net_managed_outcome_r": "-0.2",
+                    "gross_managed_outcome_r": "-0.1",
+                    "hit_1r_before_invalidation": "True",
+                    "hit_2r_before_invalidation": "False",
+                    "target_before_invalidation": "False",
+                    "invalidated": "True",
+                    "target_distance_r": "3",
+                    "mfe_r": "1.2",
+                    "risk_bps": "40",
+                    "execution_cost_r": "0.08",
+                    "funding_cost_r": "0.02",
+                    "total_cost_r": "0.1",
+                },
+                {
+                    "model": "turtle_soup",
+                    "activated_trade": "True",
+                    "net_managed_outcome_r": "-1.05",
+                    "gross_managed_outcome_r": "-1.0",
+                    "hit_1r_before_invalidation": "False",
+                    "hit_2r_before_invalidation": "False",
+                    "target_before_invalidation": "False",
+                    "invalidated": "True",
+                    "target_distance_r": "3",
+                    "mfe_r": "0.4",
+                    "risk_bps": "120",
+                    "execution_cost_r": "0.04",
+                    "funding_cost_r": "0.01",
+                    "total_cost_r": "0.05",
+                },
+                {
+                    "model": "turtle_soup",
+                    "activated_trade": "False",
+                    "risk_bps": "40",
+                    "total_cost_r": "0.1",
+                },
+            ],
+            run_name="unit",
+        )
+
+        row = next(item for item in report if item["scope"] == "run")
+        self.assertEqual(row["count"], 3)
+        self.assertEqual(row["activated_trades"], 2)
+        self.assertEqual(row["current_expectancy"], -0.625)
+        self.assertEqual(row["one_r_expectancy"], -0.075)
+        self.assertEqual(row["two_r_expectancy"], -1.075)
+        self.assertEqual(row["one_r_profit_factor"], 0.857143)
+        self.assertEqual(row["best_policy"], "one_r")
+        self.assertEqual(row["hit_1r_rate"], 0.5)
+        self.assertEqual(row["avg_total_cost_r"], 0.075)
+
+    def test_algorithm_barrier_audit_flags_profitability_blockers(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir) / "weak_silver"
+            run_dir.mkdir()
+            (run_dir / "summary_by_model.csv").write_text(
+                "\n".join(
+                    [
+                        "model,count,activated_trades,managed_expectancy,gross_managed_expectancy,profit_factor,avg_execution_cost_r,avg_mfe_r,target_before_invalidation_rate,hit_1r_before_invalidation_rate,invalidation_rate",
+                        "silver_bullet,12,12,-0.4,0.1,0.7,0.35,2.4,0.1,0.3,0.75",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (run_dir / "walk_forward_report.csv").write_text(
+                "\n".join(
+                    [
+                        "phase,count,managed_expectancy,profit_factor,passed,failed_gates",
+                        "overall,12,-0.4,0.7,False,min_total_trades;min_managed_expectancy_r",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (run_dir / "summary_by_no_trade_reasons.csv").write_text(
+                "\n".join(
+                    [
+                        "model,no_trade_reasons,count,managed_expectancy",
+                        "silver_bullet,target_rr_below_2,10,-0.4",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            rows = audit_run_dir(run_dir)
+            by_model = summarize_by_model(rows)
+
+        self.assertEqual(rows[0]["model"], "silver_bullet")
+        self.assertIn("cost_drag", rows[0]["barriers"])
+        self.assertIn("high_invalidation", rows[0]["barriers"])
+        self.assertIn("target_rr_pressure", rows[0]["barriers"])
+        self.assertEqual(by_model[0]["model"], "silver_bullet")
+        self.assertEqual(by_model[0]["runs"], 1)
+
+    def test_algorithm_barrier_audit_includes_walk_forward_only_runs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir) / "asian_turtle_candidate_nodedupe_max2"
+            run_dir.mkdir()
+            (run_dir / "walk_forward_report.csv").write_text(
+                "\n".join(
+                    [
+                        "phase,count,activated_trades,managed_expectancy,gross_managed_expectancy,profit_factor,avg_execution_cost_r,avg_total_cost_r,passed,failed_gates",
+                        "overall,34,34,0.47,0.65,4.99,0.17,0.17,True,",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            rows = audit_result_tree(Path(temp_dir))
+            by_model = summarize_by_model(rows)
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["model"], "turtle_soup")
+        self.assertEqual(rows[0]["walk_forward_passed"], "True")
+        self.assertNotIn("wf_", rows[0]["barriers"])
+        self.assertEqual(by_model[0]["passed_runs"], 1)
 
     def test_walk_forward_quality_gates_fail_on_small_sample(self) -> None:
         events = [
@@ -1725,6 +2302,115 @@ class NewICTModelTests(unittest.TestCase):
 
         self.assertTrue(report[0]["passed"])
         self.assertEqual(report[0]["session_overtrade_count"], 0)
+
+    def test_walk_forward_can_dedupe_session_by_timeframe_priority(self) -> None:
+        events = [
+            {
+                "model": "turtle_soup",
+                "symbol": "BTCUSDT",
+                "timeframe": "30m",
+                "timestamp": ts(2025, 5, 1, 14, 0),
+                "session_date": "2025-05-01",
+                "session_window": "08:30-12:00",
+                "activated_trade": "True",
+                "net_managed_outcome_r": "-1.0",
+            },
+            {
+                "model": "turtle_soup",
+                "symbol": "BTCUSDT",
+                "timeframe": "1h",
+                "timestamp": ts(2025, 5, 1, 15, 0),
+                "session_date": "2025-05-01",
+                "session_window": "08:30-12:00",
+                "activated_trade": "True",
+                "net_managed_outcome_r": "1.0",
+            },
+        ]
+
+        report = summarize_walk_forward(
+            events,
+            min_total_trades=1,
+            min_phase_trades=1,
+            min_managed_expectancy_r=0.0,
+            dedupe_session=True,
+            dedupe_session_timeframe_priority=["1h", "30m"],
+        )
+
+        self.assertEqual(report[0]["count"], 1)
+        self.assertEqual(report[0]["managed_expectancy"], 1.0)
+        self.assertEqual(report[0]["session_overtrade_count"], 0)
+
+    def test_walk_forward_can_dedupe_session_by_highest_score(self) -> None:
+        events = [
+            {
+                "model": "turtle_soup",
+                "symbol": "BTCUSDT",
+                "timeframe": "30m",
+                "decision_score": "80",
+                "timestamp": ts(2025, 5, 1, 14, 0),
+                "session_date": "2025-05-01",
+                "session_window": "08:30-12:00",
+                "activated_trade": "True",
+                "net_managed_outcome_r": "1.0",
+            },
+            {
+                "model": "turtle_soup",
+                "symbol": "BTCUSDT",
+                "timeframe": "1h",
+                "decision_score": "60",
+                "timestamp": ts(2025, 5, 1, 13, 0),
+                "session_date": "2025-05-01",
+                "session_window": "08:30-12:00",
+                "activated_trade": "True",
+                "net_managed_outcome_r": "-1.0",
+            },
+        ]
+
+        report = summarize_walk_forward(
+            events,
+            min_total_trades=1,
+            min_phase_trades=1,
+            min_managed_expectancy_r=0.0,
+            dedupe_session=True,
+            dedupe_session_selection="highest_score",
+            dedupe_session_timeframe_priority=["1h", "30m"],
+        )
+
+        self.assertEqual(report[0]["count"], 1)
+        self.assertEqual(report[0]["managed_expectancy"], 1.0)
+        self.assertEqual(report[0]["session_overtrade_count"], 0)
+
+    def test_walk_forward_quality_gates_count_only_activated_trades(self) -> None:
+        unactivated = [
+            {
+                "model": "rejection_block",
+                "symbol": "ETHUSDT",
+                "timestamp": ts(2025, 5, 1, 14, 0),
+                "session_date": "2025-05-01",
+                "session_window": "10:00-11:00",
+                "activated_trade": "False",
+            }
+            for _ in range(30)
+        ]
+        activated = [
+            {
+                "model": "rejection_block",
+                "symbol": "ETHUSDT",
+                "timestamp": ts(2025, 5, day, 14, 0),
+                "session_date": f"2025-05-{day:02d}",
+                "session_window": "10:00-11:00",
+                "activated_trade": "True",
+                "net_managed_outcome_r": "1.0",
+            }
+            for day in range(2, 5)
+        ]
+
+        report = summarize_walk_forward(unactivated + activated, min_total_trades=30, min_phase_trades=1)
+
+        self.assertEqual(report[0]["count"], 3)
+        self.assertEqual(report[0]["activated_trades"], 3)
+        self.assertEqual(report[0]["session_overtrade_count"], 0)
+        self.assertIn("min_total_trades", report[0]["failed_gates"])
 
     def test_data_coverage_report_flags_missing_or_sparse_history(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1812,6 +2498,20 @@ class NewICTModelTests(unittest.TestCase):
         self.assertEqual(report[0]["rank"], 1)
         self.assertGreaterEqual(float(report[0]["expectancy"]), 1.0)
 
+    def test_ict_summaries_preserve_zero_bucket_values(self) -> None:
+        summaries = _summaries(
+            [
+                {
+                    "model": "turtle_soup",
+                    "asian_failed_sweep_count_before_reclaim": 0,
+                }
+            ]
+        )
+
+        rows = summaries["summary_by_asian_failed_sweep_count"]
+
+        self.assertEqual(rows[0]["asian_failed_sweep_count_before_reclaim"], 0)
+
     def test_live_model_filter_event_uses_setup_rr(self) -> None:
         setup = EntrySetup(
             model_name="breaker_block",
@@ -1832,7 +2532,11 @@ class NewICTModelTests(unittest.TestCase):
             reason="test",
             components=default_components(),
             timestamp=1,
-            metadata={"displacement_grade": "valid"},
+            metadata={
+                "displacement_grade": "valid",
+                "turtle_quality": "strong",
+                "asian_failed_sweep_count_before_reclaim": 0,
+            },
         )
 
         event = setup_filter_event(setup)
@@ -1864,10 +2568,45 @@ class NewICTModelTests(unittest.TestCase):
         self.assertFalse(passes_model_filter({**event, "htf_context_alignment": "mixed"}, {"allowed_htf_context_alignments": ["aligned"]}))
         event["risk_bps"] = 100
         event["execution_cost_r"] = 0.2
+        event["dol_priority"] = 1
+        event["dol_target_type"] = "external_swing_low"
+        event["dol_source"] = "local_swing"
+        event["target_model"] = "external_liq_bsl_ssl"
         self.assertTrue(passes_model_filter(event, {"min_risk_bps": 80, "max_execution_cost_r": 0.3}))
         self.assertFalse(passes_model_filter(event, {"min_risk_bps": 120}))
         self.assertFalse(passes_model_filter(event, {"max_risk_bps": 80}))
         self.assertFalse(passes_model_filter(event, {"max_execution_cost_r": 0.1}))
+        self.assertTrue(
+            passes_model_filter(
+                event,
+                {
+                    "allowed_dol_target_types": ["external_swing_low"],
+                    "allowed_dol_sources": ["local_swing"],
+                    "allowed_target_models": ["external_liq_bsl_ssl"],
+                    "max_dol_priority": 1,
+                },
+            )
+        )
+        self.assertFalse(passes_model_filter(event, {"allowed_dol_target_types": ["fixed_r_fallback"]}))
+        self.assertFalse(passes_model_filter(event, {"max_dol_priority": 0}))
+        self.assertTrue(
+            passes_model_filter(
+                event,
+                {
+                    "allowed_turtle_qualities": ["strong"],
+                    "max_asian_failed_sweep_count_before_reclaim": 0,
+                },
+            )
+        )
+        self.assertFalse(passes_model_filter(event, {"allowed_turtle_qualities": ["valid"]}))
+        self.assertFalse(
+            passes_model_filter(
+                {**event, "asian_failed_sweep_count_before_reclaim": 1},
+                {"max_asian_failed_sweep_count_before_reclaim": 0},
+            )
+        )
+        self.assertTrue(passes_model_filter(event, {"allowed_timeframe_directions": ["1h:long"]}))
+        self.assertFalse(passes_model_filter(event, {"allowed_timeframe_directions": ["30m:short"]}))
 
     def test_lifecycle_marks_pending_filled_and_target(self) -> None:
         setup = EntrySetup(
@@ -1944,6 +2683,7 @@ class NewICTModelTests(unittest.TestCase):
                 "symbols": ["BTCUSDT", "ETHUSDT"],
                 "models": ["turtle_soup", "ifvg_retest"],
                 "context_mode": "aligned_only",
+                "funding_data_dir": "data/hyperliquid_funding",
                 "smt_pairs": ["BTCUSDT:ETHUSDT"],
                 "forward_bars": 20,
                 "commission_bps": 4.0,
@@ -1952,6 +2692,9 @@ class NewICTModelTests(unittest.TestCase):
                 "end_date": "2025-05-31",
                 "turtle_soup_session_windows": "02:00-05:00,07:00-10:00,13:30-16:00",
                 "turtle_soup_min_stop_bps": 80,
+                "turtle_soup_require_smt": True,
+                "turtle_soup_require_smt_on_sweep": True,
+                "turtle_soup_asian_reject_prior_failed_sweep": True,
                 "pre_model_require_smt": True,
                 "pre_model_filter": False,
                 "pre_model_require_htf_poi": False,
@@ -1983,6 +2726,8 @@ class NewICTModelTests(unittest.TestCase):
         self.assertNotIn("ETHUSDT", args[args.index("--symbols") + 1 : args.index("--timeframes")])
         self.assertIn("--smt-pairs", args)
         self.assertIn("BTCUSDT:ETHUSDT", args)
+        self.assertIn("--funding-data-dir", args)
+        self.assertIn("data/hyperliquid_funding", args)
         self.assertIn("--commission-bps", args)
         self.assertIn("4.0", args)
         self.assertIn("--slippage-bps", args)
@@ -1998,6 +2743,9 @@ class NewICTModelTests(unittest.TestCase):
         self.assertIn("02:00-05:00,07:00-10:00,13:30-16:00", args)
         self.assertIn("--turtle-soup-min-stop-bps", args)
         self.assertIn("80", args)
+        self.assertIn("--turtle-soup-require-smt", args)
+        self.assertIn("--turtle-soup-require-smt-on-sweep", args)
+        self.assertIn("--turtle-soup-asian-reject-prior-failed-sweep", args)
         self.assertIn("--silver-bullet-windows", args)
         self.assertIn("10:00-11:00,14:00-15:00", args)
         self.assertIn("--silver-bullet-max-retest-bars", args)
@@ -2036,6 +2784,22 @@ class NewICTModelTests(unittest.TestCase):
 
         self.assertIn("--smt-pairs", args)
         self.assertEqual(args.index("--smt-pairs"), len(args) - 1)
+
+    def test_ict_batch_forwards_futures_point_costs(self) -> None:
+        args = build_run_args(
+            {"data_dir": "data/cme", "symbols": ["MNQ"], "models": ["turtle_soup"]},
+            {
+                "timeframes": ["30m"],
+                "out_dir": "backtest_results/mnq",
+                "commission_points": 0.425,
+                "slippage_points": 0.25,
+            },
+        )
+
+        self.assertIn("--commission-points", args)
+        self.assertIn("0.425", args)
+        self.assertIn("--slippage-points", args)
+        self.assertIn("0.25", args)
 
     def test_r_hits_are_measured_from_entry_time(self) -> None:
         future = [
@@ -2082,6 +2846,8 @@ class NewICTModelTests(unittest.TestCase):
 
         self.assertTrue(outcome["tp1_hit"])
         self.assertTrue(outcome["moved_to_be"])
+        self.assertEqual(outcome["tp1_time"], 1)
+        self.assertEqual(outcome["exit_time"], 2)
         self.assertEqual(outcome["managed_exit_reason"], "be_after_tp1")
         self.assertEqual(outcome["managed_outcome_r"], 0.5)
 
@@ -2095,6 +2861,7 @@ class NewICTModelTests(unittest.TestCase):
 
         self.assertEqual(outcome["managed_exit_reason"], "horizon_close")
         self.assertEqual(outcome["exit_reason"], "horizon_close")
+        self.assertEqual(outcome["exit_time"], 2)
         self.assertEqual(outcome["managed_outcome_r"], 0.5)
 
 

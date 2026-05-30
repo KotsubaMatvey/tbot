@@ -35,6 +35,16 @@ def passes_model_filter(event: dict[str, Any], rules: dict[str, Any]) -> bool:
         cost_r = _float_or_none(event.get("execution_cost_r"))
         if cost_r is None or cost_r > max_execution_cost_r:
             return False
+    max_dol_priority = _float_or_none(rules.get("max_dol_priority"))
+    if max_dol_priority is not None:
+        priority = _float_or_none(event.get("dol_priority"))
+        if priority is None or priority > max_dol_priority:
+            return False
+    max_failed_asian_sweeps = _float_or_none(rules.get("max_asian_failed_sweep_count_before_reclaim"))
+    if max_failed_asian_sweeps is not None:
+        failed_sweeps = _float_or_none(event.get("asian_failed_sweep_count_before_reclaim"))
+        if failed_sweeps is None or failed_sweeps > max_failed_asian_sweeps:
+            return False
     min_score = _float_or_none(rules.get("min_decision_score"))
     if min_score is not None:
         score = _float_or_none(event.get("decision_score"))
@@ -58,6 +68,8 @@ def passes_model_filter(event: dict[str, Any], rules: dict[str, Any]) -> bool:
         return False
     if not _field_allowed(event, rules, "timeframe", "allowed_timeframes"):
         return False
+    if not _timeframe_direction_allowed(event, rules):
+        return False
     if not _field_allowed(event, rules, "session_label", "allowed_session_labels"):
         return False
     if not _field_allowed(event, rules, "session_window", "allowed_session_windows"):
@@ -69,6 +81,14 @@ def passes_model_filter(event: dict[str, Any], rules: dict[str, Any]) -> bool:
     if not _field_allowed(event, rules, "htf_zone_type", "allowed_htf_zone_types"):
         return False
     if not _field_allowed(event, rules, "htf_context_alignment", "allowed_htf_context_alignments"):
+        return False
+    if not _field_allowed(event, rules, "dol_target_type", "allowed_dol_target_types"):
+        return False
+    if not _field_allowed(event, rules, "dol_source", "allowed_dol_sources"):
+        return False
+    if not _field_allowed(event, rules, "target_model", "allowed_target_models"):
+        return False
+    if not _field_allowed(event, rules, "turtle_quality", "allowed_turtle_qualities"):
         return False
     if not _displacement_allowed(event, rules):
         return False
@@ -101,6 +121,15 @@ def _field_allowed(event: dict[str, Any], rules: dict[str, Any], field: str, rul
     if not allowed:
         return True
     return str(event.get(field) or "none") in {str(item) for item in allowed}
+
+
+def _timeframe_direction_allowed(event: dict[str, Any], rules: dict[str, Any]) -> bool:
+    allowed = rules.get("allowed_timeframe_directions")
+    if not allowed:
+        return True
+    timeframe = str(event.get("timeframe") or "none")
+    direction = str(event.get("direction") or "none")
+    return f"{timeframe}:{direction}" in {str(item) for item in allowed}
 
 
 def _displacement_allowed(event: dict[str, Any], rules: dict[str, Any]) -> bool:

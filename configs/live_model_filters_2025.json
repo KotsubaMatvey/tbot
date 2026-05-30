@@ -1,7 +1,7 @@
 {
   "model_filters": {
     "silver_bullet": {
-      "enabled": true,
+      "enabled": false,
       "allowed_symbols": ["BTCUSDT"],
       "allowed_timeframes": ["15m"],
       "min_target_distance_r": 2.0,
@@ -14,10 +14,11 @@
       "silver_bullet_max_retest_bars": 1,
       "silver_bullet_min_retest_depth": 0.15,
       "silver_bullet_retest_must_occur_within_window": true,
-      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"]
+      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"],
+      "research_note": "Disabled live after costed BTC 15m validation: 2025 net managed expectancy -0.217593R over 13 trades; through 2026-04 partial -0.293280R over 17 trades; walk-forward gates failed."
     },
     "ifvg_retest": {
-      "enabled": true,
+      "enabled": false,
       "allowed_symbols": ["BTCUSDT"],
       "allowed_timeframes": ["4h"],
       "min_target_distance_r": 3.0,
@@ -27,7 +28,7 @@
       "allowed_htf_context_alignments": ["aligned"],
       "allowed_displacement_grades": ["valid", "strong"],
       "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"],
-      "research_note": "Enabled only on 4h because strict 5-15 IFVG annual sample produced almost no activated trades after the spec update."
+      "research_note": "Disabled live pending costed validation: the 2025 strict 4h probe left one activated BTC trade under live filters and it lost -1.164073R net; walk-forward gates cannot pass."
     },
     "ict2022_mss_fvg": {
       "enabled": false,
@@ -55,15 +56,18 @@
       "require_premium_discount_alignment": true,
       "allowed_htf_context_alignments": ["aligned"],
       "target_mode": "dol_hierarchy",
+      "require_smt": true,
       "turtle_soup_require_killzone": true,
+      "turtle_soup_require_smt": true,
+      "turtle_soup_require_smt_on_sweep": true,
       "turtle_soup_session_windows": ["02:00-05:00", "07:00-10:00", "13:30-16:00"],
       "turtle_soup_min_wick_fraction": 0.10,
       "turtle_soup_min_close_back_fraction": 0.05,
       "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"],
-      "research_note": "Prepared as a session fallback, but disabled live until sweep+MSS/FVG filters show positive expectancy."
+      "research_note": "Disabled; directional SMT-on-sweep plumbing is available, but the Asian BTC 30m candidate failed independent costed 2022-2024 OOS validation at -0.185833R net expectancy (PF 0.616131), and its selected 1h variant also failed OOS gates."
     },
     "breaker_block": {
-      "enabled": true,
+      "enabled": false,
       "allowed_symbols": ["BTCUSDT"],
       "allowed_timeframes": ["30m", "1h"],
       "min_target_distance_r": 2.0,
@@ -72,10 +76,11 @@
       "require_premium_discount_alignment": true,
       "allowed_htf_context_alignments": ["aligned"],
       "allowed_displacement_grades": ["valid", "strong"],
-      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"]
+      "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"],
+      "research_note": "Disabled live pending costed validation: current filters selected zero activated BTC trades in the available 1h and 30m validation artifacts; walk-forward gates cannot pass."
     },
     "reclaimed_ob": {
-      "enabled": true,
+      "enabled": false,
       "allowed_symbols": ["BTCUSDT"],
       "allowed_timeframes": ["4h"],
       "allowed_htf_zone_types": ["FVG", "Breaker"],
@@ -86,11 +91,11 @@
       "allowed_htf_context_alignments": ["aligned"],
       "min_target_distance_r": 1.0,
       "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location"],
-      "research_note": "Low-frequency continuation model; not a default user model."
+      "research_note": "Disabled live pending costed validation: the 2025 strict 4h probe left one activated BTC trade under live filters at -0.001597R net; walk-forward gates cannot pass."
     },
     "rejection_block": {
       "enabled": false,
-      "research_note": "Research-only after NotebookLM spec; full-2025 annual baseline was negative after swing-limit RB rewrite."
+      "research_note": "Research-only after NotebookLM spec; extended costed ETH 1h strict baseline remained negative at -0.087709R net expectancy (PF 0.816027) over 39 activated trades after gate-count correction."
     },
     "mitigation_block": {
       "enabled": false,

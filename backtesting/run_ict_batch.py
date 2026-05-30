@@ -55,6 +55,14 @@ def main(argv: list[str] | None = None) -> int:
             ]
             if config.get("model_filters"):
                 wf_args.extend(["--model-filters", str(config_path)])
+            if config.get("dedupe_session"):
+                wf_args.append("--dedupe-session")
+                selection = config.get("dedupe_session_selection")
+                if selection:
+                    wf_args.extend(["--dedupe-session-selection", str(selection)])
+                priority = config.get("dedupe_session_timeframe_priority") or []
+                if priority:
+                    wf_args.extend(["--dedupe-session-timeframe-priority", ",".join(str(item) for item in priority)])
             result = walk_forward_report.main(wf_args)
             if result != 0:
                 return result
@@ -78,11 +86,14 @@ def build_run_args(config: dict[str, Any], run: dict[str, Any]) -> list[str]:
     ]
     if "smt_pairs" in config:
         args.extend(["--smt-pairs", *[str(item) for item in config.get("smt_pairs") or []]])
+    funding_data_dir = run.get("funding_data_dir", config.get("funding_data_dir"))
+    if funding_data_dir is not None:
+        args.extend(["--funding-data-dir", str(funding_data_dir)])
     for name in ("forward_bars", "warmup_bars"):
         value = run.get(name, config.get(name))
         if value is not None:
             args.extend([f"--{name.replace('_', '-')}", str(value)])
-    for name in ("tp1_r", "partial_close_fraction", "commission_bps", "slippage_bps"):
+    for name in ("tp1_r", "partial_close_fraction", "commission_bps", "slippage_bps", "commission_points", "slippage_points"):
         value = run.get(name, config.get(name))
         if value is not None:
             args.extend([f"--{name.replace('_', '-')}", str(value)])
@@ -134,7 +145,14 @@ def build_run_args(config: dict[str, Any], run: dict[str, Any]) -> list[str]:
     for name in ("pre_model_allow_neutral_htf", "pre_model_allow_equilibrium", "pre_model_require_smt", "pre_model_require_killzone"):
         if run.get(name, config.get(name)):
             args.append(f"--{name.replace('_', '-')}")
-    for name in ("turtle_soup_require_killzone", "turtle_soup_require_smt", "turtle_soup_require_mss_confirmation", "breaker_require_displacement"):
+    for name in (
+        "turtle_soup_require_killzone",
+        "turtle_soup_require_smt",
+        "turtle_soup_require_smt_on_sweep",
+        "turtle_soup_require_mss_confirmation",
+        "turtle_soup_asian_reject_prior_failed_sweep",
+        "breaker_require_displacement",
+    ):
         if run.get(name, config.get(name)):
             args.append(f"--{name.replace('_', '-')}")
     confirmation_fvg = run.get("turtle_soup_require_confirmation_fvg", config.get("turtle_soup_require_confirmation_fvg"))

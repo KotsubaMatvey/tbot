@@ -1,0 +1,61 @@
+{
+  "data_dir": "data/history_2025-01-01_2025-12-31",
+  "symbols": ["BTCUSDT"],
+  "models": ["turtle_soup"],
+  "smt_pairs": ["BTCUSDT:ETHUSDT"],
+  "thresholds": [0],
+  "grid_filters": false,
+  "context_mode": "off",
+  "pre_model_filter": false,
+  "forward_bars": 24,
+  "warmup_bars": 100,
+  "tp1_r": 1.0,
+  "partial_close_fraction": 0.5,
+  "move_to_be_after_tp1": true,
+  "commission_bps": 4.0,
+  "slippage_bps": 1.0,
+  "target_mode": "fixed_r",
+  "entry_mode": "close",
+  "turtle_soup_range_source": "asian_range",
+  "turtle_soup_require_killzone": true,
+  "turtle_soup_require_smt": true,
+  "turtle_soup_require_smt_on_sweep": true,
+  "turtle_soup_session_windows": "08:30-12:00",
+  "turtle_soup_asian_range_window": "00:00-08:00",
+  "turtle_soup_asian_range_tz": "UTC",
+  "turtle_soup_asian_min_range_bps": 20,
+  "turtle_soup_asian_min_breach_bps": 1,
+  "turtle_soup_asian_first_signal_only": true,
+  "scan_session_windows": "08:30-12:00",
+  "walk_forward_threshold": 0,
+  "walk_forward_gates": {
+    "min_total_trades": 30,
+    "min_phase_trades": 10,
+    "min_managed_expectancy_r": 0.3,
+    "min_profit_factor": 1.3,
+    "max_drawdown_r": 8.0,
+    "max_trades_per_session": 1
+  },
+  "model_filters": {
+    "turtle_soup": {
+      "allowed_symbols": ["BTCUSDT"],
+      "allowed_timeframes": ["30m"],
+      "allowed_session_labels": ["ny_open"],
+      "allowed_range_sources": ["asian_range"],
+      "require_smt": true
+    }
+  },
+  "runs": [
+    {
+      "name": "btc_30m_asian_smt_on_sweep_2025",
+      "timeframes": ["30m"],
+      "out_dir": "backtest_results/asian_turtle_smt_on_sweep_costed_2025"
+    },
+    {
+      "name": "btc_30m_asian_smt_on_sweep_extended",
+      "data_dir": "data/history_2024-11-06_2026-04-20",
+      "timeframes": ["30m"],
+      "out_dir": "backtest_results/asian_turtle_smt_on_sweep_costed_extended"
+    }
+  ]
+}

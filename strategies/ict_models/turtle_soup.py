@@ -48,6 +48,7 @@ def detect_setups(
     max_confirmation_bars = int(cfg.get("turtle_soup_max_confirmation_bars") or TURTLE_MAX_CONFIRMATION_BARS)
     require_killzone = bool(cfg.get("turtle_soup_require_killzone", False))
     require_smt = bool(cfg.get("turtle_soup_require_smt", False))
+    require_smt_on_sweep = bool(cfg.get("turtle_soup_require_smt_on_sweep", False))
     require_mss_confirmation = bool(cfg.get("turtle_soup_require_mss_confirmation", TURTLE_REQUIRE_MSS_CONFIRMATION))
     require_confirmation_fvg = bool(cfg.get("turtle_soup_require_confirmation_fvg", True))
     allowed_significances = set(cfg.get("turtle_soup_allowed_swing_significances") or [])
@@ -110,6 +111,8 @@ def detect_setups(
         quality = _quality("long", sweep, low.level, average_true_range, min_wick_fraction, min_wick_atr_ratio, min_close_back_fraction)
         if not quality["passed"]:
             low = None
+    if low is not None and require_smt and not _has_smt_confirmation(cfg, "long", int(sweep["time"]) if require_smt_on_sweep else None):
+        low = None
     if low is not None:
         entry = float(sweep["close"] if entry_mode == "close" else low.level)
         stop = buffered_stop("long", float(sweep["low"]), entry, stop_bps)
@@ -166,6 +169,8 @@ def detect_setups(
         quality = _quality("short", sweep, high.level, average_true_range, min_wick_fraction, min_wick_atr_ratio, min_close_back_fraction)
         if not quality["passed"]:
             high = None
+    if high is not None and require_smt and not _has_smt_confirmation(cfg, "short", int(sweep["time"]) if require_smt_on_sweep else None):
+        high = None
     if high is not None:
         entry = float(sweep["close"] if entry_mode == "close" else high.level)
         stop = buffered_stop("short", float(sweep["high"]), entry, stop_bps)
@@ -268,6 +273,12 @@ def _confirmed_setups(
             continue
         swing, sweep_idx, quality = sweep_match
         sweep = scan[sweep_idx]
+        if require_smt and not _has_smt_confirmation(
+            cfg,
+            side,
+            int(sweep["time"]) if cfg.get("turtle_soup_require_smt_on_sweep", False) else None,
+        ):
+            continue
         session_window = _matching_window(int(sweep["time"]), session_windows)
         if require_killzone and session_window is None:
             continue
@@ -406,8 +417,16 @@ def _quality(
     }
 
 
-def _has_smt_confirmation(cfg: dict[str, Any]) -> bool:
-    return bool(cfg.get("has_smt_confirmation") or cfg.get("smt_divergences"))
+def _has_smt_confirmation(cfg: dict[str, Any], side: str | None = None, sweep_timestamp: int | None = None) -> bool:
+    divergences = cfg.get("smt_divergences") or []
+    if side is None:
+        return bool(cfg.get("has_smt_confirmation") or divergences)
+    expected = "bullish" if side == "long" else "bearish"
+    return any(
+        getattr(item, "direction", None) == expected
+        and (sweep_timestamp is None or int(getattr(item, "timestamp", -1)) == sweep_timestamp)
+        for item in divergences
+    )
 
 
 def _target_for(
@@ -440,6 +459,10 @@ def _asian_range_setups(
     session_window = _matching_window(int(current["time"]), session_windows)
     require_killzone = bool(cfg.get("turtle_soup_require_killzone", True))
     if require_killzone and session_window is None:
+        return []
+    require_smt = bool(cfg.get("turtle_soup_require_smt", False))
+    require_smt_on_sweep = bool(cfg.get("turtle_soup_require_smt_on_sweep", False))
+    if require_smt and not _has_smt_confirmation(cfg):
         return []
 
     range_window = str(cfg.get("turtle_soup_asian_range_window") or "00:00-08:00")
@@ -476,12 +499,20 @@ def _asian_range_setups(
     min_close_back_fraction = float(cfg.get("turtle_soup_min_close_back_fraction") or TURTLE_MIN_CLOSE_BACK_FRACTION)
     min_breach_bps = float(cfg.get("turtle_soup_asian_min_breach_bps") or 0.0)
     first_signal_only = bool(cfg.get("turtle_soup_asian_first_signal_only", True))
+    reject_prior_failed_sweep = bool(cfg.get("turtle_soup_asian_reject_prior_failed_sweep", False))
     average_true_range = avg_range(closed[:-1])
     results = []
 
-    if float(current["low"]) < range_low < float(current["close"]):
+    if float(current["low"]) < range_low < float(current["close"]) and (
+        not require_smt or _has_smt_confirmation(cfg, "long", int(current["time"]) if require_smt_on_sweep else None)
+    ):
         breach_bps = wick_extension_bps(range_low, float(current["low"]))
-        if breach_bps >= min_breach_bps and not _prior_asian_reclaim(closed[:-1], range_end, int(current["time"]), "long", range_low, first_signal_only):
+        failed_sweep_count = _prior_failed_asian_sweep_count(closed[:-1], range_end, int(current["time"]), "long", range_low)
+        if (
+            breach_bps >= min_breach_bps
+            and not (reject_prior_failed_sweep and failed_sweep_count)
+            and not _prior_asian_reclaim(closed[:-1], range_end, int(current["time"]), "long", range_low, first_signal_only)
+        ):
             quality = _quality("long", current, range_low, average_true_range, min_wick_fraction, min_wick_atr_ratio, min_close_back_fraction)
             if quality["passed"]:
                 entry = float(current["close"] if entry_mode == "close" else range_low)
@@ -516,6 +547,8 @@ def _asian_range_setups(
                         "sweep_extreme": current["low"],
                         "sweep_time": int(current["time"]),
                         "entry_time": int(current["time"]),
+                        "asian_failed_sweep_count_before_reclaim": failed_sweep_count,
+                        "asian_reject_prior_failed_sweep": reject_prior_failed_sweep,
                         "wick_extension_bps": breach_bps,
                         "close_back_distance_bps": wick_extension_bps(range_low, float(current["close"])),
                         "turtle_quality": quality["quality"],
@@ -526,9 +559,16 @@ def _asian_range_setups(
                 if item:
                     results.append(item)
 
-    if float(current["high"]) > range_high > float(current["close"]):
+    if float(current["high"]) > range_high > float(current["close"]) and (
+        not require_smt or _has_smt_confirmation(cfg, "short", int(current["time"]) if require_smt_on_sweep else None)
+    ):
         breach_bps = wick_extension_bps(range_high, float(current["high"]))
-        if breach_bps >= min_breach_bps and not _prior_asian_reclaim(closed[:-1], range_end, int(current["time"]), "short", range_high, first_signal_only):
+        failed_sweep_count = _prior_failed_asian_sweep_count(closed[:-1], range_end, int(current["time"]), "short", range_high)
+        if (
+            breach_bps >= min_breach_bps
+            and not (reject_prior_failed_sweep and failed_sweep_count)
+            and not _prior_asian_reclaim(closed[:-1], range_end, int(current["time"]), "short", range_high, first_signal_only)
+        ):
             quality = _quality("short", current, range_high, average_true_range, min_wick_fraction, min_wick_atr_ratio, min_close_back_fraction)
             if quality["passed"]:
                 entry = float(current["close"] if entry_mode == "close" else range_high)
@@ -563,6 +603,8 @@ def _asian_range_setups(
                         "sweep_extreme": current["high"],
                         "sweep_time": int(current["time"]),
                         "entry_time": int(current["time"]),
+                        "asian_failed_sweep_count_before_reclaim": failed_sweep_count,
+                        "asian_reject_prior_failed_sweep": reject_prior_failed_sweep,
                         "wick_extension_bps": breach_bps,
                         "close_back_distance_bps": wick_extension_bps(range_high, float(current["close"])),
                         "turtle_quality": quality["quality"],
@@ -584,11 +626,15 @@ def _range_candles_before(
     zone = ZoneInfo(tz_name)
     current_dt = datetime.fromtimestamp(current_timestamp / 1000, tz=ZoneInfo("UTC")).astimezone(zone)
     start_time, end_time = (_parse_time(part) for part in window.split("-", 1))
-    range_date = current_dt.date()
-    if current_dt.time() <= end_time:
-        range_date -= timedelta(days=1)
+    end_date = current_dt.date()
+    if end_time <= start_time:
+        range_date = end_date - timedelta(days=1)
+    else:
+        if current_dt.time() <= end_time:
+            end_date -= timedelta(days=1)
+        range_date = end_date
     start_dt = datetime.combine(range_date, start_time, tzinfo=zone)
-    end_dt = datetime.combine(range_date, end_time, tzinfo=zone)
+    end_dt = datetime.combine(end_date, end_time, tzinfo=zone)
     start_ms = int(start_dt.astimezone(ZoneInfo("UTC")).timestamp() * 1000)
     end_ms = int(end_dt.astimezone(ZoneInfo("UTC")).timestamp() * 1000)
     return [candle for candle in candles if start_ms <= int(candle["time"]) <= end_ms], start_ms, end_ms, range_date.isoformat()
@@ -613,6 +659,25 @@ def _prior_asian_reclaim(
         if side == "short" and float(candle["high"]) > level > float(candle["close"]):
             return True
     return False
+
+
+def _prior_failed_asian_sweep_count(
+    candles: list[dict[str, float | int]],
+    after_timestamp: int,
+    before_timestamp: int,
+    side: str,
+    level: float,
+) -> int:
+    failed = 0
+    for candle in candles:
+        ts = int(candle["time"])
+        if ts <= after_timestamp or ts >= before_timestamp:
+            continue
+        if side == "long" and float(candle["low"]) < level and float(candle["close"]) <= level:
+            failed += 1
+        if side == "short" and float(candle["high"]) > level and float(candle["close"]) >= level:
+            failed += 1
+    return failed
 
 
 def _apply_min_stop_distance(side: str, entry: float, stop: float, cfg: dict[str, Any]) -> tuple[float, bool]:
@@ -690,7 +755,7 @@ def _session_label(window: str) -> str:
         return "ny_open"
     if start < time(12, 0):
         return "ny_am"
-    if start >= time(14, 0) and start < time(16, 0):
+    if start >= time(13, 30) and start < time(16, 0):
         return "ny_pm"
     return "custom"
 

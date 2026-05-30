@@ -111,11 +111,39 @@ def load_history_for(
     return candles
 
 
+def load_funding_for(data_dir: str | Path, symbol: str, *, required: bool = True) -> list[dict[str, float | int]] | None:
+    path = Path(data_dir) / f"{symbol}_funding.csv"
+    if not path.exists():
+        if required:
+            raise HistoricalDataError(f"missing funding history for {symbol}; tried {path}")
+        return None
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    try:
+        funding = []
+        for row in rows:
+            item: dict[str, float | int] = {
+                "time": normalize_time_ms(row["time"]),
+                "funding_rate": float(row["funding_rate"]),
+                "premium": float(row.get("premium") or 0.0),
+            }
+            if row.get("mark_price"):
+                item["mark_price"] = float(row["mark_price"])
+            funding.append(item)
+    except (KeyError, TypeError, ValueError) as exc:
+        raise HistoricalDataError(f"invalid funding history row in {path}: {type(exc).__name__}: {exc}") from exc
+    funding.sort(key=lambda row: int(row["time"]))
+    if required and not funding:
+        raise HistoricalDataError(f"empty funding history for {symbol}: {path}")
+    return funding
+
+
 __all__ = [
     "HistoricalDataError",
     "candidate_paths",
     "find_history_file",
     "load_candles",
+    "load_funding_for",
     "load_history_for",
     "normalize_candle",
     "normalize_time_ms",
