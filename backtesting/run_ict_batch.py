@@ -5,7 +5,14 @@ import json
 from pathlib import Path
 from typing import Any
 
-from backtesting import grid_filter_analysis, run_ict_models, score_threshold_report, walk_forward_report
+from backtesting import (
+    grid_filter_analysis,
+    htf_bias_audit,
+    run_ict_models,
+    score_threshold_report,
+    trade_pnl_report,
+    walk_forward_report,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -28,6 +35,16 @@ def main(argv: list[str] | None = None) -> int:
         result = score_threshold_report.main(report_args)
         if result != 0:
             return result
+        if config.get("trade_pnl_report", True):
+            pnl_args = build_trade_pnl_report_args(config, config_path, out_dir, thresholds)
+            result = trade_pnl_report.main(pnl_args)
+            if result != 0:
+                return result
+        if config.get("htf_bias_audit", True):
+            htf_args = build_htf_bias_audit_args(config, config_path, out_dir, thresholds)
+            result = htf_bias_audit.main(htf_args)
+            if result != 0:
+                return result
         if config.get("grid_filters", True):
             grid_args = ["--events", str(out_dir / "events.csv"), "--min-count", str(config.get("grid_min_count", 10))]
             result = grid_filter_analysis.main(grid_args)
@@ -69,6 +86,41 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
+def build_trade_pnl_report_args(config: dict[str, Any], config_path: Path, out_dir: Path, thresholds: list[str]) -> list[str]:
+    threshold = config.get("trade_pnl_threshold", config.get("walk_forward_threshold", thresholds[0] if thresholds else 0))
+    args = [
+        "--events",
+        str(out_dir / "events.csv"),
+        "--threshold",
+        str(threshold),
+        "--min-trades",
+        str(config.get("trade_pnl_min_trades", config.get("min_trade_sample", 100))),
+        "--group-by",
+        *[str(item) for item in config.get("trade_pnl_group_by", ["model", "symbol", "timeframe", "direction", "htf_bias", "htf_context_alignment", "htf_draw_direction"])],
+    ]
+    if config.get("model_filters"):
+        args.extend(["--model-filters", str(config_path)])
+    return args
+
+
+def build_htf_bias_audit_args(config: dict[str, Any], config_path: Path, out_dir: Path, thresholds: list[str]) -> list[str]:
+    threshold = config.get(
+        "htf_bias_audit_threshold",
+        config.get("trade_pnl_threshold", config.get("walk_forward_threshold", thresholds[0] if thresholds else 0)),
+    )
+    args = [
+        "--events",
+        str(out_dir / "events.csv"),
+        "--threshold",
+        str(threshold),
+        "--min-trades",
+        str(config.get("htf_bias_audit_min_trades", config.get("trade_pnl_min_trades", config.get("min_trade_sample", 100)))),
+    ]
+    if config.get("model_filters"):
+        args.extend(["--model-filters", str(config_path)])
+    return args
+
+
 def build_run_args(config: dict[str, Any], run: dict[str, Any]) -> list[str]:
     args = [
         "--data-dir",
@@ -89,7 +141,7 @@ def build_run_args(config: dict[str, Any], run: dict[str, Any]) -> list[str]:
     funding_data_dir = run.get("funding_data_dir", config.get("funding_data_dir"))
     if funding_data_dir is not None:
         args.extend(["--funding-data-dir", str(funding_data_dir)])
-    for name in ("forward_bars", "warmup_bars"):
+    for name in ("forward_bars", "warmup_bars", "seed_bars"):
         value = run.get(name, config.get(name))
         if value is not None:
             args.extend([f"--{name.replace('_', '-')}", str(value)])
@@ -127,6 +179,7 @@ def build_run_args(config: dict[str, Any], run: dict[str, Any]) -> list[str]:
         "ifvg_max_source_age_bars",
         "ict2022_max_fvg_retest_bars",
         "ict2022_session_windows",
+        "ict2022_fvg_selection",
         "breaker_max_trigger_to_retest_bars",
         "breaker_max_retest_count",
         "rejection_block_min_wick_fraction",
@@ -170,6 +223,12 @@ def build_run_args(config: dict[str, Any], run: dict[str, Any]) -> list[str]:
     ict2022_retest_in_session = run.get("ict2022_retest_must_occur_within_session", config.get("ict2022_retest_must_occur_within_session"))
     if ict2022_retest_in_session is not None:
         args.append("--ict2022-retest-must-occur-within-session" if ict2022_retest_in_session else "--no-ict2022-retest-must-occur-within-session")
+    ict2022_killzone = run.get("ict2022_require_killzone", config.get("ict2022_require_killzone"))
+    if ict2022_killzone is not None:
+        args.append("--ict2022-require-killzone" if ict2022_killzone else "--no-ict2022-require-killzone")
+    ict2022_same_session = run.get("ict2022_require_same_session", config.get("ict2022_require_same_session"))
+    if ict2022_same_session is not None:
+        args.append("--ict2022-require-same-session" if ict2022_same_session else "--no-ict2022-require-same-session")
     ict2022_strong = run.get("ict2022_require_strong_displacement", config.get("ict2022_require_strong_displacement"))
     if ict2022_strong is not None:
         args.append("--ict2022-require-strong-displacement" if ict2022_strong else "--no-ict2022-require-strong-displacement")

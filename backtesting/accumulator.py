@@ -79,6 +79,7 @@ class PrimitiveSnapshotAccumulator:
         max_primitives_per_field: int = DEFAULT_MAX_PRIMITIVES_PER_FIELD,
         detector_window: int = DEFAULT_DETECTOR_WINDOW,
         snapshot_candle_window: int = DEFAULT_SNAPSHOT_CANDLE_WINDOW,
+        start_index: int = 0,
     ) -> None:
         self.symbol = symbol
         self.timeframe = timeframe
@@ -87,6 +88,7 @@ class PrimitiveSnapshotAccumulator:
         self.detector_window = detector_window
         self.snapshot_candle_window = snapshot_candle_window
         self.state = _SnapshotState()
+        self.state.next_index = max(0, start_index)
 
     def snapshot_until(self, timestamp: int) -> PrimitiveSnapshot:
         while self.state.next_index < len(self.candles):
@@ -153,11 +155,13 @@ class ReplaySnapshotCache:
         max_primitives_per_field: int = DEFAULT_MAX_PRIMITIVES_PER_FIELD,
         detector_window: int = DEFAULT_DETECTOR_WINDOW,
         snapshot_candle_window: int = DEFAULT_SNAPSHOT_CANDLE_WINDOW,
+        start_indices: dict[tuple[str, str], int] | None = None,
     ) -> None:
         self.candle_store = candle_store
         self.max_primitives_per_field = max_primitives_per_field
         self.detector_window = detector_window
         self.snapshot_candle_window = snapshot_candle_window
+        self.start_indices = start_indices or {}
         self.accumulators: dict[tuple[str, str], PrimitiveSnapshotAccumulator] = {}
 
     def get_snapshot(self, symbol: str, timeframe: str, timestamp: int) -> PrimitiveSnapshot | None:
@@ -174,9 +178,14 @@ class ReplaySnapshotCache:
                 max_primitives_per_field=self.max_primitives_per_field,
                 detector_window=self.detector_window,
                 snapshot_candle_window=self.snapshot_candle_window,
+                start_index=self.start_indices.get(key, 0),
             )
             self.accumulators[key] = accumulator
         return accumulator.snapshot_until(timestamp)
+
+    def set_start_index(self, symbol: str, timeframe: str, start_index: int) -> None:
+        key = (symbol, timeframe)
+        self.start_indices[key] = max(0, start_index)
 
 
 def _primitive_key(field_name: str, item: Any) -> tuple[Any, ...]:

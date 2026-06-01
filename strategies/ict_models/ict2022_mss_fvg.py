@@ -13,6 +13,7 @@ ICT2022_REQUIRE_KILLZONE = True
 ICT2022_ENTRY_MODE = "edge"
 ICT2022_STOP_MODE = "sweep_extreme"
 ICT2022_TARGET_MODE = "nearest_liquidity"
+ICT2022_FVG_SELECTION = "first_after_mss"
 
 
 def detect_setups(
@@ -35,6 +36,9 @@ def detect_setups(
     retest_must_be_in_session = bool(cfg.get("ict2022_retest_must_occur_within_session", False))
     max_sweep_age_bars = int(cfg.get("ict2022_max_sweep_age_bars", 20))
     max_fvg_retest_bars = int(cfg.get("ict2022_max_fvg_retest_bars", 20))
+    fvg_selection = str(cfg.get("ict2022_fvg_selection") or ICT2022_FVG_SELECTION)
+    if fvg_selection not in {"first_after_mss", "first_retested_after_mss"}:
+        fvg_selection = ICT2022_FVG_SELECTION
     htf_mode = str(cfg.get("context_mode") or cfg.get("htf_mode") or "off")
     stop_bps = float(cfg.get("stop_buffer_bps") or 2)
     snapshot = getattr(context, "primary", None) if context is not None else None
@@ -71,25 +75,39 @@ def detect_setups(
                 continue
             if require_same_session and sweep_window != structure_window:
                 continue
-        fvg = next((g for g in snapshot.fvgs if g.direction == direction and g.created_at >= structure.timestamp and not g.invalidated), None)
-        if fvg is None:
-            continue
-        retest_idx = _first_retest_index(snapshot.candles, fvg.created_at, fvg.gap_low, fvg.gap_high, max_fvg_retest_bars)
-        if retest_idx is None:
-            continue
-        retest = snapshot.candles[retest_idx]
-        retest_window = _matching_window(int(retest["time"]), session_windows)
-        if retest_must_be_in_session and retest_window != (structure_window or sweep_window):
-            continue
-        session_window = retest_window or structure_window or sweep_window
-        ce = (fvg.gap_low + fvg.gap_high) / 2
-        entry = fvg.gap_high if side == "long" and entry_mode == "edge" else fvg.gap_low if side == "short" and entry_mode == "edge" else ce
-        stop = buffered_stop(side, sweep.wick_extreme, entry, stop_bps)
         metadata = context_metadata(context, side, htf_mode, cfg)
         context_target = _target_from_context(metadata, side)
-        target = context_target or nearest_liquidity_target(closed_candles(candles), side, entry, stop)
-        if _target_reached_before_retest(snapshot.candles, fvg.created_at, int(retest["time"]), side, target):
+        fvgs = [
+            g
+            for g in snapshot.fvgs
+            if g.direction == direction and g.created_at >= structure.timestamp and not g.invalidated
+        ]
+        selected = _select_fvg_entry(
+            source_candles=candles,
+            snapshot_candles=snapshot.candles,
+            fvgs=fvgs,
+            side=side,
+            sweep_extreme=sweep.wick_extreme,
+            stop_bps=stop_bps,
+            entry_mode=entry_mode,
+            max_retest_bars=max_fvg_retest_bars,
+            session_windows=session_windows,
+            retest_must_be_in_session=retest_must_be_in_session,
+            structure_window=structure_window,
+            sweep_window=sweep_window,
+            context_target=context_target,
+            fvg_selection=fvg_selection,
+        )
+        if selected is None:
             continue
+        fvg = selected["fvg"]
+        retest_idx = int(selected["retest_idx"])
+        retest = snapshot.candles[retest_idx]
+        session_window = selected["session_window"]
+        ce = float(selected["ce"])
+        entry = float(selected["entry"])
+        stop = float(selected["stop"])
+        target = selected["target"]
         item = setup(
             model_name="ict2022_mss_fvg",
             direction=side,
@@ -111,6 +129,7 @@ def detect_setups(
                 "target_mode": "htf_external_liquidity" if context_target is not None else ICT2022_TARGET_MODE,
                 "target_reached_before_entry_policy": "skip_before_retest",
                 "session_filter": "configured" if require_killzone else "off",
+                "ict2022_fvg_selection": fvg_selection,
                 "ict2022_session_windows": ",".join(session_windows),
                 "ict2022_retest_must_occur_within_session": retest_must_be_in_session,
                 "sweep_time": sweep.timestamp,
@@ -136,6 +155,50 @@ def detect_setups(
         if item:
             results.append(item)
     return results
+
+
+def _select_fvg_entry(
+    *,
+    source_candles: list[dict[str, float | int]],
+    snapshot_candles: list[dict[str, float | int]],
+    fvgs: list[Any],
+    side: str,
+    sweep_extreme: float,
+    stop_bps: float,
+    entry_mode: str,
+    max_retest_bars: int,
+    session_windows: list[str],
+    retest_must_be_in_session: bool,
+    structure_window: str | None,
+    sweep_window: str | None,
+    context_target: float | None,
+    fvg_selection: str,
+) -> dict[str, Any] | None:
+    candidates = fvgs[:1] if fvg_selection == "first_after_mss" else fvgs
+    for fvg in candidates:
+        retest_idx = _first_retest_index(snapshot_candles, fvg.created_at, fvg.gap_low, fvg.gap_high, max_retest_bars)
+        if retest_idx is None:
+            continue
+        retest = snapshot_candles[retest_idx]
+        retest_window = _matching_window(int(retest["time"]), session_windows)
+        if retest_must_be_in_session and retest_window != (structure_window or sweep_window):
+            continue
+        ce = (fvg.gap_low + fvg.gap_high) / 2
+        entry = fvg.gap_high if side == "long" and entry_mode == "edge" else fvg.gap_low if side == "short" and entry_mode == "edge" else ce
+        stop = buffered_stop(side, sweep_extreme, entry, stop_bps)
+        target = context_target or nearest_liquidity_target(closed_candles(source_candles), side, entry, stop)
+        if _target_reached_before_retest(snapshot_candles, fvg.created_at, int(retest["time"]), side, target):
+            continue
+        return {
+            "fvg": fvg,
+            "retest_idx": retest_idx,
+            "session_window": retest_window or structure_window or sweep_window,
+            "ce": ce,
+            "entry": entry,
+            "stop": stop,
+            "target": target,
+        }
+    return None
 
 
 def _target_from_context(metadata: dict[str, object], side: str) -> float | None:

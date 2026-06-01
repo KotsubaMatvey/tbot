@@ -24,11 +24,12 @@ from strategies.ict_models.registry import (
     resolve_models,
 )
 from strategies.pre_model_filter import evaluate_pre_model_filter, merge_pre_model_metadata, setup_passes_pre_model_filter
-from strategies.types import EntrySetup
+from strategies.types import EntrySetup, StrategyContext
 from timeframes import SUPPORTED_TIMEFRAMES, execution_htf_for
 
 DEFAULT_DATA_DIR = "data/history_2025-05-01_2025-10-31"
 DETECTOR_CANDLE_WINDOW = 1500
+_CANDLE_TIMESTAMPS_CACHE: dict[int, tuple[int, list[int]]] = {}
 
 EVENT_FIELDS = [
     "model",
@@ -159,6 +160,7 @@ EVENT_FIELDS = [
     "fvg_low",
     "fvg_high",
     "fvg_ce",
+    "ict2022_fvg_selection",
     "fvg_fill_depth",
     "ifvg_low",
     "ifvg_high",
@@ -258,6 +260,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--context-mode", choices=["off", "aligned_only", "strict"], default="off")
     parser.add_argument("--forward-bars", type=int, default=20)
     parser.add_argument("--warmup-bars", type=int, default=100)
+    parser.add_argument("--seed-bars", type=int, default=1500, help="Bars before start-date used to seed accumulated primitive snapshots.")
     parser.add_argument("--turtle-soup-min-wick-fraction", type=float, default=None)
     parser.add_argument("--turtle-soup-min-wick-atr-ratio", type=float, default=None)
     parser.add_argument("--turtle-soup-min-close-back-fraction", type=float, default=None)
@@ -287,6 +290,9 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--ifvg-max-source-age-bars", type=int, default=None)
     parser.add_argument("--ict2022-max-fvg-retest-bars", type=int, default=None)
     parser.add_argument("--ict2022-session-windows", default=None)
+    parser.add_argument("--ict2022-fvg-selection", choices=["first_after_mss", "first_retested_after_mss"], default=None)
+    parser.add_argument("--ict2022-require-killzone", action=argparse.BooleanOptionalAction, default=None)
+    parser.add_argument("--ict2022-require-same-session", action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument("--ict2022-require-strong-displacement", action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument("--ict2022-retest-must-occur-within-session", action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument("--breaker-max-trigger-to-retest-bars", type=int, default=None)
@@ -380,6 +386,8 @@ def _run_symbol(
         candles = store.get((symbol, timeframe), [])
         scan_windows = _window_list(args.scan_session_windows)
         start_idx, end_idx = _date_scan_bounds(candles, args.warmup_bars, args.start_date, args.end_date)
+        if accumulate_primary:
+            cache.set_start_index(symbol, timeframe, max(0, start_idx - max(0, args.seed_bars)))
         for idx in range(start_idx, end_idx):
             ts = int(candles[idx]["time"])
             if scan_windows and not _scan_session_window_matches(candles, idx, scan_windows, args.scan_session_lag_bars):
@@ -405,6 +413,14 @@ def _run_symbol(
                     accumulate_primary=accumulate_primary,
                     htf_mode="strict" if args.context_mode == "strict" else "soft",
                 )
+            elif accumulate_primary:
+                primary = cache.get_snapshot(symbol, timeframe, ts)
+                if primary is not None:
+                    context = StrategyContext(
+                        primary=primary,
+                        execution_timeframe=timeframe,
+                        htf_mode="off",
+                    )
             pre_model = evaluate_pre_model_filter(context, config)
             if not pre_model.passed:
                 continue
@@ -448,7 +464,7 @@ def _run_symbol(
 
 
 def _models_need_accumulated_primary(models: list[Any]) -> bool:
-    return any(getattr(spec, "name", None) != "silver_bullet" for spec in models)
+    return any(getattr(spec, "name", None) not in {"silver_bullet", "turtle_soup"} for spec in models)
 
 
 def _context_aligned(setup: EntrySetup, context: object | None, *, require_htf_poi: bool = True) -> bool:
@@ -507,8 +523,21 @@ def _smt_divergences(symbol: str, timeframe: str, visible: list[Candle], store: 
 
 
 def _candles_until(candles: list[Candle], timestamp: int, limit: int | None = None) -> list[Candle]:
-    visible = [candle for candle in candles if int(candle["time"]) <= timestamp]
-    return visible[-limit:] if limit is not None else visible
+    if not candles:
+        return []
+    idx = bisect_right(_candle_timestamps(candles), timestamp)
+    start = max(0, idx - limit) if limit is not None else 0
+    return candles[start:idx]
+
+
+def _candle_timestamps(candles: list[Candle]) -> list[int]:
+    key = id(candles)
+    cached = _CANDLE_TIMESTAMPS_CACHE.get(key)
+    if cached is not None and cached[0] == len(candles):
+        return cached[1]
+    timestamps = [int(candle["time"]) for candle in candles]
+    _CANDLE_TIMESTAMPS_CACHE[key] = (len(candles), timestamps)
+    return timestamps
 
 
 def _index_at_or_before(candles: list[Candle], timestamp: int) -> int | None:

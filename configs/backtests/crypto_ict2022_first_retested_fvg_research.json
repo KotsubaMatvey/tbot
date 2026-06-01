@@ -1,0 +1,48 @@
+{
+  "data_dir": "data/history_crypto_2022-01-01_2026-04-20",
+  "funding_data_dir": "data/history_crypto_2022-01-01_2026-04-20",
+  "symbols": ["BTCUSDT"],
+  "models": ["ict2022_mss_fvg"],
+  "smt_pairs": [],
+  "thresholds": [0],
+  "grid_filters": false,
+  "context_mode": "off",
+  "pre_model_filter": false,
+  "pre_model_require_htf_poi": false,
+  "forward_bars": 32,
+  "warmup_bars": 150,
+  "seed_bars": 1500,
+  "tp1_r": 1.0,
+  "partial_close_fraction": 0.5,
+  "move_to_be_after_tp1": true,
+  "commission_bps": 4.0,
+  "slippage_bps": 1.0,
+  "entry_mode": "edge",
+  "ict2022_fvg_selection": "first_retested_after_mss",
+  "ict2022_session_windows": "02:00-05:00,07:00-10:00,13:30-16:00",
+  "ict2022_max_fvg_retest_bars": 20,
+  "ict2022_require_killzone": false,
+  "ict2022_require_same_session": false,
+  "ict2022_require_strong_displacement": false,
+  "ict2022_retest_must_occur_within_session": false,
+  "scan_session_windows": "02:00-05:00,07:00-10:00,13:30-16:00",
+  "scan_session_lag_bars": 0,
+  "trade_pnl_min_trades": 30,
+  "htf_bias_audit_min_trades": 30,
+  "runs": [
+    {
+      "name": "ict2022_first_retested_fvg_2024_01_btc_30m",
+      "timeframes": ["30m"],
+      "start_date": "2024-01-01",
+      "end_date": "2024-01-31",
+      "out_dir": "backtest_results/ict2022_first_retested_fvg_research_2024_01_btc_30m_no_killzone"
+    },
+    {
+      "name": "ict2022_first_retested_fvg_2025_01_btc_30m",
+      "timeframes": ["30m"],
+      "start_date": "2025-01-01",
+      "end_date": "2025-01-31",
+      "out_dir": "backtest_results/ict2022_first_retested_fvg_research_2025_01_btc_30m_no_killzone"
+    }
+  ]
+}

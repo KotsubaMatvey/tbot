@@ -12,6 +12,7 @@ from timeframes import SUPPORTED_TIMEFRAMES
 
 BINANCE_FUTURES_API = "https://fapi.binance.com"
 MAX_BINANCE_LIMIT = 1500
+MAX_BINANCE_FUNDING_LIMIT = 1000
 
 
 async def main_async(argv: list[str] | None = None) -> int:
@@ -27,6 +28,7 @@ async def main_async(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     limit = min(max(args.limit, 1), MAX_BINANCE_LIMIT)
+    funding_limit = funding_limit_for_request(limit)
     start_ms = parse_time_ms(args.start, is_end=False) if args.start else None
     end_ms = parse_time_ms(args.end, is_end=True) if args.end else None
     out_dir = Path(args.out_dir)
@@ -43,7 +45,7 @@ async def main_async(argv: list[str] | None = None) -> int:
                 write_csv(path, candles)
                 print(f"Wrote {len(candles)} candles: {path}")
             if args.include_funding:
-                funding = await fetch_funding(session, symbol, limit, start_ms, end_ms)
+                funding = await fetch_funding(session, symbol, funding_limit, start_ms, end_ms)
                 path = out_dir / f"{symbol}_funding.csv"
                 write_funding_csv(path, funding)
                 print(f"Wrote {len(funding)} funding rows: {path}")
@@ -159,6 +161,10 @@ def normalize_funding(item: dict[str, Any]) -> dict[str, float | int]:
     if item.get("markPrice"):
         normalized["mark_price"] = float(item["markPrice"])
     return normalized
+
+
+def funding_limit_for_request(limit: int) -> int:
+    return min(max(limit, 1), MAX_BINANCE_FUNDING_LIMIT)
 
 
 def write_csv(path: Path, candles: list[dict[str, float | int]]) -> None:

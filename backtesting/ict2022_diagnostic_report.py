@@ -40,6 +40,19 @@ STAGES = [
     "retest_session_gate",
     "target_open_until_retest",
     "candidate",
+    "retested_eligible_fvg_any",
+    "retested_eligible_fvg_within_limit",
+    "retested_eligible_fvg_session_gate",
+    "target_open_until_retest_any_fvg",
+    "candidate_any_fvg",
+]
+
+FVG_PATH_STAGES = [
+    "retest_any",
+    "retest_within_limit",
+    "retest_session_gate",
+    "target_open_until_retest",
+    "candidate",
 ]
 
 
@@ -181,18 +194,83 @@ def diagnose_side(snapshot: PrimitiveSnapshot, side: str, config: ICT2022Diagnos
         return row
     row["same_session_sweep_mss"] = 1
 
-    fvg = next(
-        (
-            item
-            for item in snapshot.fvgs
-            if item.direction == direction and item.created_at >= structure.timestamp and not item.invalidated
-        ),
-        None,
-    )
-    if fvg is None:
+    fvgs = [
+        item
+        for item in snapshot.fvgs
+        if item.direction == direction and item.created_at >= structure.timestamp and not item.invalidated
+    ]
+    if not fvgs:
         return row
     row["active_fvg_after_mss"] = 1
 
+    first_fvg = _evaluate_fvg_path(
+        snapshot,
+        fvgs[0],
+        side,
+        config,
+        sweep,
+        structure_window=structure_window,
+        sweep_window=sweep_window,
+    )
+    for stage in FVG_PATH_STAGES:
+        row[stage] = first_fvg[stage]
+
+    any_fvg = _evaluate_any_fvg_path(
+        snapshot,
+        fvgs,
+        side,
+        config,
+        sweep,
+        structure_window=structure_window,
+        sweep_window=sweep_window,
+    )
+    row["retested_eligible_fvg_any"] = any_fvg["retest_any"]
+    row["retested_eligible_fvg_within_limit"] = any_fvg["retest_within_limit"]
+    row["retested_eligible_fvg_session_gate"] = any_fvg["retest_session_gate"]
+    row["target_open_until_retest_any_fvg"] = any_fvg["target_open_until_retest"]
+    row["candidate_any_fvg"] = any_fvg["candidate"]
+    return row
+
+
+def _evaluate_any_fvg_path(
+    snapshot: PrimitiveSnapshot,
+    fvgs: list[Any],
+    side: str,
+    config: ICT2022DiagnosticConfig,
+    sweep: Any,
+    *,
+    structure_window: str | None,
+    sweep_window: str | None,
+) -> dict[str, int]:
+    aggregate = {stage: 0 for stage in FVG_PATH_STAGES}
+    for fvg in fvgs:
+        path = _evaluate_fvg_path(
+            snapshot,
+            fvg,
+            side,
+            config,
+            sweep,
+            structure_window=structure_window,
+            sweep_window=sweep_window,
+        )
+        for stage in FVG_PATH_STAGES:
+            aggregate[stage] = max(aggregate[stage], path[stage])
+        if aggregate["candidate"]:
+            break
+    return aggregate
+
+
+def _evaluate_fvg_path(
+    snapshot: PrimitiveSnapshot,
+    fvg: Any,
+    side: str,
+    config: ICT2022DiagnosticConfig,
+    sweep: Any,
+    *,
+    structure_window: str | None,
+    sweep_window: str | None,
+) -> dict[str, int]:
+    row = {stage: 0 for stage in FVG_PATH_STAGES}
     any_retest_idx = _first_retest_index(
         snapshot.candles,
         fvg.created_at,
@@ -362,6 +440,8 @@ def _write_report(path: Path, rows: list[dict[str, int | str]], config: dict[str
         "# ICT2022 MSS+FVG Frequency Diagnostic",
         "",
         "Diagnostic only. Counts rule-stage opportunities before event-study evaluation.",
+        "`retest_*` and `candidate` use the current first-eligible-FVG policy.",
+        "`*_any_fvg` fields are research attribution across eligible subsequent FVGs; they do not change detector behavior.",
         "",
         "## Config",
         f"- data_dir: {config.get('data_dir')}",

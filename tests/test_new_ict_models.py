@@ -8,16 +8,23 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from backtesting.accumulator import ReplaySnapshotCache
 from backtesting.run_ict_models import EVENT_FIELDS, _candles_until, _context_aligned, _date_scan_bounds, _decision_score, _evaluate, _execution_costs, _funding_costs, _models_need_accumulated_primary, _scan_session_window_matches, _smt_divergences, _summaries, _timestamp_in_date_range, _with_execution_costs
-from backtesting.run_ict_batch import build_run_args
+from backtesting.run_ict_batch import (
+    build_htf_bias_audit_args,
+    build_run_args,
+    build_trade_pnl_report_args,
+)
 from backtesting.download_databento_history import frame_to_candles, main as download_databento_main
-from backtesting.download_history import normalize_funding as normalize_binance_funding
+from backtesting.download_history import funding_limit_for_request, normalize_funding as normalize_binance_funding
 from backtesting.download_hyperliquid_history import normalize_candle as normalize_hyperliquid_candle, normalize_funding as normalize_hyperliquid_funding, output_symbol as hyperliquid_output_symbol
 from backtesting.algorithm_barrier_audit import audit_result_tree, audit_run_dir, summarize_by_model
 from backtesting.exit_policy_audit import summarize_exit_policies
 from backtesting.score_threshold_report import summarize_thresholds
 from backtesting.grid_filter_analysis import summarize_grid
+from backtesting.htf_bias_audit import summarize_htf_bias
 from backtesting.ict2022_diagnostic_report import ICT2022DiagnosticConfig, diagnose_side
+from backtesting.trade_pnl_report import summarize_trade_pnl
 from backtesting.walk_forward_report import summarize_walk_forward
 from backtesting.data_coverage_report import summarize_coverage
 from backtesting.forward_log_report import summarize_forward_logs
@@ -155,7 +162,7 @@ class NewICTModelTests(unittest.TestCase):
         self.assertEqual(enabled, [])
 
     def test_backtest_exports_live_filter_htf_fields(self) -> None:
-        for field in ("htf_draw_direction", "htf_objective_level", "htf_objective_unreached", "smt_timestamp", "exit_time", "funding_cost_r", "total_cost_r"):
+        for field in ("htf_draw_direction", "htf_objective_level", "htf_objective_unreached", "smt_timestamp", "exit_time", "funding_cost_r", "total_cost_r", "ict2022_fvg_selection"):
             self.assertIn(field, EVENT_FIELDS)
 
     def test_live_turtle_soup_is_prepared_session_fallback_but_disabled(self) -> None:
@@ -210,8 +217,26 @@ class NewICTModelTests(unittest.TestCase):
         self.assertEqual(_date_scan_bounds(candles, 0, "2025-05-01", "2025-05-31"), (1, 3))
         self.assertEqual(_date_scan_bounds(candles, 2, "2025-05-01", "2025-05-31"), (2, 3))
 
+    def test_replay_snapshot_cache_can_seed_accumulation_start(self) -> None:
+        candles = [
+            candle(1, 100, 101, 99, 100),
+            candle(2, 100, 101, 99, 100),
+            candle(3, 100, 101, 99, 100),
+            candle(4, 100, 101, 99, 100),
+        ]
+        cache = ReplaySnapshotCache(
+            {("BTCUSDT", "5m"): candles},
+            snapshot_candle_window=2,
+            start_indices={("BTCUSDT", "5m"): 2},
+        )
+
+        snapshot = cache.get_snapshot("BTCUSDT", "5m", 4)
+
+        self.assertEqual([item["time"] for item in snapshot.candles], [3, 4])
+
     def test_silver_bullet_backtest_can_skip_accumulated_primary(self) -> None:
         self.assertFalse(_models_need_accumulated_primary([SimpleNamespace(name="silver_bullet")]))
+        self.assertFalse(_models_need_accumulated_primary([SimpleNamespace(name="turtle_soup")]))
         self.assertTrue(_models_need_accumulated_primary([SimpleNamespace(name="silver_bullet"), SimpleNamespace(name="ifvg_retest")]))
 
     def test_strategy_alerts_ignore_user_zone_timeframes(self) -> None:
@@ -1508,6 +1533,108 @@ class NewICTModelTests(unittest.TestCase):
 
         self.assertEqual(setups, [])
 
+    def test_ict2022_research_mode_can_select_first_retested_fvg_after_mss(self) -> None:
+        candles = [
+            candle(1, 100, 101, 98, 100),
+            candle(2, 100, 102, 99, 102),
+            candle(3, 102, 104, 102, 103),
+            candle(4, 104, 105, 104, 104.5),
+            candle(5, 104.5, 105, 102.8, 103.5),
+        ]
+        snapshot = PrimitiveSnapshot(
+            symbol="BTCUSDT",
+            timeframe="30m",
+            candles=candles,
+            sweeps=[
+                LiquiditySweep(
+                    symbol="BTCUSDT",
+                    timeframe="30m",
+                    direction="bullish",
+                    timestamp=1,
+                    liquidity_level=99,
+                    wick_extreme=98,
+                    close_back_inside=100,
+                    source_swing_index=0,
+                    clean=True,
+                )
+            ],
+            structure_breaks=[
+                StructureBreak(
+                    symbol="BTCUSDT",
+                    timeframe="30m",
+                    break_type="BOS",
+                    direction="bullish",
+                    timestamp=2,
+                    broken_level=101,
+                    close_price=102,
+                    source_swing_index=0,
+                    strength=1.0,
+                    displacement_grade="valid",
+                    close_beyond_structure=True,
+                )
+            ],
+            fvgs=[
+                FairValueGap(
+                    symbol="BTCUSDT",
+                    timeframe="30m",
+                    direction="bullish",
+                    created_at=3,
+                    gap_low=100,
+                    gap_high=101,
+                    mitigated=False,
+                    invalidated=False,
+                    mitigated_at=None,
+                    invalidated_at=None,
+                    fill_ratio=0,
+                ),
+                FairValueGap(
+                    symbol="BTCUSDT",
+                    timeframe="30m",
+                    direction="bullish",
+                    created_at=4,
+                    gap_low=102.5,
+                    gap_high=103,
+                    mitigated=True,
+                    invalidated=False,
+                    mitigated_at=5,
+                    invalidated_at=None,
+                    fill_ratio=0.5,
+                ),
+            ],
+        )
+        context = StrategyContext(primary=snapshot)
+
+        default_setups = detect_ict2022_mss_fvg(
+            "BTCUSDT",
+            "30m",
+            candles,
+            context,
+            config={
+                "ict2022_require_killzone": False,
+                "ict2022_require_strong_displacement": False,
+                "ict2022_max_fvg_retest_bars": 2,
+            },
+        )
+        research_setups = detect_ict2022_mss_fvg(
+            "BTCUSDT",
+            "30m",
+            candles,
+            context,
+            config={
+                "ict2022_require_killzone": False,
+                "ict2022_require_strong_displacement": False,
+                "ict2022_max_fvg_retest_bars": 2,
+                "ict2022_fvg_selection": "first_retested_after_mss",
+            },
+        )
+
+        self.assertEqual(default_setups, [])
+        self.assertEqual(len(research_setups), 1)
+        self.assertEqual(research_setups[0].metadata["fvg_low"], 102.5)
+        self.assertEqual(research_setups[0].metadata["fvg_high"], 103)
+        self.assertEqual(research_setups[0].metadata["entry_time"], 5)
+        self.assertEqual(research_setups[0].metadata["ict2022_fvg_selection"], "first_retested_after_mss")
+
     def test_ict2022_diagnostic_identifies_retest_timing_gate(self) -> None:
         candles = [
             candle(1, 100, 101, 99, 100),
@@ -1594,6 +1721,97 @@ class NewICTModelTests(unittest.TestCase):
         self.assertEqual(fast_retest["candidate"], 0)
         self.assertEqual(relaxed_retest["retest_within_limit"], 1)
         self.assertEqual(relaxed_retest["candidate"], 1)
+
+    def test_ict2022_diagnostic_separates_first_fvg_from_any_retested_fvg(self) -> None:
+        candles = [
+            candle(1, 100, 101, 98, 100),
+            candle(2, 100, 102, 99, 102),
+            candle(3, 102, 104, 102, 103),
+            candle(4, 104, 105, 104, 104.5),
+            candle(5, 104.5, 105, 102.8, 103.5),
+        ]
+        snapshot = PrimitiveSnapshot(
+            symbol="BTCUSDT",
+            timeframe="30m",
+            candles=candles,
+            sweeps=[
+                LiquiditySweep(
+                    symbol="BTCUSDT",
+                    timeframe="30m",
+                    direction="bullish",
+                    timestamp=1,
+                    liquidity_level=99,
+                    wick_extreme=98,
+                    close_back_inside=100,
+                    source_swing_index=0,
+                    clean=True,
+                )
+            ],
+            structure_breaks=[
+                StructureBreak(
+                    symbol="BTCUSDT",
+                    timeframe="30m",
+                    break_type="BOS",
+                    direction="bullish",
+                    timestamp=2,
+                    broken_level=101,
+                    close_price=102,
+                    source_swing_index=0,
+                    strength=1.0,
+                    displacement_grade="valid",
+                    close_beyond_structure=True,
+                )
+            ],
+            fvgs=[
+                FairValueGap(
+                    symbol="BTCUSDT",
+                    timeframe="30m",
+                    direction="bullish",
+                    created_at=3,
+                    gap_low=100,
+                    gap_high=101,
+                    mitigated=False,
+                    invalidated=False,
+                    mitigated_at=None,
+                    invalidated_at=None,
+                    fill_ratio=0,
+                ),
+                FairValueGap(
+                    symbol="BTCUSDT",
+                    timeframe="30m",
+                    direction="bullish",
+                    created_at=4,
+                    gap_low=102.5,
+                    gap_high=103,
+                    mitigated=True,
+                    invalidated=False,
+                    mitigated_at=5,
+                    invalidated_at=None,
+                    fill_ratio=0.5,
+                ),
+            ],
+        )
+
+        row = diagnose_side(
+            snapshot,
+            "long",
+            ICT2022DiagnosticConfig(
+                session_windows=[],
+                max_fvg_retest_bars=2,
+                require_killzone=False,
+                require_strong_displacement=False,
+                retest_must_occur_within_session=False,
+            ),
+        )
+
+        self.assertEqual(row["active_fvg_after_mss"], 1)
+        self.assertEqual(row["retest_any"], 0)
+        self.assertEqual(row["candidate"], 0)
+        self.assertEqual(row["retested_eligible_fvg_any"], 1)
+        self.assertEqual(row["retested_eligible_fvg_within_limit"], 1)
+        self.assertEqual(row["retested_eligible_fvg_session_gate"], 1)
+        self.assertEqual(row["target_open_until_retest_any_fvg"], 1)
+        self.assertEqual(row["candidate_any_fvg"], 1)
 
     def test_breaker_block_default_requires_displacement(self) -> None:
         candles = [
@@ -2111,6 +2329,10 @@ class NewICTModelTests(unittest.TestCase):
             {"time": 3, "funding_rate": 0.00001},
         )
 
+    def test_binance_funding_limit_uses_endpoint_cap(self) -> None:
+        self.assertEqual(funding_limit_for_request(1500), 1000)
+        self.assertEqual(funding_limit_for_request(500), 500)
+
     def test_score_threshold_report_prefers_net_managed_outcome(self) -> None:
         report = summarize_thresholds(
             [
@@ -2139,6 +2361,56 @@ class NewICTModelTests(unittest.TestCase):
         self.assertEqual(row["avg_execution_cost_r"], 0.05)
         self.assertEqual(row["avg_funding_cost_r"], 0.01)
         self.assertEqual(row["avg_total_cost_r"], 0.06)
+
+    def test_trade_pnl_report_uses_realized_trade_outcomes(self) -> None:
+        report = summarize_trade_pnl(
+            [
+                {"model": "turtle_soup", "decision_score": "70", "activated_trade": "True", "net_managed_outcome_r": "2.0", "total_cost_r": "0.1"},
+                {"model": "turtle_soup", "decision_score": "70", "activated_trade": "True", "net_managed_outcome_r": "1.0", "total_cost_r": "0.1"},
+                {"model": "turtle_soup", "decision_score": "70", "activated_trade": "True", "net_managed_outcome_r": "-1.0", "total_cost_r": "0.1"},
+                {"model": "turtle_soup", "decision_score": "70", "activated_trade": "True", "net_managed_outcome_r": "-0.5", "total_cost_r": "0.1"},
+                {"model": "turtle_soup", "decision_score": "70", "activated_trade": "False", "net_managed_outcome_r": "10.0", "total_cost_r": "0.1"},
+            ],
+            min_trades=5,
+            group_by=["model"],
+        )
+
+        overall = next(row for row in report if row["scope"] == "all")
+
+        self.assertEqual(overall["trade_count"], 4)
+        self.assertFalse(overall["sample_valid"])
+        self.assertEqual(overall["win_rate_pct"], 50.0)
+        self.assertEqual(overall["avg_realized_rr"], 0.375)
+        self.assertEqual(overall["avg_win_r"], 1.5)
+        self.assertEqual(overall["avg_loss_r"], 0.75)
+        self.assertEqual(overall["expectancy_r"], 0.375)
+        self.assertEqual(overall["profit_factor"], 2.0)
+        self.assertEqual(overall["max_drawdown_r"], 1.5)
+        self.assertEqual(overall["total_pnl_r"], 1.5)
+
+    def test_htf_bias_audit_flags_edge_vs_sample_reduction(self) -> None:
+        events = [
+            {"model": "turtle_soup", "direction": "long", "activated_trade": "True", "net_managed_outcome_r": "1.0", "htf_bias": "bullish", "htf_draw_direction": "up", "htf_context_alignment": "aligned"},
+            {"model": "turtle_soup", "direction": "long", "activated_trade": "True", "net_managed_outcome_r": "1.0", "htf_bias": "bullish", "htf_draw_direction": "up", "htf_context_alignment": "aligned"},
+            {"model": "turtle_soup", "direction": "long", "activated_trade": "True", "net_managed_outcome_r": "-1.0", "htf_bias": "bearish", "htf_draw_direction": "down", "htf_context_alignment": "mixed"},
+            {"model": "turtle_soup", "direction": "short", "activated_trade": "True", "net_managed_outcome_r": "-1.0", "htf_bias": "bullish", "htf_draw_direction": "up", "htf_context_alignment": "mixed"},
+        ]
+
+        report = summarize_htf_bias(events, min_trades=2)
+
+        baseline = next(row for row in report if row["section"] == "baseline")
+        with_bias = next(row for row in report if row["section"] == "htf_bias_relation" and row["bucket"] == "with_bias")
+        against_bias = next(row for row in report if row["section"] == "htf_bias_relation" and row["bucket"] == "against_bias")
+
+        self.assertEqual(baseline["trade_count"], 4)
+        self.assertEqual(baseline["expectancy_r"], 0.0)
+        self.assertEqual(with_bias["trade_count"], 2)
+        self.assertEqual(with_bias["retention_pct"], 50.0)
+        self.assertEqual(with_bias["expectancy_r"], 1.0)
+        self.assertEqual(with_bias["expectancy_delta_vs_all"], 1.0)
+        self.assertEqual(with_bias["verdict"], "improves_edge")
+        self.assertEqual(against_bias["expectancy_r"], -1.0)
+        self.assertEqual(against_bias["verdict"], "worse_than_baseline")
 
     def test_exit_policy_audit_estimates_costed_1r_and_2r_policies(self) -> None:
         report = summarize_exit_policies(
@@ -2686,6 +2958,7 @@ class NewICTModelTests(unittest.TestCase):
                 "funding_data_dir": "data/hyperliquid_funding",
                 "smt_pairs": ["BTCUSDT:ETHUSDT"],
                 "forward_bars": 20,
+                "seed_bars": 500,
                 "commission_bps": 4.0,
                 "slippage_bps": 1.0,
                 "start_date": "2025-05-01",
@@ -2705,6 +2978,9 @@ class NewICTModelTests(unittest.TestCase):
                 "silver_bullet_use_ce_invalidation": False,
                 "ict2022_max_fvg_retest_bars": 12,
                 "ict2022_session_windows": "02:00-05:00,07:00-10:00,13:30-16:00",
+                "ict2022_fvg_selection": "first_retested_after_mss",
+                "ict2022_require_killzone": False,
+                "ict2022_require_same_session": False,
                 "ict2022_retest_must_occur_within_session": True,
                 "ict2022_require_strong_displacement": False,
                 "ifvg_min_retest_depth": 0.25,
@@ -2730,6 +3006,8 @@ class NewICTModelTests(unittest.TestCase):
         self.assertIn("data/hyperliquid_funding", args)
         self.assertIn("--commission-bps", args)
         self.assertIn("4.0", args)
+        self.assertIn("--seed-bars", args)
+        self.assertIn("500", args)
         self.assertIn("--slippage-bps", args)
         self.assertIn("1.0", args)
         self.assertIn("--start-date", args)
@@ -2760,6 +3038,10 @@ class NewICTModelTests(unittest.TestCase):
         self.assertIn("12", args)
         self.assertIn("--ict2022-session-windows", args)
         self.assertIn("02:00-05:00,07:00-10:00,13:30-16:00", args)
+        self.assertIn("--ict2022-fvg-selection", args)
+        self.assertIn("first_retested_after_mss", args)
+        self.assertIn("--no-ict2022-require-killzone", args)
+        self.assertIn("--no-ict2022-require-same-session", args)
         self.assertIn("--ict2022-retest-must-occur-within-session", args)
         self.assertIn("--no-ict2022-require-strong-displacement", args)
         self.assertIn("--rejection-block-min-wick-fraction", args)
@@ -2784,6 +3066,25 @@ class NewICTModelTests(unittest.TestCase):
 
         self.assertIn("--smt-pairs", args)
         self.assertEqual(args.index("--smt-pairs"), len(args) - 1)
+
+    def test_ict_batch_builds_pnl_and_htf_audit_args(self) -> None:
+        config = {
+            "walk_forward_threshold": 70,
+            "trade_pnl_min_trades": 100,
+            "model_filters": {"turtle_soup": {"enabled": True}},
+        }
+        config_path = Path("configs/example.json")
+        out_dir = Path("backtest_results/example")
+
+        pnl_args = build_trade_pnl_report_args(config, config_path, out_dir, ["0"])
+        htf_args = build_htf_bias_audit_args(config, config_path, out_dir, ["0"])
+
+        self.assertEqual(pnl_args[:6], ["--events", str(out_dir / "events.csv"), "--threshold", "70", "--min-trades", "100"])
+        self.assertIn("--group-by", pnl_args)
+        self.assertIn("htf_context_alignment", pnl_args)
+        self.assertIn("--model-filters", pnl_args)
+        self.assertEqual(htf_args[:6], ["--events", str(out_dir / "events.csv"), "--threshold", "70", "--min-trades", "100"])
+        self.assertIn("--model-filters", htf_args)
 
     def test_ict_batch_forwards_futures_point_costs(self) -> None:
         args = build_run_args(
