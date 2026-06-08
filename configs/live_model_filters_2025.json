@@ -28,7 +28,7 @@
       "allowed_htf_context_alignments": ["aligned"],
       "allowed_displacement_grades": ["valid", "strong"],
       "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"],
-      "research_note": "Disabled live pending costed validation: the 2025 strict 4h probe left one activated BTC trade under live filters and it lost -1.164073R net; walk-forward gates cannot pass."
+        "research_note": "Disabled live. Multi-year BTC/ETH 15m costed validation rejected both CE and opposite-boundary stops: raw OOS/late expectancy stayed negative, while a 0.20R execution-cost cap reduced the sample to 4 and 5 trades. See research/ict/58_ifvg_15m_cost_geometry_rejection_2026-06-08.md."
     },
     "ict2022_mss_fvg": {
       "enabled": false,
@@ -64,7 +64,7 @@
       "turtle_soup_min_wick_fraction": 0.10,
       "turtle_soup_min_close_back_fraction": 0.05,
       "exclude_no_trade_reasons": ["equilibrium", "poor_pd_location", "target_rr_below_2"],
-      "research_note": "Disabled; directional SMT-on-sweep plumbing is available, but the Asian BTC 30m candidate failed independent costed 2022-2024 OOS validation at -0.185833R net expectancy (PF 0.616131), and its selected 1h variant also failed OOS gates."
+      "research_note": "Disabled for live execution. The older directional SMT-on-sweep candidate failed independent costed validation. The BTC/ETH 15m+30m non-SMT stability candidate is separated into configs/paper_model_filters_turtle_soup_stability_minrisk25_2026.json for paper/shadow validation only."
     },
     "breaker_block": {
       "enabled": false,

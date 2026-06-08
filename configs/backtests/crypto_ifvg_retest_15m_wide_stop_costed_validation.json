@@ -1,0 +1,81 @@
+{
+  "data_dir": "data/history_crypto_2022-01-01_2026-04-20",
+  "funding_data_dir": "data/history_crypto_2022-01-01_2026-04-20",
+  "symbols": ["BTCUSDT", "ETHUSDT"],
+  "models": ["ifvg_retest"],
+  "smt_pairs": [],
+  "thresholds": [0],
+  "grid_filters": false,
+  "context_mode": "off",
+  "pre_model_filter": false,
+  "pre_model_require_htf_poi": false,
+  "forward_bars": 96,
+  "warmup_bars": 150,
+  "tp1_r": 1.0,
+  "partial_close_fraction": 0.5,
+  "move_to_be_after_tp1": true,
+  "commission_bps": 4.0,
+  "slippage_bps": 1.0,
+  "entry_mode": "edge",
+  "ifvg_entry_mode": "edge",
+  "ifvg_stop_mode": "opposite_boundary",
+  "min_ifvg_retest_bars": 1,
+  "max_ifvg_retest_bars": 48,
+  "ifvg_min_retest_depth": 0.15,
+  "ifvg_max_source_touches_before_inversion": 12,
+  "ifvg_max_source_age_bars": 100,
+  "model_filters": {
+    "ifvg_retest": {
+      "allowed_symbols": ["BTCUSDT", "ETHUSDT"],
+      "allowed_timeframes": ["15m"],
+      "allowed_displacement_grades": ["valid", "strong"],
+      "min_target_distance_r": 2.0,
+      "max_execution_cost_r": 0.2
+    }
+  },
+  "walk_forward_threshold": 0,
+  "walk_forward_gates": {
+    "min_total_trades": 100,
+    "min_phase_trades": 30,
+    "min_managed_expectancy_r": 0.1,
+    "min_profit_factor": 1.1,
+    "max_drawdown_r": 8.0,
+    "max_trades_per_session": 1
+  },
+  "trade_pnl_threshold": 0,
+  "trade_pnl_min_trades": 100,
+  "trade_pnl_group_by": [
+    "symbol",
+    "direction",
+    "displacement_grade",
+    "dol_target_type",
+    "dol_source"
+  ],
+  "phase_attribution_report": true,
+  "phase_attribution_threshold": 0,
+  "phase_attribution_min_trades": 30,
+  "phase_attribution_group_by": [
+    "symbol",
+    "direction",
+    "displacement_grade",
+    "dol_target_type",
+    "dol_source"
+  ],
+  "htf_bias_audit": false,
+  "runs": [
+    {
+      "name": "ifvg_retest_15m_wide_stop_costed_oos_btc_eth",
+      "timeframes": ["15m"],
+      "start_date": "2022-01-01",
+      "end_date": "2024-11-05",
+      "out_dir": "backtest_results/ifvg_retest_15m_wide_stop_costed_oos_2022-01-01_2024-11-05_btc_eth"
+    },
+    {
+      "name": "ifvg_retest_15m_wide_stop_costed_late_btc_eth",
+      "timeframes": ["15m"],
+      "start_date": "2024-11-06",
+      "end_date": "2026-04-20",
+      "out_dir": "backtest_results/ifvg_retest_15m_wide_stop_costed_late_2024-11-06_2026-04-20_btc_eth"
+    }
+  ]
+}

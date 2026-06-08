@@ -80,6 +80,7 @@ class PrimitiveSnapshotAccumulator:
         detector_window: int = DEFAULT_DETECTOR_WINDOW,
         snapshot_candle_window: int = DEFAULT_SNAPSHOT_CANDLE_WINDOW,
         start_index: int = 0,
+        primitive_fields: set[str] | None = None,
     ) -> None:
         self.symbol = symbol
         self.timeframe = timeframe
@@ -87,6 +88,7 @@ class PrimitiveSnapshotAccumulator:
         self.max_primitives_per_field = max_primitives_per_field
         self.detector_window = detector_window
         self.snapshot_candle_window = snapshot_candle_window
+        self.primitive_fields = primitive_fields
         self.state = _SnapshotState()
         self.state.next_index = max(0, start_index)
 
@@ -101,7 +103,12 @@ class PrimitiveSnapshotAccumulator:
             # with recent candles visible at the current replay bar. The live detectors
             # use bounded lookbacks, and detected primitives are accumulated after they
             # become visible; future candles are not used here.
-            latest = _build_entry_model_snapshot(self.symbol, self.timeframe, visible)
+            latest = _build_entry_model_snapshot(
+                self.symbol,
+                self.timeframe,
+                visible,
+                primitive_fields=self.primitive_fields,
+            )
             self._merge(latest)
             self.state.next_index += 1
 
@@ -156,12 +163,14 @@ class ReplaySnapshotCache:
         detector_window: int = DEFAULT_DETECTOR_WINDOW,
         snapshot_candle_window: int = DEFAULT_SNAPSHOT_CANDLE_WINDOW,
         start_indices: dict[tuple[str, str], int] | None = None,
+        primitive_fields: set[str] | None = None,
     ) -> None:
         self.candle_store = candle_store
         self.max_primitives_per_field = max_primitives_per_field
         self.detector_window = detector_window
         self.snapshot_candle_window = snapshot_candle_window
         self.start_indices = start_indices or {}
+        self.primitive_fields = primitive_fields
         self.accumulators: dict[tuple[str, str], PrimitiveSnapshotAccumulator] = {}
 
     def get_snapshot(self, symbol: str, timeframe: str, timestamp: int) -> PrimitiveSnapshot | None:
@@ -179,6 +188,7 @@ class ReplaySnapshotCache:
                 detector_window=self.detector_window,
                 snapshot_candle_window=self.snapshot_candle_window,
                 start_index=self.start_indices.get(key, 0),
+                primitive_fields=self.primitive_fields,
             )
             self.accumulators[key] = accumulator
         return accumulator.snapshot_until(timestamp)
@@ -263,24 +273,35 @@ def _primitive_sort_key(item: Any) -> tuple[int, str]:
     return int(timestamp), type(item).__name__
 
 
-def _build_entry_model_snapshot(symbol: str, timeframe: str, candles: list[Candle]) -> PrimitiveSnapshot:
+def _build_entry_model_snapshot(
+    symbol: str,
+    timeframe: str,
+    candles: list[Candle],
+    *,
+    primitive_fields: set[str] | None = None,
+) -> PrimitiveSnapshot:
+    enabled = primitive_fields or set(_PRIMITIVE_LIST_FIELDS)
     return PrimitiveSnapshot(
         symbol=symbol,
         timeframe=timeframe,
         candles=candles,
-        swings=detect_swings(candles, symbol, timeframe),
-        sweeps=detect_sweeps(candles, symbol, timeframe),
-        raids=detect_liquidity_raids(candles, symbol, timeframe),
-        structure_breaks=detect_structure_breaks(candles, symbol, timeframe),
-        fvgs=detect_fvg(candles, symbol, timeframe),
-        ifvgs=detect_ifvg(candles, symbol, timeframe),
-        order_blocks=detect_order_blocks(candles, symbol, timeframe),
-        breaker_blocks=detect_breaker_blocks(candles, symbol, timeframe),
-        equal_highs=detect_eqh(candles, symbol, timeframe),
-        equal_lows=detect_eql(candles, symbol, timeframe),
-        key_levels=detect_key_levels(candles, symbol, timeframe),
-        volume_signals=detect_volume(candles, symbol, timeframe) + detect_volume_profile(candles, symbol, timeframe),
-        pd_zones=detect_pd_zones(candles, symbol, timeframe),
+        swings=detect_swings(candles, symbol, timeframe) if "swings" in enabled else [],
+        sweeps=detect_sweeps(candles, symbol, timeframe) if "sweeps" in enabled else [],
+        raids=detect_liquidity_raids(candles, symbol, timeframe) if "raids" in enabled else [],
+        structure_breaks=detect_structure_breaks(candles, symbol, timeframe) if "structure_breaks" in enabled else [],
+        fvgs=detect_fvg(candles, symbol, timeframe) if "fvgs" in enabled else [],
+        ifvgs=detect_ifvg(candles, symbol, timeframe) if "ifvgs" in enabled else [],
+        order_blocks=detect_order_blocks(candles, symbol, timeframe) if "order_blocks" in enabled else [],
+        breaker_blocks=detect_breaker_blocks(candles, symbol, timeframe) if "breaker_blocks" in enabled else [],
+        equal_highs=detect_eqh(candles, symbol, timeframe) if "equal_highs" in enabled else [],
+        equal_lows=detect_eql(candles, symbol, timeframe) if "equal_lows" in enabled else [],
+        key_levels=detect_key_levels(candles, symbol, timeframe) if "key_levels" in enabled else [],
+        volume_signals=(
+            detect_volume(candles, symbol, timeframe) + detect_volume_profile(candles, symbol, timeframe)
+            if "volume_signals" in enabled
+            else []
+        ),
+        pd_zones=detect_pd_zones(candles, symbol, timeframe) if "pd_zones" in enabled else [],
     )
 
 

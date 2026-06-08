@@ -379,9 +379,9 @@ def _run_symbol(
     args: argparse.Namespace,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    cache = ReplaySnapshotCache(store)
+    cache = ReplaySnapshotCache(store, primitive_fields=_accumulated_primitive_fields(models))
     seen: set[tuple[Any, ...]] = set()
-    accumulate_primary = _models_need_accumulated_primary(models)
+    accumulate_primary = _models_need_accumulated_primary(models, args.context_mode)
     for timeframe in timeframes:
         candles = store.get((symbol, timeframe), [])
         scan_windows = _window_list(args.scan_session_windows)
@@ -463,8 +463,18 @@ def _run_symbol(
     return rows
 
 
-def _models_need_accumulated_primary(models: list[Any]) -> bool:
-    return any(getattr(spec, "name", None) not in {"silver_bullet", "turtle_soup"} for spec in models)
+def _models_need_accumulated_primary(models: list[Any], context_mode: str | None = None) -> bool:
+    names = {getattr(spec, "name", None) for spec in models}
+    if context_mode == "off" and names == {"ifvg_retest"}:
+        return False
+    return any(name not in {"silver_bullet", "turtle_soup"} for name in names)
+
+
+def _accumulated_primitive_fields(models: list[Any]) -> set[str] | None:
+    names = {getattr(spec, "name", None) for spec in models}
+    if names == {"ict2022_mss_fvg"}:
+        return {"sweeps", "raids", "structure_breaks", "fvgs"}
+    return None
 
 
 def _context_aligned(setup: EntrySetup, context: object | None, *, require_htf_poi: bool = True) -> bool:

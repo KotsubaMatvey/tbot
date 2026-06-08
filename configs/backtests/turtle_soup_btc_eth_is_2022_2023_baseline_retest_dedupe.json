@@ -1,0 +1,47 @@
+{
+  "data_dir": "data/history_crypto_2022-01-01_2026-04-20",
+  "funding_data_dir": "data/history_crypto_2022-01-01_2026-04-20",
+  "symbols": ["BTCUSDT", "ETHUSDT"],
+  "models": ["turtle_soup"],
+  "smt_pairs": [],
+  "thresholds": [0],
+  "grid_filters": false,
+  "context_mode": "off",
+  "pre_model_filter": false,
+  "forward_bars": 24,
+  "warmup_bars": 100,
+  "seed_bars": 1500,
+  "tp1_r": 1.0,
+  "partial_close_fraction": 1.0,
+  "move_to_be_after_tp1": true,
+  "commission_bps": 4.0,
+  "slippage_bps": 1.0,
+  "target_mode": "dol_hierarchy",
+  "entry_mode": "retest",
+  "turtle_soup_require_killzone": true,
+  "turtle_soup_session_windows": "02:00-05:00,07:00-10:00,13:00-16:00",
+  "scan_session_windows": "02:00-05:00,07:00-10:00,13:00-16:00",
+  "dedupe_session": true,
+  "dedupe_session_selection": "first",
+  "dedupe_session_timeframe_priority": ["30m"],
+  "walk_forward_threshold": 0,
+  "walk_forward_gates": {
+    "min_total_trades": 100,
+    "min_phase_trades": 30,
+    "min_managed_expectancy_r": 0.1,
+    "min_profit_factor": 1.1,
+    "max_drawdown_r": 8.0,
+    "max_trades_per_session": 1
+  },
+  "trade_pnl_min_trades": 100,
+  "htf_bias_audit_min_trades": 100,
+  "runs": [
+    {
+      "name": "is_2022_2023_btc_eth_30m_baseline_retest_dedupe",
+      "start_date": "2022-01-01",
+      "end_date": "2023-06-30",
+      "timeframes": ["30m"],
+      "out_dir": "backtest_results/turtle_soup_btc_eth_is_2022-01-01_2023-06-30_30m_baseline_retest_dedupe"
+    }
+  ]
+}

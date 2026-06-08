@@ -279,6 +279,7 @@ def from_entry_setup(setup: EntrySetup) -> AlertPayload:
         entry_low=setup.entry_low,
         entry_high=setup.entry_high,
         invalidation=setup.invalidation,
+        target_hint=setup.target_hint,
         sweep_level=setup.sweep_level,
         structure_level=setup.structure_level,
         context_timeframe=setup.context_timeframe,

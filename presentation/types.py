@@ -24,6 +24,7 @@ class AlertPayload:
     entry_low: float | None = None
     entry_high: float | None = None
     invalidation: float | None = None
+    target_hint: float | None = None
     sweep_level: float | None = None
     structure_level: float | None = None
     context_timeframe: str | None = None

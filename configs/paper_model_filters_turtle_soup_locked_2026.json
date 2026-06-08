@@ -1,0 +1,55 @@
+{
+  "profile_name": "turtle_soup_btc_eth_locked_paper_2026_06_04",
+  "mode": "paper_shadow",
+  "live_execution": false,
+  "source_research": "research/ict/53_turtle_soup_15m_external_validation_2026-06-04.md",
+  "forward_log": {
+    "enabled": true,
+    "path": "logs/turtle_soup_forward_shadow.csv",
+    "horizon_bars": 24,
+    "models": ["turtle_soup"]
+  },
+  "scanner_config": {
+    "context_mode": "off",
+    "htf_mode": "off",
+    "pre_model_filter": false
+  },
+  "model_filters": {
+    "silver_bullet": {
+      "enabled": false
+    },
+    "ifvg_retest": {
+      "enabled": false
+    },
+    "ict2022_mss_fvg": {
+      "enabled": false
+    },
+    "breaker_block": {
+      "enabled": false
+    },
+    "reclaimed_ob": {
+      "enabled": false
+    },
+    "turtle_soup": {
+      "enabled": true,
+      "allowed_symbols": ["BTCUSDT", "ETHUSDT"],
+      "allowed_timeframes": ["15m", "30m"],
+      "entry_mode": "retest",
+      "target_mode": "dol_hierarchy",
+      "turtle_soup_range_source": "asian_range",
+      "turtle_soup_require_killzone": true,
+      "turtle_soup_session_windows": ["02:00-05:00", "07:00-10:00", "13:00-16:00"],
+      "turtle_soup_asian_range_window": "00:00-08:00",
+      "turtle_soup_asian_range_tz": "UTC",
+      "turtle_soup_asian_min_range_bps": 20,
+      "turtle_soup_asian_min_breach_bps": 1,
+      "turtle_soup_asian_first_signal_only": false,
+      "turtle_soup_asian_reject_prior_failed_sweep": true,
+      "allowed_turtle_qualities": ["strong"],
+      "allowed_range_sources": ["asian_range"],
+      "require_no_smt": true,
+      "min_risk_bps": 35,
+      "research_note": "Locked paper/shadow profile only. IS passed; original 2023-2024 OOS was positive but missed the deduped 100-trade gate by 8 trades; pooled 2023-2026 external period passed. Live execution stays disabled until forward logs confirm fill rate, slippage, and alert timing."
+    }
+  }
+}

@@ -8,6 +8,7 @@ from typing import Any
 from backtesting import (
     grid_filter_analysis,
     htf_bias_audit,
+    phase_attribution_report,
     run_ict_models,
     score_threshold_report,
     trade_pnl_report,
@@ -36,13 +37,18 @@ def main(argv: list[str] | None = None) -> int:
         if result != 0:
             return result
         if config.get("trade_pnl_report", True):
-            pnl_args = build_trade_pnl_report_args(config, config_path, out_dir, thresholds)
+            pnl_args = build_trade_pnl_report_args(config, config_path, out_dir, thresholds, run)
             result = trade_pnl_report.main(pnl_args)
             if result != 0:
                 return result
         if config.get("htf_bias_audit", True):
             htf_args = build_htf_bias_audit_args(config, config_path, out_dir, thresholds)
             result = htf_bias_audit.main(htf_args)
+            if result != 0:
+                return result
+        if config.get("phase_attribution_report", False):
+            phase_args = build_phase_attribution_report_args(config, config_path, out_dir, thresholds)
+            result = phase_attribution_report.main(phase_args)
             if result != 0:
                 return result
         if config.get("grid_filters", True):
@@ -86,7 +92,13 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def build_trade_pnl_report_args(config: dict[str, Any], config_path: Path, out_dir: Path, thresholds: list[str]) -> list[str]:
+def build_trade_pnl_report_args(
+    config: dict[str, Any],
+    config_path: Path,
+    out_dir: Path,
+    thresholds: list[str],
+    run: dict[str, Any] | None = None,
+) -> list[str]:
     threshold = config.get("trade_pnl_threshold", config.get("walk_forward_threshold", thresholds[0] if thresholds else 0))
     args = [
         "--events",
@@ -98,6 +110,9 @@ def build_trade_pnl_report_args(config: dict[str, Any], config_path: Path, out_d
         "--group-by",
         *[str(item) for item in config.get("trade_pnl_group_by", ["model", "symbol", "timeframe", "direction", "htf_bias", "htf_context_alignment", "htf_draw_direction"])],
     ]
+    period = _configured_period(config, run or {})
+    if period:
+        args.extend(["--period", period])
     if config.get("model_filters"):
         args.extend(["--model-filters", str(config_path)])
     return args
@@ -119,6 +134,48 @@ def build_htf_bias_audit_args(config: dict[str, Any], config_path: Path, out_dir
     if config.get("model_filters"):
         args.extend(["--model-filters", str(config_path)])
     return args
+
+
+def build_phase_attribution_report_args(config: dict[str, Any], config_path: Path, out_dir: Path, thresholds: list[str]) -> list[str]:
+    threshold = config.get(
+        "phase_attribution_threshold",
+        config.get("trade_pnl_threshold", config.get("walk_forward_threshold", thresholds[0] if thresholds else 0)),
+    )
+    args = [
+        "--events",
+        str(out_dir / "events.csv"),
+        "--threshold",
+        str(threshold),
+        "--min-trades",
+        str(config.get("phase_attribution_min_trades", config.get("trade_pnl_min_trades", config.get("min_trade_sample", 30)))),
+        "--group-by",
+        *[
+            str(item)
+            for item in config.get(
+                "phase_attribution_group_by",
+                ["symbol", "direction", "session_label", "score_bucket", "has_smt_confirmation"],
+            )
+        ],
+    ]
+    if config.get("model_filters"):
+        args.extend(["--model-filters", str(config_path)])
+    if config.get("dedupe_session"):
+        args.append("--dedupe-session")
+        selection = config.get("dedupe_session_selection")
+        if selection:
+            args.extend(["--dedupe-session-selection", str(selection)])
+        priority = config.get("dedupe_session_timeframe_priority") or []
+        if priority:
+            args.extend(["--dedupe-session-timeframe-priority", ",".join(str(item) for item in priority)])
+    return args
+
+
+def _configured_period(config: dict[str, Any], run: dict[str, Any]) -> str | None:
+    start = run.get("start_date", config.get("start_date"))
+    end = run.get("end_date", config.get("end_date"))
+    if start and end:
+        return f"{start}..{end}"
+    return None
 
 
 def build_run_args(config: dict[str, Any], run: dict[str, Any]) -> list[str]:

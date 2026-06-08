@@ -10,6 +10,7 @@ from telegram.ext import Application
 
 from config import DIGEST_INTERVAL, SCAN_INTERVAL
 from database import get_all_active_users
+from forward_logging import record_forward_shadow_alerts
 from formatters import build_alert_message, build_chart_caption, utc_now
 from health import record_alert, record_error, record_scan
 from presentation.types import AlertPayload
@@ -61,6 +62,11 @@ async def scanner_loop(application: Application) -> None:
         try:
             alerts, _, all_candles = await run_scanner()
             record_scan()
+            try:
+                record_forward_shadow_alerts(alerts, all_candles)
+            except Exception as exc:
+                logger.error("Forward shadow log error: %s", exc, exc_info=True)
+                record_error()
             users = get_all_active_users()
             now = asyncio.get_event_loop().time()
 

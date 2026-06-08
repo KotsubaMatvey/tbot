@@ -49,16 +49,21 @@ def detect_setups(
     htf_mode = str(cfg.get("context_mode") or cfg.get("htf_mode") or "off")
     stop_bps = float(cfg.get("stop_buffer_bps") or 2)
     gaps = detect_fvg(candles, symbol, timeframe, scan_back=60)
+    candle_index = {int(candle["time"]): idx for idx, candle in enumerate(closed)}
     results = []
 
     for gap in reversed(gaps):
-        breach_idx = _breach_index(closed, gap)
+        source_idx = candle_index.get(int(gap.created_at))
+        if source_idx is None:
+            continue
+        breach_idx = _breach_index(closed, gap, source_idx)
         if breach_idx is None:
             continue
-        source_age = _bars_between(closed, int(gap.created_at), int(closed[breach_idx]["time"]))
-        if source_age is not None and source_age > max_source_age:
+        source_age = breach_idx - source_idx
+        if source_age > max_source_age:
             continue
-        if _source_touches_before_breach(closed, gap, breach_idx) > max_source_touches:
+        source_touches = _source_touches_before_breach(closed, gap, source_idx, breach_idx)
+        if source_touches > max_source_touches:
             continue
         side = "long" if gap.direction == "bearish" else "short"
         direction = "bullish" if side == "long" else "bearish"
@@ -125,7 +130,7 @@ def detect_setups(
                 "ifvg_min_retest_bars": min_retest,
                 "ifvg_max_retest_bars": max_retest,
                 "ifvg_min_retest_depth": min_retest_depth,
-                "source_fvg_touches_before_inversion": _source_touches_before_breach(closed, gap, breach_idx),
+                "source_fvg_touches_before_inversion": source_touches,
                 "time_to_retest_bars": retest_idx - breach_idx,
                 "retest_depth": _retest_depth(retest, gap.gap_low, gap.gap_high, side),
                 "ifvg_fill_depth": _retest_depth(retest, gap.gap_low, gap.gap_high, side),
@@ -160,10 +165,9 @@ def _ifvg_displacement_grade(disp: object) -> str:
     return "weak"
 
 
-def _breach_index(candles: list[dict[str, float | int]], gap: object) -> int | None:
-    for idx, candle in enumerate(candles):
-        if int(candle["time"]) <= int(gap.created_at):
-            continue
+def _breach_index(candles: list[dict[str, float | int]], gap: object, source_idx: int) -> int | None:
+    for idx in range(source_idx + 1, len(candles)):
+        candle = candles[idx]
         if gap.direction == "bearish" and float(candle["close"]) > float(gap.gap_high):
             return idx
         if gap.direction == "bullish" and float(candle["close"]) < float(gap.gap_low):
@@ -231,13 +235,14 @@ def _retest_depth(candle: dict[str, float | int], low: float, high: float, side:
     return min(1.0, max(0.0, depth))
 
 
-def _source_touches_before_breach(candles: list[dict[str, float | int]], gap: object, breach_idx: int) -> int:
+def _source_touches_before_breach(
+    candles: list[dict[str, float | int]],
+    gap: object,
+    source_idx: int,
+    breach_idx: int,
+) -> int:
     touches = 0
-    for candle in candles:
-        if int(candle["time"]) <= int(gap.created_at):
-            continue
-        if int(candle["time"]) >= int(candles[breach_idx]["time"]):
-            break
+    for candle in candles[source_idx + 1 : breach_idx]:
         if float(candle["low"]) <= float(gap.gap_high) and float(candle["high"]) >= float(gap.gap_low):
             touches += 1
     return touches
@@ -245,14 +250,6 @@ def _source_touches_before_breach(candles: list[dict[str, float | int]], gap: ob
 
 def _ce_breached_by_close(candle: dict[str, float | int], ce: float, side: str) -> bool:
     return float(candle["close"]) < ce if side == "long" else float(candle["close"]) > ce
-
-
-def _bars_between(candles: list[dict[str, float | int]], start: int, end: int) -> int | None:
-    start_idx = next((idx for idx, candle in enumerate(candles) if int(candle["time"]) == start), None)
-    end_idx = next((idx for idx, candle in enumerate(candles) if int(candle["time"]) == end), None)
-    if start_idx is None or end_idx is None:
-        return None
-    return max(0, end_idx - start_idx)
 
 
 __all__ = ["detect_setups"]

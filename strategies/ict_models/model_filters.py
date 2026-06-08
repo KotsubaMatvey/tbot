@@ -52,6 +52,8 @@ def passes_model_filter(event: dict[str, Any], rules: dict[str, Any]) -> bool:
             return False
     if rules.get("require_smt") and not _bool(event.get("has_smt_confirmation")):
         return False
+    if rules.get("require_no_smt") and _bool(event.get("has_smt_confirmation")):
+        return False
     if rules.get("require_session_window") and not (event.get("session_window") or event.get("ny_time")):
         return False
     if rules.get("require_htf_draw") and not _has_htf_draw(event):

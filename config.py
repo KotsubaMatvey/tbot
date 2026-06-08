@@ -57,7 +57,7 @@ MAX_SETUP_AGE_BARS = 30
 MAX_INVERSION_AGE_BARS = 40
 
 # ── Candles to fetch
-CANDLE_LIMIT = 200
+CANDLE_LIMIT = 500
 
 # ── Scanner interval (seconds)
 SCAN_INTERVAL = 60

@@ -1,0 +1,87 @@
+{
+  "data_dir": "data/history_crypto_2022-01-01_2026-04-20",
+  "funding_data_dir": "data/history_crypto_2022-01-01_2026-04-20",
+  "symbols": ["BTCUSDT", "ETHUSDT"],
+  "models": ["ict2022_mss_fvg"],
+  "smt_pairs": [],
+  "thresholds": [0],
+  "grid_filters": false,
+  "context_mode": "off",
+  "pre_model_filter": false,
+  "pre_model_require_htf_poi": false,
+  "forward_bars": 32,
+  "warmup_bars": 150,
+  "seed_bars": 1500,
+  "tp1_r": 1.0,
+  "partial_close_fraction": 0.5,
+  "move_to_be_after_tp1": true,
+  "commission_bps": 4.0,
+  "slippage_bps": 1.0,
+  "entry_mode": "edge",
+  "ict2022_fvg_selection": "first_retested_after_mss",
+  "ict2022_session_windows": "02:00-05:00,07:00-10:00,13:30-16:00",
+  "ict2022_max_fvg_retest_bars": 3,
+  "ict2022_require_killzone": true,
+  "ict2022_require_same_session": true,
+  "ict2022_require_strong_displacement": true,
+  "ict2022_retest_must_occur_within_session": false,
+  "scan_session_windows": "02:00-05:00,07:00-10:00,13:30-16:00",
+  "scan_session_lag_bars": 3,
+  "model_filters": {
+    "ict2022_mss_fvg": {
+      "allowed_symbols": ["BTCUSDT", "ETHUSDT"],
+      "allowed_timeframes": ["30m"],
+      "allowed_displacement_grades": ["strong"],
+      "min_target_distance_r": 2.0
+    }
+  },
+  "dedupe_session": true,
+  "dedupe_session_selection": "first",
+  "walk_forward_threshold": 0,
+  "walk_forward_gates": {
+    "min_total_trades": 100,
+    "min_phase_trades": 30,
+    "min_managed_expectancy_r": 0.1,
+    "min_profit_factor": 1.1,
+    "max_drawdown_r": 8.0,
+    "max_trades_per_session": 1
+  },
+  "trade_pnl_threshold": 0,
+  "trade_pnl_min_trades": 100,
+  "trade_pnl_group_by": [
+    "symbol",
+    "direction",
+    "session_label",
+    "target_distance_bucket",
+    "risk_bps_bucket",
+    "no_trade_reasons"
+  ],
+  "phase_attribution_report": true,
+  "phase_attribution_threshold": 0,
+  "phase_attribution_min_trades": 30,
+  "phase_attribution_group_by": [
+    "symbol",
+    "direction",
+    "session_label",
+    "target_distance_bucket",
+    "risk_bps_bucket",
+    "no_trade_reasons"
+  ],
+  "htf_bias_audit": false,
+  "runs": [
+    {
+      "name": "ict2022_first_retested_fvg_session_fallback_oos_btc_eth_30m",
+      "timeframes": ["30m"],
+      "start_date": "2022-01-01",
+      "end_date": "2024-11-05",
+      "out_dir": "backtest_results/ict2022_first_retested_fvg_session_fallback_oos_2022-01-01_2024-11-05_btc_eth_30m"
+    },
+    {
+      "name": "ict2022_first_retested_fvg_session_fallback_late_btc_eth_30m",
+      "timeframes": ["30m"],
+      "start_date": "2024-11-06",
+      "end_date": "2026-04-20",
+      "out_dir": "backtest_results/ict2022_first_retested_fvg_session_fallback_late_2024-11-06_2026-04-20_btc_eth_30m"
+    }
+  ]
+}

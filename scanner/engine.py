@@ -63,7 +63,7 @@ SMT_TIMEFRAMES = {"1m", "5m", "15m", "30m", "1h", "4h"}
 SMT_PAIRS = [("BTCUSDT", "ETHUSDT"), ("ETHUSDT", "SOLUSDT")]
 
 _sem = asyncio.Semaphore(5)
-_model_filters_cache: dict[str, dict] | None = None
+_model_filter_payload_cache: dict[str, object] | None = None
 MODEL_DEDUP_PRIORITY = {
     "ict2022_mss_fvg": 10,
     "breaker_block": 20,
@@ -130,12 +130,7 @@ def _build_strategy_alerts(
     )
     setups = []
     model_filters = _load_model_filters()
-    config = {
-        "context_mode": ENTRY_MODEL_HTF_MODE,
-        "htf_mode": ENTRY_MODEL_HTF_MODE,
-        "smt_divergences": list(smt_divergences or []),
-        "has_smt_confirmation": bool(smt_divergences),
-    }
+    config = _strategy_base_config(_load_scanner_config(), smt_divergences)
     pre_model = evaluate_pre_model_filter(context, config)
     if not pre_model.passed:
         return []
@@ -184,24 +179,36 @@ def _closed_htf_snapshot(snapshot: PrimitiveSnapshot) -> PrimitiveSnapshot | Non
     return build_primitive_snapshot(snapshot.symbol, snapshot.timeframe, closed)
 
 
-def _load_model_filters() -> dict[str, dict]:
-    global _model_filters_cache
-    if _model_filters_cache is not None:
-        return _model_filters_cache
+def _load_model_filter_payload() -> dict[str, object]:
+    global _model_filter_payload_cache
+    if _model_filter_payload_cache is not None:
+        return _model_filter_payload_cache
     path = Path(os.getenv("LIVE_MODEL_FILTER_CONFIG", LIVE_MODEL_FILTER_CONFIG))
     if not path.is_absolute():
         path = Path(__file__).resolve().parent.parent / path
     if not path.exists():
-        _model_filters_cache = {}
-        return _model_filters_cache
+        _model_filter_payload_cache = {}
+        return _model_filter_payload_cache
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         logger.warning("Could not load live model filters from %s: %s", path, exc)
-        _model_filters_cache = {}
-        return _model_filters_cache
-    _model_filters_cache = payload.get("model_filters", payload)
-    return _model_filters_cache
+        _model_filter_payload_cache = {}
+        return _model_filter_payload_cache
+    _model_filter_payload_cache = payload if isinstance(payload, dict) else {}
+    return _model_filter_payload_cache
+
+
+def _load_model_filters() -> dict[str, dict]:
+    payload = _load_model_filter_payload()
+    filters = payload.get("model_filters", payload)
+    return filters if isinstance(filters, dict) else {}
+
+
+def _load_scanner_config() -> dict[str, object]:
+    payload = _load_model_filter_payload()
+    config = payload.get("scanner_config", {})
+    return config if isinstance(config, dict) else {}
 
 
 def _model_enabled(model_name: str, model_filters: dict[str, dict]) -> bool:
@@ -210,6 +217,30 @@ def _model_enabled(model_name: str, model_filters: dict[str, dict]) -> bool:
 
 def _detector_config(base_config: dict, model_rules: dict) -> dict:
     return {**base_config, **model_rules}
+
+
+def _strategy_base_config(scanner_config: dict[str, object], smt_divergences: list | None) -> dict:
+    context_mode = str(scanner_config.get("context_mode") or ENTRY_MODEL_HTF_MODE)
+    htf_mode = str(scanner_config.get("htf_mode") or context_mode)
+    config = {
+        "context_mode": context_mode,
+        "htf_mode": htf_mode,
+        "smt_divergences": list(smt_divergences or []),
+        "has_smt_confirmation": bool(smt_divergences),
+    }
+    for name in (
+        "pre_model_filter",
+        "pre_model_filter_enabled",
+        "pre_model_require_htf_poi",
+        "pre_model_allow_neutral_htf",
+        "pre_model_allow_equilibrium",
+        "pre_model_require_smt",
+        "pre_model_require_killzone",
+        "pre_model_killzone_windows",
+    ):
+        if name in scanner_config:
+            config[name] = scanner_config[name]
+    return config
 
 
 def _build_smt_map(all_candles: dict[tuple[str, str], list[dict]]) -> dict[tuple[str, str], list]:
