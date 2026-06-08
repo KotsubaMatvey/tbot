@@ -1,0 +1,10 @@
+model,session_date,session_window,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,managed_expectancy,avg_managed_outcome_r,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+silver_bullet,2025-05-11,14:00-15:00,1,1,1,0,2.687414,2.687414,1.0,2.0,100.0,2.0,1.5,1.5,1.0,1.0,1.0,0.0,1.0,,21.0,23.0,0,0
+silver_bullet,2025-05-12,10:00-11:00,1,1,1,0,0.932926,0.932926,0.0,2.0,100.0,-1.0,-1.0,-1.0,0.0,0.0,0.0,1.0,1.0,2.0,,,0,0
+silver_bullet,2025-05-16,10:00-11:00,1,1,1,0,2.580394,2.580394,1.0,2.0,100.0,2.0,1.5,1.5,1.0,1.0,1.0,0.0,1.0,,23.0,30.0,0,0
+silver_bullet,2025-06-02,10:00-11:00,1,1,1,0,2.086688,2.086688,1.0,2.0,100.0,2.0,1.5,1.5,1.0,1.0,1.0,0.0,1.0,,26.0,31.0,0,0
+silver_bullet,2025-06-03,14:00-15:00,1,1,1,0,2.524708,2.524708,0.0,2.0,100.0,-1.0,-1.0,-1.0,0.0,0.0,0.0,1.0,1.0,3.0,,,0,0
+silver_bullet,2025-06-12,10:00-11:00,1,1,1,0,0.307783,0.307783,0.0,2.0,100.0,-1.0,-1.0,-1.0,0.0,0.0,0.0,1.0,1.0,3.0,,,0,0
+silver_bullet,2025-06-12,14:00-15:00,1,1,1,0,0.0,0.0,0.0,2.0,100.0,-1.0,-1.0,-1.0,0.0,0.0,0.0,1.0,1.0,1.0,,,0,0
+silver_bullet,2025-06-17,10:00-11:00,1,1,1,0,0.686772,0.686772,0.0,2.0,100.0,-1.0,-1.0,-1.0,0.0,0.0,0.0,1.0,1.0,2.0,,,0,0
+silver_bullet,2025-06-26,10:00-11:00,1,1,1,0,0.679994,0.679994,0.0,2.0,100.0,-1.0,-1.0,-1.0,0.0,0.0,0.0,1.0,1.0,2.0,,,0,0

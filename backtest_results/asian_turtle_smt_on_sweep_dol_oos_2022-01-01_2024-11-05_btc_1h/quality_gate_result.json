@@ -1,0 +1,69 @@
+{
+  "passed": false,
+  "rows": [
+    {
+      "phase": "overall",
+      "start_date": "2022-03-27",
+      "end_date": "2024-10-02",
+      "count": 30,
+      "activated_trades": 30,
+      "managed_expectancy": 0.061161,
+      "gross_managed_expectancy": 0.208464,
+      "profit_factor": 1.175881,
+      "max_drawdown_r": 4.833136,
+      "win_rate": 0.666667,
+      "avg_execution_cost_r": 0.147303,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_managed_expectancy_r;min_profit_factor"
+    },
+    {
+      "phase": "train",
+      "start_date": "2022-03-27",
+      "end_date": "2023-04-12",
+      "count": 10,
+      "activated_trades": 10,
+      "managed_expectancy": 0.117397,
+      "gross_managed_expectancy": 0.262167,
+      "profit_factor": 1.332846,
+      "max_drawdown_r": 3.527076,
+      "win_rate": 0.7,
+      "avg_execution_cost_r": 0.14477,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_managed_expectancy_r"
+    },
+    {
+      "phase": "validation",
+      "start_date": "2023-07-11",
+      "end_date": "2024-02-23",
+      "count": 10,
+      "activated_trades": 10,
+      "managed_expectancy": 0.280228,
+      "gross_managed_expectancy": 0.426998,
+      "profit_factor": 2.087377,
+      "max_drawdown_r": 1.140955,
+      "win_rate": 0.7,
+      "avg_execution_cost_r": 0.146771,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_managed_expectancy_r"
+    },
+    {
+      "phase": "test",
+      "start_date": "2024-03-12",
+      "end_date": "2024-10-02",
+      "count": 10,
+      "activated_trades": 10,
+      "managed_expectancy": -0.214142,
+      "gross_managed_expectancy": -0.063773,
+      "profit_factor": 0.505222,
+      "max_drawdown_r": 4.003897,
+      "win_rate": 0.6,
+      "avg_execution_cost_r": 0.150369,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_managed_expectancy_r;min_profit_factor"
+    }
+  ]
+}

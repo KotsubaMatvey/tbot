@@ -1,0 +1,39 @@
+# ICT Phase Attribution Report
+
+- events: `backtest_results\ict2022_first_retested_fvg_session_fallback_late_2024-11-06_2026-04-20_btc_eth_30m\events.csv`
+- realized R uses `net_managed_outcome_r` when available, otherwise `managed_outcome_r`.
+
+| phase | scope | group | filter_name | threshold | dedupe_session | dedupe_selection | trade_count | min_trades | sample_valid | win_rate_pct | expectancy_r | profit_factor | max_drawdown_r | total_pnl_r | avg_decision_score | avg_target_distance_r | avg_risk_bps | avg_execution_cost_r | avg_funding_cost_r | avg_total_cost_r |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| overall | ALL | ALL | model_rules | 0 | True | first | 12 | 30 | False | 16.666667 | -0.72952 | 0.165284 | 8.754235 | -8.754235 | 88.0 | 2.0 | 321.311868 | 0.046721 | 0.000168 | 0.046889 |
+| train | ALL | ALL | model_rules | 0 | True | first | 4 | 30 | False | 0.0 | -1.022921 | 0.0 | 4.091682 | -4.091682 | 88.0 | 2.0 | 502.775843 | 0.022452 | 0.000468 | 0.02292 |
+| train | by_symbol | BTCUSDT | model_rules | 0 | True | first | 2 | 30 | False | 0.0 | -1.023969 | 0.0 | 2.047937 | -2.047937 | 88.0 | 2.0 | 483.798525 | 0.023769 | 0.000199 | 0.023969 |
+| train | by_symbol | ETHUSDT | model_rules | 0 | True | first | 2 | 30 | False | 0.0 | -1.021873 | 0.0 | 2.043745 | -2.043745 | 88.0 | 2.0 | 521.75316 | 0.021135 | 0.000737 | 0.021872 |
+| train | by_direction | long | model_rules | 0 | True | first | 3 | 30 | False | 0.0 | -1.021365 | 0.0 | 3.064096 | -3.064096 | 88.0 | 2.0 | 549.534248 | 0.020741 | 0.000624 | 0.021365 |
+| train | by_direction | short | model_rules | 0 | True | first | 1 | 30 | False | 0.0 | -1.027586 | 0.0 | 1.027586 | -1.027586 | 88.0 | 2.0 | 362.500626 | 0.027586 | 0.0 | 0.027586 |
+| train | by_session_label | custom | model_rules | 0 | True | first | 3 | 30 | False | 0.0 | -1.019776 | 0.0 | 3.059329 | -3.059329 | 88.0 | 2.0 | 567.337063 | 0.019152 | 0.000624 | 0.019776 |
+| train | by_session_label | ny_open | model_rules | 0 | True | first | 1 | 30 | False | 0.0 | -1.032353 | 0.0 | 1.032353 | -1.032353 | 88.0 | 2.0 | 309.092183 | 0.032353 | 0.0 | 0.032353 |
+| train | by_target_distance_bucket | none | model_rules | 0 | True | first | 4 | 30 | False | 0.0 | -1.022921 | 0.0 | 4.091682 | -4.091682 | 88.0 | 2.0 | 502.775843 | 0.022452 | 0.000468 | 0.02292 |
+| train | by_risk_bps_bucket | none | model_rules | 0 | True | first | 4 | 30 | False | 0.0 | -1.022921 | 0.0 | 4.091682 | -4.091682 | 88.0 | 2.0 | 502.775843 | 0.022452 | 0.000468 | 0.02292 |
+| train | by_no_trade_reasons | target_rr_below_3 | model_rules | 0 | True | first | 4 | 30 | False | 0.0 | -1.022921 | 0.0 | 4.091682 | -4.091682 | 88.0 | 2.0 | 502.775843 | 0.022452 | 0.000468 | 0.02292 |
+| validation | ALL | ALL | model_rules | 0 | True | first | 4 | 30 | False | 25.0 | -0.443129 | 0.451688 | 2.081674 | -1.772516 | 88.0 | 2.0 | 203.874045 | 0.067791 | 0.000338 | 0.068129 |
+| validation | by_symbol | BTCUSDT | model_rules | 0 | True | first | 3 | 30 | False | 0.0 | -1.07756 | 0.0 | 3.23268 | -3.23268 | 88.0 | 2.0 | 183.87325 | 0.077756 | -0.000196 | 0.07756 |
+| validation | by_symbol | ETHUSDT | model_rules | 0 | True | first | 1 | 30 | False | 100.0 | 1.460164 | inf | 0.0 | 1.460164 | 88.0 | 2.0 | 263.87643 | 0.037897 | 0.001939 | 0.039836 |
+| validation | by_direction | long | model_rules | 0 | True | first | 2 | 30 | False | 50.0 | 0.154579 | 1.268598 | 1.151006 | 0.309158 | 88.0 | 2.0 | 165.390358 | 0.093682 | 0.001739 | 0.095421 |
+| validation | by_direction | short | model_rules | 0 | True | first | 2 | 30 | False | 0.0 | -1.040837 | 0.0 | 2.081674 | -2.081674 | 88.0 | 2.0 | 242.357731 | 0.041901 | -0.001063 | 0.040837 |
+| validation | by_session_label | custom | model_rules | 0 | True | first | 1 | 30 | False | 0.0 | -1.044948 | 0.0 | 1.044948 | -1.044948 | 88.0 | 2.0 | 212.426768 | 0.047075 | -0.002127 | 0.044948 |
+| validation | by_session_label | london_open | model_rules | 0 | True | first | 1 | 30 | False | 0.0 | -1.036726 | 0.0 | 1.036726 | -1.036726 | 88.0 | 2.0 | 272.288695 | 0.036726 | 0.0 | 0.036726 |
+| validation | by_session_label | ny_open | model_rules | 0 | True | first | 2 | 30 | False | 50.0 | 0.154579 | 1.268598 | 1.151006 | 0.309158 | 88.0 | 2.0 | 165.390358 | 0.093682 | 0.001739 | 0.095421 |
+| validation | by_target_distance_bucket | none | model_rules | 0 | True | first | 4 | 30 | False | 25.0 | -0.443129 | 0.451688 | 2.081674 | -1.772516 | 88.0 | 2.0 | 203.874045 | 0.067791 | 0.000338 | 0.068129 |
+| validation | by_risk_bps_bucket | none | model_rules | 0 | True | first | 4 | 30 | False | 25.0 | -0.443129 | 0.451688 | 2.081674 | -1.772516 | 88.0 | 2.0 | 203.874045 | 0.067791 | 0.000338 | 0.068129 |
+| validation | by_no_trade_reasons | target_rr_below_3 | model_rules | 0 | True | first | 4 | 30 | False | 25.0 | -0.443129 | 0.451688 | 2.081674 | -1.772516 | 88.0 | 2.0 | 203.874045 | 0.067791 | 0.000338 | 0.068129 |
+| test | ALL | ALL | model_rules | 0 | True | first | 4 | 30 | False | 25.0 | -0.722509 | 0.086391 | 2.890037 | -2.890037 | 88.0 | 2.0 | 257.285718 | 0.049919 | -0.000302 | 0.049618 |
+| test | by_symbol | BTCUSDT | model_rules | 0 | True | first | 4 | 30 | False | 25.0 | -0.722509 | 0.086391 | 2.890037 | -2.890037 | 88.0 | 2.0 | 257.285718 | 0.049919 | -0.000302 | 0.049618 |
+| test | by_direction | long | model_rules | 0 | True | first | 1 | 30 | False | 0.0 | -1.086644 | 0.0 | 1.086644 | -1.086644 | 88.0 | 2.0 | 115.414447 | 0.086644 | 0.0 | 0.086644 |
+| test | by_direction | short | model_rules | 0 | True | first | 3 | 30 | False | 33.333333 | -0.601131 | 0.131596 | 2.076675 | -1.803393 | 88.0 | 2.0 | 304.576142 | 0.037678 | -0.000402 | 0.037276 |
+| test | by_session_label | custom | model_rules | 0 | True | first | 2 | 30 | False | 0.0 | -1.038337 | 0.0 | 2.076675 | -2.076675 | 88.0 | 2.0 | 319.409939 | 0.038329 | 8e-06 | 0.038337 |
+| test | by_session_label | london_open | model_rules | 0 | True | first | 1 | 30 | False | 0.0 | -1.086644 | 0.0 | 1.086644 | -1.086644 | 88.0 | 2.0 | 115.414447 | 0.086644 | 0.0 | 0.086644 |
+| test | by_session_label | ny_open | model_rules | 0 | True | first | 1 | 30 | False | 100.0 | 0.273282 | inf | 0.0 | 0.273282 | 88.0 | 2.0 | 274.908547 | 0.036376 | -0.001224 | 0.035152 |
+| test | by_target_distance_bucket | none | model_rules | 0 | True | first | 4 | 30 | False | 25.0 | -0.722509 | 0.086391 | 2.890037 | -2.890037 | 88.0 | 2.0 | 257.285718 | 0.049919 | -0.000302 | 0.049618 |
+| test | by_risk_bps_bucket | none | model_rules | 0 | True | first | 4 | 30 | False | 25.0 | -0.722509 | 0.086391 | 2.890037 | -2.890037 | 88.0 | 2.0 | 257.285718 | 0.049919 | -0.000302 | 0.049618 |
+| test | by_no_trade_reasons | target_rr_below_3 | model_rules | 0 | True | first | 4 | 30 | False | 25.0 | -0.722509 | 0.086391 | 2.890037 | -2.890037 | 88.0 | 2.0 | 257.285718 | 0.049919 | -0.000302 | 0.049618 |

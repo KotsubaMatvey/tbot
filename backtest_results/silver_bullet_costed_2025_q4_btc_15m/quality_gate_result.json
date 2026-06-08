@@ -1,0 +1,21 @@
+{
+  "passed": false,
+  "rows": [
+    {
+      "phase": "overall",
+      "start_date": null,
+      "end_date": null,
+      "count": 0,
+      "activated_trades": 0,
+      "managed_expectancy": null,
+      "gross_managed_expectancy": null,
+      "profit_factor": null,
+      "max_drawdown_r": null,
+      "win_rate": null,
+      "avg_execution_cost_r": null,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_total_trades"
+    }
+  ]
+}

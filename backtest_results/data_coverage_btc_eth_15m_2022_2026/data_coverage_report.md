@@ -1,0 +1,10 @@
+# ICT Data Coverage Report
+
+- data_dir: `data\history_crypto_2022-01-01_2026-04-20`
+- passed: `True`
+
+## Coverage
+| symbol | timeframe | path | candles | start | end | expected_candles | coverage_pct | max_gap_bars | passes | missing_reason |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| BTCUSDT | 15m | data\history_crypto_2022-01-01_2026-04-20\BTCUSDT_15m.csv | 150816 | 2022-01-01 | 2026-04-20 | 150816 | 100.0 | 1.0 | True |  |
+| ETHUSDT | 15m | data\history_crypto_2022-01-01_2026-04-20\ETHUSDT_15m.csv | 150816 | 2022-01-01 | 2026-04-20 | 150816 | 100.0 | 1.0 | True |  |

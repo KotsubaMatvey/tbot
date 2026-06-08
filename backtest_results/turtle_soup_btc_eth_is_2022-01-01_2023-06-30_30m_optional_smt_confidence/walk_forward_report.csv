@@ -1,0 +1,5 @@
+phase,start_date,end_date,count,activated_trades,managed_expectancy,gross_managed_expectancy,profit_factor,max_drawdown_r,win_rate,avg_execution_cost_r,avg_funding_cost_r,avg_total_cost_r,session_overtrade_count,passed,failed_gates
+overall,2022-01-05,2023-06-30,385,385,-0.203397,0.430575,0.600484,90.086053,0.584416,0.634,-2.8e-05,0.633972,0,False,max_drawdown_r;min_managed_expectancy_r;min_profit_factor
+train,2022-01-05,2022-07-11,128,128,0.020416,0.5,1.055103,11.972416,0.695312,0.479584,0.0,0.479584,0,False,min_managed_expectancy_r;min_profit_factor;max_drawdown_r
+validation,2022-07-13,2023-01-27,129,129,-0.316379,0.348837,0.471227,48.331485,0.527132,0.665298,-8.2e-05,0.665216,0,False,min_managed_expectancy_r;min_profit_factor;max_drawdown_r
+test,2023-01-27,2023-06-30,130,130,-0.319196,0.436702,0.431971,43.27515,0.530769,0.755899,0.0,0.755899,0,False,min_managed_expectancy_r;min_profit_factor;max_drawdown_r

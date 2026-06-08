@@ -1,0 +1,20 @@
+# ICT Decision Score Threshold Report
+
+- events: `backtest_results\silver_bullet_live_like_costed_may_jun_2025_btc_15m\events.csv`
+- thresholds: 0, 70
+
+## All Models
+| scope | model | threshold | filter_name | filtered_out | count | activated_trades | invalidated_before_entry | avg_decision_score | avg_mfe_r | median_mfe_r | avg_rr | expectancy | gross_managed_expectancy | managed_expectancy | avg_managed_outcome_r | avg_execution_cost_r | profit_factor | target_before_invalidation_rate | hit_1r_before_invalidation_rate | hit_2r_before_invalidation_rate | invalidation_rate | same_bar_ambiguous_count | no_trade_reason_count | top_no_trade_reasons |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| all | ALL | 0 | none |  | 1 | 1 |  | 100.0 | 2.086688 | 2.086688 | 2.0 | 2.0 | 1.5 | 1.35296 | 1.35296 | 0.14704 |  | 1.0 | 1.0 | 1.0 |  |  |  |  |
+| filtered_all | ALL | 0 | model_rules |  | 1 | 1 |  | 100.0 | 2.086688 | 2.086688 | 2.0 | 2.0 | 1.5 | 1.35296 | 1.35296 | 0.14704 |  | 1.0 | 1.0 | 1.0 |  |  |  |  |
+| all | ALL | 70 | none |  | 1 | 1 |  | 100.0 | 2.086688 | 2.086688 | 2.0 | 2.0 | 1.5 | 1.35296 | 1.35296 | 0.14704 |  | 1.0 | 1.0 | 1.0 |  |  |  |  |
+| filtered_all | ALL | 70 | model_rules |  | 1 | 1 |  | 100.0 | 2.086688 | 2.086688 | 2.0 | 2.0 | 1.5 | 1.35296 | 1.35296 | 0.14704 |  | 1.0 | 1.0 | 1.0 |  |  |  |  |
+
+## By Model
+| scope | model | threshold | filter_name | filtered_out | count | activated_trades | invalidated_before_entry | avg_decision_score | avg_mfe_r | median_mfe_r | avg_rr | expectancy | gross_managed_expectancy | managed_expectancy | avg_managed_outcome_r | avg_execution_cost_r | profit_factor | target_before_invalidation_rate | hit_1r_before_invalidation_rate | hit_2r_before_invalidation_rate | invalidation_rate | same_bar_ambiguous_count | no_trade_reason_count | top_no_trade_reasons |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| model | silver_bullet | 0 | none |  | 1 | 1 |  | 100.0 | 2.086688 | 2.086688 | 2.0 | 2.0 | 1.5 | 1.35296 | 1.35296 | 0.14704 |  | 1.0 | 1.0 | 1.0 |  |  |  |  |
+| filtered_model | silver_bullet | 0 | model_rules |  | 1 | 1 |  | 100.0 | 2.086688 | 2.086688 | 2.0 | 2.0 | 1.5 | 1.35296 | 1.35296 | 0.14704 |  | 1.0 | 1.0 | 1.0 |  |  |  |  |
+| model | silver_bullet | 70 | none |  | 1 | 1 |  | 100.0 | 2.086688 | 2.086688 | 2.0 | 2.0 | 1.5 | 1.35296 | 1.35296 | 0.14704 |  | 1.0 | 1.0 | 1.0 |  |  |  |  |
+| filtered_model | silver_bullet | 70 | model_rules |  | 1 | 1 |  | 100.0 | 2.086688 | 2.086688 | 2.0 | 2.0 | 1.5 | 1.35296 | 1.35296 | 0.14704 |  | 1.0 | 1.0 | 1.0 |  |  |  |  |

@@ -1,0 +1,69 @@
+{
+  "passed": false,
+  "rows": [
+    {
+      "phase": "overall",
+      "start_date": "2022-03-27",
+      "end_date": "2024-10-02",
+      "count": 30,
+      "activated_trades": 30,
+      "managed_expectancy": 0.014625,
+      "gross_managed_expectancy": 0.161928,
+      "profit_factor": 1.031894,
+      "max_drawdown_r": 4.74746,
+      "win_rate": 0.566667,
+      "avg_execution_cost_r": 0.147303,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_managed_expectancy_r;min_profit_factor"
+    },
+    {
+      "phase": "train",
+      "start_date": "2022-03-27",
+      "end_date": "2023-04-12",
+      "count": 10,
+      "activated_trades": 10,
+      "managed_expectancy": -0.036073,
+      "gross_managed_expectancy": 0.108697,
+      "profit_factor": 0.93684,
+      "max_drawdown_r": 4.08667,
+      "win_rate": 0.5,
+      "avg_execution_cost_r": 0.14477,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_managed_expectancy_r;min_profit_factor"
+    },
+    {
+      "phase": "validation",
+      "start_date": "2023-07-11",
+      "end_date": "2024-02-23",
+      "count": 10,
+      "activated_trades": 10,
+      "managed_expectancy": 0.280316,
+      "gross_managed_expectancy": 0.427087,
+      "profit_factor": 2.087722,
+      "max_drawdown_r": 1.140955,
+      "win_rate": 0.7,
+      "avg_execution_cost_r": 0.146771,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_managed_expectancy_r"
+    },
+    {
+      "phase": "test",
+      "start_date": "2024-03-12",
+      "end_date": "2024-10-02",
+      "count": 10,
+      "activated_trades": 10,
+      "managed_expectancy": -0.200369,
+      "gross_managed_expectancy": -0.05,
+      "profit_factor": 0.633557,
+      "max_drawdown_r": 4.226754,
+      "win_rate": 0.5,
+      "avg_execution_cost_r": 0.150369,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_managed_expectancy_r;min_profit_factor"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+# ICT Forward Log Report
+
+- logs: `logs\turtle_soup_stability_minrisk25_forward_shadow.csv`
+
+## Summary
+| scope | model | symbol | signals | filled | fill_rate | avg_slippage_bps | avg_outcome_r | avg_net_outcome_r | win_rate | missing_fill_count | passed | failed_gates |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| overall | ALL | ALL | 0 | 0 | 0.0 |  |  |  |  | 0 | False | min_signals;min_fill_rate;max_avg_slippage_bps;min_avg_net_outcome_r |

@@ -1,0 +1,5 @@
+phase,start_date,end_date,count,activated_trades,managed_expectancy,gross_managed_expectancy,profit_factor,max_drawdown_r,win_rate,avg_execution_cost_r,avg_funding_cost_r,avg_total_cost_r,session_overtrade_count,passed,failed_gates
+overall,2022-03-18,2023-04-30,11,11,0.415328,0.818182,4.110634,1.468707,0.909091,0.39756,0.005293,0.402854,0,False,min_phase_trades;min_total_trades
+train,2022-03-18,2022-09-08,4,4,0.693499,1.0,inf,0.0,1.0,0.306501,0.0,0.306501,0,False,min_phase_trades
+validation,2022-09-17,2023-02-28,4,4,0.197323,0.5,1.537407,1.468707,0.75,0.309286,-0.006609,0.302677,0,False,min_phase_trades
+test,2023-04-12,2023-04-30,3,3,0.335107,1.0,inf,0.0,1.0,0.636672,0.028221,0.664893,0,False,min_phase_trades

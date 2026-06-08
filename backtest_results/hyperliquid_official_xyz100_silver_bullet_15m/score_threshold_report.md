@@ -1,0 +1,14 @@
+# ICT Decision Score Threshold Report
+
+- events: `backtest_results\hyperliquid_official_xyz100_silver_bullet_15m\events.csv`
+- thresholds: 0
+
+## All Models
+| scope | model | threshold | filter_name | filtered_out | count | activated_trades | invalidated_before_entry | avg_decision_score | avg_mfe_r | median_mfe_r | avg_rr | expectancy | gross_managed_expectancy | managed_expectancy | avg_managed_outcome_r | avg_execution_cost_r | avg_funding_cost_r | avg_total_cost_r | profit_factor | target_before_invalidation_rate | hit_1r_before_invalidation_rate | hit_2r_before_invalidation_rate | invalidation_rate | same_bar_ambiguous_count | no_trade_reason_count | top_no_trade_reasons |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| all | ALL | 0 | none |  | 72 | 68 |  | 78.0 | 2.461995 | 1.426835 | 2.0 | -0.061763 | -0.058894 | -1.478487 | -1.478487 | 1.336732 | 0.003994 | 1.340727 | 0.066541 | 0.236111 | 0.388889 | 0.236111 | 0.597222 | 4 |  |  |
+
+## By Model
+| scope | model | threshold | filter_name | filtered_out | count | activated_trades | invalidated_before_entry | avg_decision_score | avg_mfe_r | median_mfe_r | avg_rr | expectancy | gross_managed_expectancy | managed_expectancy | avg_managed_outcome_r | avg_execution_cost_r | avg_funding_cost_r | avg_total_cost_r | profit_factor | target_before_invalidation_rate | hit_1r_before_invalidation_rate | hit_2r_before_invalidation_rate | invalidation_rate | same_bar_ambiguous_count | no_trade_reason_count | top_no_trade_reasons |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| model | silver_bullet | 0 | none |  | 72 | 68 |  | 78.0 | 2.461995 | 1.426835 | 2.0 | -0.061763 | -0.058894 | -1.478487 | -1.478487 | 1.336732 | 0.003994 | 1.340727 | 0.066541 | 0.236111 | 0.388889 | 0.236111 | 0.597222 | 4 |  |  |

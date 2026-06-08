@@ -1,0 +1,53 @@
+# ICT Phase Attribution Report
+
+- events: `backtest_results\turtle_soup_btc_eth_is_2022-01-01_2023-06-30_15m_30m_strong_no_smt_minrisk35_first\events.csv`
+- realized R uses `net_managed_outcome_r` when available, otherwise `managed_outcome_r`.
+
+| phase | scope | group | filter_name | threshold | dedupe_session | dedupe_selection | trade_count | min_trades | sample_valid | win_rate_pct | expectancy_r | profit_factor | max_drawdown_r | total_pnl_r | avg_decision_score | avg_target_distance_r | avg_risk_bps | avg_execution_cost_r | avg_funding_cost_r | avg_total_cost_r |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| overall | ALL | ALL | model_rules | 0 | True | first | 171 | 30 | True | 76.608187 | 0.330721 | 2.189534 | 3.011907 | 56.553282 | 59.005848 | 3.290624 | 61.000632 | 0.186469 | -2e-06 | 0.186466 |
+| train | ALL | ALL | model_rules | 0 | True | first | 57 | 30 | True | 73.684211 | 0.287443 | 1.92668 | 2.708161 | 16.384233 | 61.754386 | 3.58889 | 61.304438 | 0.18542 | 0.000822 | 0.186242 |
+| train | by_timeframe | 15m | model_rules | 0 | True | first | 24 | 30 | False | 83.333333 | 0.463843 | 3.342895 | 1.28208 | 11.13224 | 63.333333 | 4.090766 | 54.315657 | 0.202823 | 0.0 | 0.202823 |
+| train | by_timeframe | 30m | model_rules | 0 | True | first | 33 | 30 | True | 66.666667 | 0.159151 | 1.406215 | 5.042027 | 5.251993 | 60.606061 | 3.223889 | 66.387188 | 0.172763 | 0.001419 | 0.174182 |
+| train | by_symbol | BTCUSDT | model_rules | 0 | True | first | 28 | 30 | False | 75.0 | 0.284008 | 1.941831 | 1.642176 | 7.952216 | 61.428571 | 3.284167 | 50.224963 | 0.214731 | 0.001262 | 0.215992 |
+| train | by_symbol | ETHUSDT | model_rules | 0 | True | first | 29 | 30 | False | 72.413793 | 0.290759 | 1.91283 | 2.521969 | 8.432017 | 62.068966 | 3.883105 | 72.001862 | 0.15712 | 0.000397 | 0.157517 |
+| train | by_direction | long | model_rules | 0 | True | first | 28 | 30 | False | 71.428571 | 0.235117 | 1.691438 | 3.159194 | 6.583288 | 60.0 | 2.878462 | 60.152992 | 0.191978 | 0.001476 | 0.193454 |
+| train | by_direction | short | model_rules | 0 | True | first | 29 | 30 | False | 75.862069 | 0.337964 | 2.201181 | 2.368742 | 9.800945 | 63.448276 | 4.27482 | 62.416179 | 0.179088 | 0.00019 | 0.179278 |
+| train | by_session_label | custom | model_rules | 0 | True | first | 10 | 30 | False | 80.0 | 0.411006 | 2.724818 | 1.204808 | 4.110056 | 67.0 | 5.024614 | 60.236757 | 0.188994 | 0.0 | 0.188994 |
+| train | by_session_label | london_open | model_rules | 0 | True | first | 21 | 30 | False | 90.47619 | 0.640291 | 6.973777 | 1.159132 | 13.446117 | 61.904762 | 3.85719 | 67.485204 | 0.16897 | 0.000263 | 0.169233 |
+| train | by_session_label | ny_open | model_rules | 0 | True | first | 26 | 30 | False | 57.692308 | -0.045075 | 0.910174 | 5.664221 | -1.17194 | 59.615385 | 2.819985 | 56.722927 | 0.197331 | 0.001589 | 0.198921 |
+| train | by_score_bucket | high | model_rules | 0 | True | first | 28 | 30 | False | 71.428571 | 0.223427 | 1.651357 | 3.35504 | 6.255965 | 70.0 | 5.465681 | 51.773996 | 0.205144 | 0.0 | 0.205144 |
+| train | by_score_bucket | medium | model_rules | 0 | True | first | 29 | 30 | False | 75.862069 | 0.349251 | 2.254109 | 1.850266 | 10.128268 | 53.793103 | 1.776816 | 70.506244 | 0.166376 | 0.001615 | 0.167991 |
+| train | by_no_trade_reasons | none | model_rules | 0 | True | first | 28 | 30 | False | 71.428571 | 0.223427 | 1.651357 | 3.35504 | 6.255965 | 70.0 | 5.465681 | 51.773996 | 0.205144 | 0.0 | 0.205144 |
+| train | by_no_trade_reasons | target_rr_below_2 | model_rules | 0 | True | first | 18 | 30 | False | 83.333333 | 0.507436 | 3.644019 | 1.2142 | 9.133855 | 50.0 | 1.348859 | 76.080091 | 0.156628 | 0.002602 | 0.15923 |
+| train | by_no_trade_reasons | target_rr_below_3 | model_rules | 0 | True | first | 11 | 30 | False | 63.636364 | 0.090401 | 1.21517 | 2.729354 | 0.994413 | 60.0 | 2.477108 | 61.385403 | 0.182326 | 0.0 | 0.182326 |
+| validation | ALL | ALL | model_rules | 0 | True | first | 57 | 30 | True | 75.438596 | 0.288967 | 1.982119 | 3.011907 | 16.471107 | 61.052632 | 4.311843 | 63.795925 | 0.183166 | -0.000258 | 0.182908 |
+| validation | by_timeframe | 15m | model_rules | 0 | True | first | 34 | 30 | True | 76.470588 | 0.31864 | 2.131089 | 3.373316 | 10.833762 | 60.588235 | 4.668186 | 65.583439 | 0.180967 | -0.000432 | 0.180535 |
+| validation | by_timeframe | 30m | model_rules | 0 | True | first | 23 | 30 | False | 73.913043 | 0.245102 | 1.783746 | 2.841383 | 5.637345 | 61.73913 | 3.785077 | 61.153512 | 0.186416 | 0.0 | 0.186416 |
+| validation | by_symbol | BTCUSDT | model_rules | 0 | True | first | 27 | 30 | False | 88.888889 | 0.504023 | 4.700099 | 1.263157 | 13.608625 | 58.518519 | 2.963871 | 60.275107 | 0.195862 | 0.0 | 0.195862 |
+| validation | by_symbol | ETHUSDT | model_rules | 0 | True | first | 30 | 30 | True | 63.333333 | 0.095416 | 1.218626 | 2.829772 | 2.862482 | 63.333333 | 5.525019 | 66.964661 | 0.17174 | -0.000489 | 0.171251 |
+| validation | by_direction | long | model_rules | 0 | True | first | 33 | 30 | True | 72.727273 | 0.227108 | 1.70112 | 3.598239 | 7.494553 | 60.606061 | 4.170943 | 69.296769 | 0.175469 | 0.0 | 0.175469 |
+| validation | by_direction | short | model_rules | 0 | True | first | 24 | 30 | False | 79.166667 | 0.374023 | 2.476021 | 2.448717 | 8.976554 | 61.666667 | 4.505581 | 56.232264 | 0.193749 | -0.000612 | 0.193138 |
+| validation | by_session_label | custom | model_rules | 0 | True | first | 9 | 30 | False | 100.0 | 0.72947 | inf | 0.0 | 6.565233 | 56.666667 | 2.968029 | 62.788925 | 0.186929 | 0.0 | 0.186929 |
+| validation | by_session_label | london_open | model_rules | 0 | True | first | 22 | 30 | False | 54.545455 | -0.119145 | 0.782076 | 6.046956 | -2.621183 | 67.272727 | 7.053105 | 66.610947 | 0.178412 | -0.000667 | 0.177744 |
+| validation | by_session_label | ny_open | model_rules | 0 | True | first | 26 | 30 | False | 84.615385 | 0.48181 | 3.641167 | 1.501 | 12.527057 | 57.307692 | 2.457481 | 61.762559 | 0.185887 | 0.0 | 0.185887 |
+| validation | by_score_bucket | high | model_rules | 0 | True | first | 27 | 30 | False | 66.666667 | 0.149027 | 1.372594 | 3.292885 | 4.02373 | 70.0 | 7.425431 | 64.528177 | 0.184306 | 0.0 | 0.184306 |
+| validation | by_score_bucket | medium | model_rules | 0 | True | first | 30 | 30 | True | 83.333333 | 0.414913 | 3.084377 | 1.263157 | 12.447377 | 53.0 | 1.509614 | 63.136898 | 0.18214 | -0.000489 | 0.18165 |
+| validation | by_no_trade_reasons | none | model_rules | 0 | True | first | 27 | 30 | False | 66.666667 | 0.149027 | 1.372594 | 3.292885 | 4.02373 | 70.0 | 7.425431 | 64.528177 | 0.184306 | 0.0 | 0.184306 |
+| validation | by_no_trade_reasons | target_rr_below_2 | model_rules | 0 | True | first | 21 | 30 | False | 90.47619 | 0.535903 | 5.776466 | 1.263157 | 11.253966 | 50.0 | 1.031623 | 67.363511 | 0.173473 | 0.0 | 0.173473 |
+| validation | by_no_trade_reasons | target_rr_below_3 | model_rules | 0 | True | first | 9 | 30 | False | 66.666667 | 0.132601 | 1.330071 | 1.551318 | 1.193411 | 60.0 | 2.624928 | 53.274799 | 0.202363 | -0.001631 | 0.200732 |
+| test | ALL | ALL | model_rules | 0 | True | first | 57 | 30 | True | 80.701754 | 0.415753 | 2.810274 | 2.926277 | 23.697942 | 54.210526 | 1.971138 | 57.901534 | 0.19082 | -0.000571 | 0.190249 |
+| test | by_timeframe | 15m | model_rules | 0 | True | first | 22 | 30 | False | 90.909091 | 0.642101 | 6.843401 | 1.231976 | 14.126228 | 52.727273 | 1.539912 | 64.739784 | 0.176081 | 0.0 | 0.176081 |
+| test | by_timeframe | 30m | model_rules | 0 | True | first | 35 | 30 | True | 74.285714 | 0.273478 | 1.896788 | 4.998661 | 9.571714 | 55.142857 | 2.242195 | 53.603205 | 0.200085 | -0.00093 | 0.199155 |
+| test | by_symbol | BTCUSDT | model_rules | 0 | True | first | 20 | 30 | False | 85.0 | 0.475754 | 3.679124 | 2.659548 | 9.515078 | 53.0 | 1.751604 | 53.693098 | 0.201354 | 0.0 | 0.201354 |
+| test | by_symbol | ETHUSDT | model_rules | 0 | True | first | 37 | 30 | True | 78.378378 | 0.383321 | 2.486792 | 1.714188 | 14.182864 | 54.864865 | 2.089806 | 60.176364 | 0.185126 | -0.00088 | 0.184247 |
+| test | by_direction | long | model_rules | 0 | True | first | 24 | 30 | False | 83.333333 | 0.456507 | 3.269709 | 1.689779 | 10.956163 | 53.75 | 1.709889 | 60.007196 | 0.190876 | 0.000207 | 0.191083 |
+| test | by_direction | short | model_rules | 0 | True | first | 33 | 30 | True | 78.787879 | 0.386115 | 2.541901 | 3.066812 | 12.741779 | 54.545455 | 2.161137 | 56.370143 | 0.19078 | -0.001137 | 0.189643 |
+| test | by_session_label | custom | model_rules | 0 | True | first | 9 | 30 | False | 88.888889 | 0.595582 | 5.737473 | 1.131455 | 5.360238 | 56.666667 | 2.198764 | 60.337943 | 0.182196 | 0.0 | 0.182196 |
+| test | by_session_label | london_open | model_rules | 0 | True | first | 8 | 30 | False | 87.5 | 0.544254 | 4.461214 | 1.25795 | 4.354034 | 60.0 | 4.148236 | 52.304058 | 0.205746 | 0.0 | 0.205746 |
+| test | by_session_label | ny_open | model_rules | 0 | True | first | 40 | 30 | True | 77.5 | 0.349592 | 2.306714 | 3.761399 | 13.98367 | 52.5 | 1.484503 | 58.472837 | 0.189776 | -0.000814 | 0.188962 |
+| test | by_score_bucket | high | model_rules | 0 | True | first | 7 | 30 | False | 85.714286 | 0.499443 | 3.857029 | 1.223684 | 3.496101 | 70.0 | 5.543274 | 46.520748 | 0.218393 | -0.003551 | 0.214843 |
+| test | by_score_bucket | medium | model_rules | 0 | True | first | 50 | 30 | True | 80.0 | 0.404037 | 2.702338 | 3.004115 | 20.201841 | 52.0 | 1.471039 | 59.494844 | 0.18696 | -0.000154 | 0.186806 |
+| test | by_no_trade_reasons | none | model_rules | 0 | True | first | 7 | 30 | False | 85.714286 | 0.499443 | 3.857029 | 1.223684 | 3.496101 | 70.0 | 5.543274 | 46.520748 | 0.218393 | -0.003551 | 0.214843 |
+| test | by_no_trade_reasons | target_rr_below_2 | model_rules | 0 | True | first | 40 | 30 | True | 80.0 | 0.407565 | 2.715397 | 2.533949 | 16.302594 | 50.0 | 1.22305 | 61.811057 | 0.181181 | -0.000192 | 0.180989 |
+| test | by_no_trade_reasons | target_rr_below_3 | model_rules | 0 | True | first | 10 | 30 | False | 80.0 | 0.389925 | 2.649825 | 1.231976 | 3.899247 | 60.0 | 2.462997 | 50.229991 | 0.210075 | 0.0 | 0.210075 |

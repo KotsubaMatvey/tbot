@@ -1,0 +1,16 @@
+# ICT Decision Score Threshold Report
+
+- events: `backtest_results\ict2022_first_retested_fvg_session_fallback_late_2024-11-06_2026-04-20_btc_eth_30m\events.csv`
+- thresholds: 0
+
+## All Models
+| scope | model | threshold | filter_name | filtered_out | count | activated_trades | invalidated_before_entry | avg_decision_score | avg_mfe_r | median_mfe_r | avg_rr | expectancy | gross_managed_expectancy | managed_expectancy | avg_managed_outcome_r | avg_execution_cost_r | avg_funding_cost_r | avg_total_cost_r | profit_factor | target_before_invalidation_rate | hit_1r_before_invalidation_rate | hit_2r_before_invalidation_rate | invalidation_rate | same_bar_ambiguous_count | no_trade_reason_count | top_no_trade_reasons |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| all | ALL | 0 | none |  | 47 | 47 |  | 80.553191 | 1.0474 | 0.784322 | 0.838592 | -0.362277 | -0.356943 | -0.425013 | -0.425013 | 0.067858 | 0.000212 | 0.06807 | 0.277305 | 0.425532 | 0.148936 | 0.021277 | 0.553191 | 5 | 47 | target_rr_below_2:35;target_rr_below_3:12 |
+| filtered_all | ALL | 0 | model_rules | 35 | 12 | 12 |  | 88.0 | 0.875711 | 0.432338 | 2.0 | -0.606112 | -0.682631 | -0.72952 | -0.72952 | 0.046721 | 0.000168 | 0.046889 | 0.165284 | 0.083333 | 0.083333 | 0.083333 | 0.833333 |  | 12 | target_rr_below_3:12 |
+
+## By Model
+| scope | model | threshold | filter_name | filtered_out | count | activated_trades | invalidated_before_entry | avg_decision_score | avg_mfe_r | median_mfe_r | avg_rr | expectancy | gross_managed_expectancy | managed_expectancy | avg_managed_outcome_r | avg_execution_cost_r | avg_funding_cost_r | avg_total_cost_r | profit_factor | target_before_invalidation_rate | hit_1r_before_invalidation_rate | hit_2r_before_invalidation_rate | invalidation_rate | same_bar_ambiguous_count | no_trade_reason_count | top_no_trade_reasons |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| model | ict2022_mss_fvg | 0 | none |  | 47 | 47 |  | 80.553191 | 1.0474 | 0.784322 | 0.838592 | -0.362277 | -0.356943 | -0.425013 | -0.425013 | 0.067858 | 0.000212 | 0.06807 | 0.277305 | 0.425532 | 0.148936 | 0.021277 | 0.553191 | 5 | 47 | target_rr_below_2:35;target_rr_below_3:12 |
+| filtered_model | ict2022_mss_fvg | 0 | model_rules | 35 | 12 | 12 |  | 88.0 | 0.875711 | 0.432338 | 2.0 | -0.606112 | -0.682631 | -0.72952 | -0.72952 | 0.046721 | 0.000168 | 0.046889 | 0.165284 | 0.083333 | 0.083333 | 0.083333 | 0.833333 |  | 12 | target_rr_below_3:12 |

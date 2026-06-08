@@ -1,0 +1,26 @@
+# ICT Data Coverage Report
+
+- data_dir: `data/history_2025-05-01_2025-06-30`
+- passed: `True`
+
+## Coverage
+| symbol | timeframe | path | candles | start | end | expected_candles | coverage_pct | max_gap_bars | passes | missing_reason |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| BTCUSDT | 1m | data\history_2025-05-01_2025-06-30\BTCUSDT_1m.csv | 87840 | 2025-05-01 | 2025-06-30 | 87840 | 100.0 | 1.0 | True |  |
+| BTCUSDT | 5m | data\history_2025-05-01_2025-06-30\BTCUSDT_5m.csv | 17568 | 2025-05-01 | 2025-06-30 | 17568 | 100.0 | 1.0 | True |  |
+| BTCUSDT | 15m | data\history_2025-05-01_2025-06-30\BTCUSDT_15m.csv | 5856 | 2025-05-01 | 2025-06-30 | 5856 | 100.0 | 1.0 | True |  |
+| BTCUSDT | 1h | data\history_2025-05-01_2025-06-30\BTCUSDT_1h.csv | 1464 | 2025-05-01 | 2025-06-30 | 1464 | 100.0 | 1.0 | True |  |
+| BTCUSDT | 4h | data\history_2025-05-01_2025-06-30\BTCUSDT_4h.csv | 366 | 2025-05-01 | 2025-06-30 | 366 | 100.0 | 1.0 | True |  |
+| BTCUSDT | 1d | data\history_2025-05-01_2025-06-30\BTCUSDT_1d.csv | 61 | 2025-05-01 | 2025-06-30 | 61 | 100.0 | 1.0 | True |  |
+| ETHUSDT | 1m | data\history_2025-05-01_2025-06-30\ETHUSDT_1m.csv | 87840 | 2025-05-01 | 2025-06-30 | 87840 | 100.0 | 1.0 | True |  |
+| ETHUSDT | 5m | data\history_2025-05-01_2025-06-30\ETHUSDT_5m.csv | 17568 | 2025-05-01 | 2025-06-30 | 17568 | 100.0 | 1.0 | True |  |
+| ETHUSDT | 15m | data\history_2025-05-01_2025-06-30\ETHUSDT_15m.csv | 5856 | 2025-05-01 | 2025-06-30 | 5856 | 100.0 | 1.0 | True |  |
+| ETHUSDT | 1h | data\history_2025-05-01_2025-06-30\ETHUSDT_1h.csv | 1464 | 2025-05-01 | 2025-06-30 | 1464 | 100.0 | 1.0 | True |  |
+| ETHUSDT | 4h | data\history_2025-05-01_2025-06-30\ETHUSDT_4h.csv | 366 | 2025-05-01 | 2025-06-30 | 366 | 100.0 | 1.0 | True |  |
+| ETHUSDT | 1d | data\history_2025-05-01_2025-06-30\ETHUSDT_1d.csv | 61 | 2025-05-01 | 2025-06-30 | 61 | 100.0 | 1.0 | True |  |
+| SOLUSDT | 1m | data\history_2025-05-01_2025-06-30\SOLUSDT_1m.csv | 87840 | 2025-05-01 | 2025-06-30 | 87840 | 100.0 | 1.0 | True |  |
+| SOLUSDT | 5m | data\history_2025-05-01_2025-06-30\SOLUSDT_5m.csv | 17568 | 2025-05-01 | 2025-06-30 | 17568 | 100.0 | 1.0 | True |  |
+| SOLUSDT | 15m | data\history_2025-05-01_2025-06-30\SOLUSDT_15m.csv | 5856 | 2025-05-01 | 2025-06-30 | 5856 | 100.0 | 1.0 | True |  |
+| SOLUSDT | 1h | data\history_2025-05-01_2025-06-30\SOLUSDT_1h.csv | 1464 | 2025-05-01 | 2025-06-30 | 1464 | 100.0 | 1.0 | True |  |
+| SOLUSDT | 4h | data\history_2025-05-01_2025-06-30\SOLUSDT_4h.csv | 366 | 2025-05-01 | 2025-06-30 | 366 | 100.0 | 1.0 | True |  |
+| SOLUSDT | 1d | data\history_2025-05-01_2025-06-30\SOLUSDT_1d.csv | 61 | 2025-05-01 | 2025-06-30 | 61 | 100.0 | 1.0 | True |  |

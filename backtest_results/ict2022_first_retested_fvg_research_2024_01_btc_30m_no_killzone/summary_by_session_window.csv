@@ -1,0 +1,5 @@
+model,session_window,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,gross_managed_expectancy,managed_expectancy,avg_managed_outcome_r,avg_execution_cost_r,avg_funding_cost_r,avg_total_cost_r,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+ict2022_mss_fvg,02:00-05:00,2,2,2,0,4.701343,4.701343,1.0,0.426286,78.0,0.426286,0.426286,0.323313,0.323313,0.102973,0.0,0.102973,1.0,0.0,0.0,0.0,1.0,,,,0,2
+ict2022_mss_fvg,07:00-10:00,6,6,6,0,1.100976,0.954183,0.333333,1.228883,81.333333,-0.120012,-0.187268,-0.283864,-0.283864,0.095823,0.000773,0.096596,0.333333,0.166667,0.0,0.5,1.5,3.666667,7.0,,1,6
+ict2022_mss_fvg,13:30-16:00,2,2,2,0,3.581407,3.581407,1.0,1.179156,80.5,1.179156,0.896088,0.813357,0.813357,0.067024,0.015707,0.082731,1.0,0.5,0.5,0.0,2.0,,6.0,8.0,0,2
+ict2022_mss_fvg,none,1,1,1,0,0.929334,0.929334,1.0,0.18522,58.0,0.18522,0.18522,0.123473,0.123473,0.061747,0.0,0.061747,1.0,0.0,0.0,0.0,1.0,,,,0,1

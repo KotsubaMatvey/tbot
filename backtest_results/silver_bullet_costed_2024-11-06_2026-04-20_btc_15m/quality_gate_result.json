@@ -1,0 +1,69 @@
+{
+  "passed": false,
+  "rows": [
+    {
+      "phase": "overall",
+      "start_date": "2025-01-10",
+      "end_date": "2026-04-07",
+      "count": 17,
+      "activated_trades": 17,
+      "managed_expectancy": -0.29328,
+      "gross_managed_expectancy": -0.094615,
+      "profit_factor": 0.536827,
+      "max_drawdown_r": 8.293195,
+      "win_rate": 0.470588,
+      "avg_execution_cost_r": 0.198665,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_managed_expectancy_r;min_phase_trades;min_profit_factor;min_total_trades"
+    },
+    {
+      "phase": "train",
+      "start_date": "2025-01-10",
+      "end_date": "2025-04-28",
+      "count": 5,
+      "activated_trades": 5,
+      "managed_expectancy": -0.097099,
+      "gross_managed_expectancy": 0.086234,
+      "profit_factor": 0.803222,
+      "max_drawdown_r": 2.467216,
+      "win_rate": 0.6,
+      "avg_execution_cost_r": 0.183332,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_phase_trades;min_managed_expectancy_r;min_profit_factor"
+    },
+    {
+      "phase": "validation",
+      "start_date": "2025-04-30",
+      "end_date": "2025-08-14",
+      "count": 6,
+      "activated_trades": 6,
+      "managed_expectancy": -0.161437,
+      "gross_managed_expectancy": -0.006605,
+      "profit_factor": 0.715385,
+      "max_drawdown_r": 3.403256,
+      "win_rate": 0.5,
+      "avg_execution_cost_r": 0.154832,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_phase_trades;min_managed_expectancy_r;min_profit_factor"
+    },
+    {
+      "phase": "test",
+      "start_date": "2025-09-06",
+      "end_date": "2026-04-07",
+      "count": 6,
+      "activated_trades": 6,
+      "managed_expectancy": -0.588608,
+      "gross_managed_expectancy": -0.333333,
+      "profit_factor": 0.278357,
+      "max_drawdown_r": 4.893903,
+      "win_rate": 0.333333,
+      "avg_execution_cost_r": 0.255275,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_phase_trades;min_managed_expectancy_r;min_profit_factor"
+    }
+  ]
+}

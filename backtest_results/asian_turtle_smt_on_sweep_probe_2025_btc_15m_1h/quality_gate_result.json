@@ -1,0 +1,69 @@
+{
+  "passed": false,
+  "rows": [
+    {
+      "phase": "overall",
+      "start_date": "2025-03-16",
+      "end_date": "2025-12-13",
+      "count": 12,
+      "activated_trades": 12,
+      "managed_expectancy": 0.182091,
+      "gross_managed_expectancy": 0.574308,
+      "profit_factor": 1.445244,
+      "max_drawdown_r": 3.396789,
+      "win_rate": 0.666667,
+      "avg_execution_cost_r": 0.392216,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_managed_expectancy_r;min_phase_trades;min_profit_factor;min_total_trades"
+    },
+    {
+      "phase": "train",
+      "start_date": "2025-03-16",
+      "end_date": "2025-05-16",
+      "count": 4,
+      "activated_trades": 4,
+      "managed_expectancy": 0.800593,
+      "gross_managed_expectancy": 1.0,
+      "profit_factor": "inf",
+      "max_drawdown_r": 0.0,
+      "win_rate": 1.0,
+      "avg_execution_cost_r": 0.199407,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_phase_trades"
+    },
+    {
+      "phase": "validation",
+      "start_date": "2025-05-26",
+      "end_date": "2025-06-14",
+      "count": 4,
+      "activated_trades": 4,
+      "managed_expectancy": 0.342079,
+      "gross_managed_expectancy": 0.875,
+      "profit_factor": 1.905658,
+      "max_drawdown_r": 1.510853,
+      "win_rate": 0.75,
+      "avg_execution_cost_r": 0.532921,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_phase_trades"
+    },
+    {
+      "phase": "test",
+      "start_date": "2025-09-03",
+      "end_date": "2025-12-13",
+      "count": 4,
+      "activated_trades": 4,
+      "managed_expectancy": -0.596398,
+      "gross_managed_expectancy": -0.152077,
+      "profit_factor": 0.297693,
+      "max_drawdown_r": 3.396789,
+      "win_rate": 0.25,
+      "avg_execution_cost_r": 0.44432,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_phase_trades;min_managed_expectancy_r;min_profit_factor"
+    }
+  ]
+}

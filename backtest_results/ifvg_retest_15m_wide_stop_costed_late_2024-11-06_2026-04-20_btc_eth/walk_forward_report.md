@@ -1,0 +1,13 @@
+# ICT Walk-Forward Quality Report
+
+- events: `backtest_results\ifvg_retest_15m_wide_stop_costed_late_2024-11-06_2026-04-20_btc_eth\events.csv`
+- threshold: `0.0`
+- passed: `False`
+
+## Phases
+| phase | start_date | end_date | count | activated_trades | managed_expectancy | gross_managed_expectancy | profit_factor | max_drawdown_r | win_rate | avg_execution_cost_r | avg_funding_cost_r | avg_total_cost_r | session_overtrade_count | passed | failed_gates |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| overall | 2025-03-01 | 2026-03-13 | 5 | 5 | -0.558968 | -0.4 | 0.199113 | 3.164835 | 0.4 | 0.158968 | 0.0 | 0.158968 | 0 | False | min_managed_expectancy_r;min_phase_trades;min_profit_factor;min_total_trades |
+| train | 2024-11-13 | 2025-04-20 | 2 | 2 | -0.389412 | -0.25 | 0.294333 | 1.103672 | 0.5 | 0.139412 | 0.0 | 0.139412 | 0 | False | min_phase_trades;min_managed_expectancy_r;min_profit_factor |
+| validation | 2025-04-20 | 2025-09-16 | 0 | 0 |  |  |  |  |  |  |  |  | 0 | False | min_phase_trades;min_managed_expectancy_r;min_profit_factor |
+| test | 2025-09-21 | 2026-04-14 | 3 | 3 | -0.672006 | -0.5 | 0.155068 | 2.38601 | 0.333333 | 0.172006 | 0.0 | 0.172006 | 0 | False | min_phase_trades;min_managed_expectancy_r;min_profit_factor |

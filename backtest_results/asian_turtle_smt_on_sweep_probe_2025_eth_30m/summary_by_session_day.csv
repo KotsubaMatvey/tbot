@@ -1,0 +1,7 @@
+model,session_date,session_window,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,gross_managed_expectancy,managed_expectancy,avg_managed_outcome_r,avg_execution_cost_r,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+turtle_soup,2025-05-15,08:30-12:00,1,1,1,0,2.360233,2.360233,0.0,2.0,80.0,-1.0,-1.0,-1.081771,-1.081771,0.081771,0.0,0.0,0.0,1.0,1.0,2.0,,,0,1
+turtle_soup,2025-06-02,08:30-12:00,1,1,1,0,0.85944,0.85944,0.0,2.0,80.0,-1.0,-1.0,-1.138965,-1.138965,0.138965,0.0,0.0,0.0,1.0,1.0,6.0,,,0,1
+turtle_soup,2025-06-15,08:30-12:00,1,1,1,0,7.350432,7.350432,0.0,2.0,80.0,-1.0,0.5,0.173351,0.173351,0.326649,0.0,1.0,0.0,1.0,1.0,4.0,2.0,,1,1
+turtle_soup,2025-08-31,08:30-12:00,1,1,1,0,11.639323,11.639323,1.0,2.0,80.0,2.0,1.5,1.101365,1.101365,0.398635,1.0,1.0,1.0,0.0,1.0,,1.0,2.0,0,1
+turtle_soup,2025-09-01,08:30-12:00,1,1,1,0,1.84924,1.84924,0.0,2.0,80.0,-1.0,-1.0,-1.235253,-1.235253,0.235253,0.0,0.0,0.0,1.0,1.0,3.0,,,0,1
+turtle_soup,2025-09-26,08:30-12:00,1,1,1,0,2.890017,2.890017,1.0,2.0,80.0,2.0,1.5,1.265486,1.265486,0.234514,1.0,1.0,1.0,0.0,1.0,,1.0,1.0,0,1

@@ -1,0 +1,41 @@
+{
+  "passed": false,
+  "rows": [
+    {
+      "phase": "overall",
+      "start_date": "2026-01-11",
+      "end_date": "2026-02-23",
+      "count": 2,
+      "activated_trades": 2,
+      "managed_expectancy": -0.294086,
+      "gross_managed_expectancy": 0.0,
+      "profit_factor": 0.46898,
+      "max_drawdown_r": 1.107627,
+      "win_rate": 0.5,
+      "avg_execution_cost_r": 0.294086,
+      "avg_funding_cost_r": 0.0,
+      "avg_total_cost_r": 0.294086,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_managed_expectancy_r;min_phase_trades;min_profit_factor;min_total_trades"
+    },
+    {
+      "phase": "test",
+      "start_date": "2026-01-11",
+      "end_date": "2026-02-23",
+      "count": 2,
+      "activated_trades": 2,
+      "managed_expectancy": -0.294086,
+      "gross_managed_expectancy": 0.0,
+      "profit_factor": 0.46898,
+      "max_drawdown_r": 1.107627,
+      "win_rate": 0.5,
+      "avg_execution_cost_r": 0.294086,
+      "avg_funding_cost_r": 0.0,
+      "avg_total_cost_r": 0.294086,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_phase_trades;min_managed_expectancy_r;min_profit_factor"
+    }
+  ]
+}

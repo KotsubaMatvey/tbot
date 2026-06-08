@@ -1,0 +1,19 @@
+# Trade P&L Report
+
+- events: `backtest_results\turtle_soup_btc_eth_is_2022-01-01_2023-06-30_30m_retest_entry\events.csv`
+- realized R uses `net_managed_outcome_r` when available, otherwise `managed_outcome_r`.
+- `sample_valid` is false when activated trade count is below `min_trades`.
+
+| scope | group | filter_name | threshold | filtered_out | trade_count | min_trades | sample_valid | win_rate_pct | avg_realized_rr | avg_win_r | avg_loss_r | expectancy_r | sharpe | profit_factor | max_drawdown_r | max_consecutive_losses | total_pnl_r | avg_execution_cost_r | avg_funding_cost_r | avg_total_cost_r |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| all | ALL | none | 0 | 0 | 27 | 100 | False | 88.888889 | 0.490399 | 0.618819 | 0.53696 | 0.490399 | 4.430751 | 9.219602 | 1.468707 | 1 | 13.240785 | 0.433498 | 0.002028 | 0.435526 |
+| filtered_all | ALL | model_rules | 0 | 15 | 12 | 100 | False | 91.666667 | 0.451438 | 0.625997 | 1.468707 | 0.451438 | 2.243591 | 4.688452 | 1.468707 | 1 | 5.417256 | 0.377043 | 0.004852 | 0.381895 |
+| by_model | turtle_soup | model_rules | 0 | 0 | 12 | 100 | False | 91.666667 | 0.451438 | 0.625997 | 1.468707 | 0.451438 | 2.243591 | 4.688452 | 1.468707 | 1 | 5.417256 | 0.377043 | 0.004852 | 0.381895 |
+| by_symbol | BTCUSDT | model_rules | 0 | 0 | 8 | 100 | False | 87.5 | 0.290935 | 0.542312 | 1.468707 | 0.290935 | 1.036733 | 2.584712 | 1.468707 | 1 | 2.327478 | 0.451787 | 0.007278 | 0.459065 |
+| by_symbol | ETHUSDT | model_rules | 0 | 0 | 4 | 100 | False | 100.0 | 0.772445 | 0.772445 |  | 0.772445 | 53.991188 | inf | 0.0 | 0 | 3.089778 | 0.227556 | 0.0 | 0.227556 |
+| by_timeframe | 30m | model_rules | 0 | 0 | 12 | 100 | False | 91.666667 | 0.451438 | 0.625997 | 1.468707 | 0.451438 | 2.243591 | 4.688452 | 1.468707 | 1 | 5.417256 | 0.377043 | 0.004852 | 0.381895 |
+| by_direction | long | model_rules | 0 | 0 | 4 | 100 | False | 75.0 | 0.063222 | 0.573864 | 1.468707 | 0.063221 | 0.166915 | 1.172183 | 1.468707 | 1 | 0.252886 | 0.415613 | 0.021166 | 0.436779 |
+| by_direction | short | model_rules | 0 | 0 | 8 | 100 | False | 100.0 | 0.645546 | 0.645546 |  | 0.645546 | 7.657124 | inf | 0.0 | 0 | 5.16437 | 0.357758 | -0.003305 | 0.354454 |
+| by_htf_bias | none | model_rules | 0 | 0 | 12 | 100 | False | 91.666667 | 0.451438 | 0.625997 | 1.468707 | 0.451438 | 2.243591 | 4.688452 | 1.468707 | 1 | 5.417256 | 0.377043 | 0.004852 | 0.381895 |
+| by_htf_context_alignment | neutral | model_rules | 0 | 0 | 12 | 100 | False | 91.666667 | 0.451438 | 0.625997 | 1.468707 | 0.451438 | 2.243591 | 4.688452 | 1.468707 | 1 | 5.417256 | 0.377043 | 0.004852 | 0.381895 |
+| by_htf_draw_direction | none | model_rules | 0 | 0 | 12 | 100 | False | 91.666667 | 0.451438 | 0.625997 | 1.468707 | 0.451438 | 2.243591 | 4.688452 | 1.468707 | 1 | 5.417256 | 0.377043 | 0.004852 | 0.381895 |

@@ -1,0 +1,69 @@
+{
+  "passed": false,
+  "rows": [
+    {
+      "phase": "overall",
+      "start_date": "2025-04-28",
+      "end_date": "2025-06-02",
+      "count": 4,
+      "activated_trades": 4,
+      "managed_expectancy": 0.928186,
+      "gross_managed_expectancy": 1.115093,
+      "profit_factor": "inf",
+      "max_drawdown_r": 0.0,
+      "win_rate": 1.0,
+      "avg_execution_cost_r": 0.186907,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_phase_trades;min_total_trades"
+    },
+    {
+      "phase": "train",
+      "start_date": "2025-04-28",
+      "end_date": "2025-04-28",
+      "count": 1,
+      "activated_trades": 1,
+      "managed_expectancy": 1.278108,
+      "gross_managed_expectancy": 1.5,
+      "profit_factor": "inf",
+      "max_drawdown_r": 0.0,
+      "win_rate": 1.0,
+      "avg_execution_cost_r": 0.221892,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_phase_trades"
+    },
+    {
+      "phase": "validation",
+      "start_date": "2025-04-30",
+      "end_date": "2025-04-30",
+      "count": 2,
+      "activated_trades": 2,
+      "managed_expectancy": 0.540838,
+      "gross_managed_expectancy": 0.730186,
+      "profit_factor": "inf",
+      "max_drawdown_r": 0.0,
+      "win_rate": 1.0,
+      "avg_execution_cost_r": 0.189348,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_phase_trades"
+    },
+    {
+      "phase": "test",
+      "start_date": "2025-04-30",
+      "end_date": "2025-06-02",
+      "count": 3,
+      "activated_trades": 3,
+      "managed_expectancy": 0.811546,
+      "gross_managed_expectancy": 0.986791,
+      "profit_factor": "inf",
+      "max_drawdown_r": 0.0,
+      "win_rate": 1.0,
+      "avg_execution_cost_r": 0.175245,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_phase_trades"
+    }
+  ]
+}

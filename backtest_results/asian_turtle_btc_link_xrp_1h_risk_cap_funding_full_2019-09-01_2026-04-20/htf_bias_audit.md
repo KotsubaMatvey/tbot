@@ -1,0 +1,12 @@
+# HTF Bias Audit
+
+- events: `backtest_results\asian_turtle_btc_link_xrp_1h_risk_cap_funding_full_2019-09-01_2026-04-20\events.csv`
+- verdict compares each HTF bucket against the full realized P&L baseline.
+
+| section | bucket | threshold | filter_name | trade_count | retention_pct | min_trades | sample_valid | win_rate_pct | avg_realized_rr | expectancy_r | profit_factor | max_drawdown_r | total_pnl_r | expectancy_delta_vs_all | win_rate_delta_vs_all | avg_realized_rr_delta_vs_all | verdict |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| baseline | all | 0 | model_rules | 107 | 100.0 | 100 | True | 73.831776 | 0.290168 | 0.290168 | 2.104551 | 3.635298 | 31.047927 | 0.0 | 0.0 | 0.0 | neutral |
+| htf_context_alignment | neutral | 0 | model_rules | 107 | 100.0 | 100 | True | 73.831776 | 0.290168 | 0.290168 | 2.104551 | 3.635298 | 31.047927 | 0.0 | 0.0 | 0.0 | neutral |
+| htf_bias_relation | neutral_or_missing | 0 | model_rules | 107 | 100.0 | 100 | True | 73.831776 | 0.290168 | 0.290168 | 2.104551 | 3.635298 | 31.047927 | 0.0 | 0.0 | 0.0 | neutral |
+| htf_draw_relation | neutral_or_missing | 0 | model_rules | 107 | 100.0 | 100 | True | 73.831776 | 0.290168 | 0.290168 | 2.104551 | 3.635298 | 31.047927 | 0.0 | 0.0 | 0.0 | neutral |
+| htf_bias | none | 0 | model_rules | 107 | 100.0 | 100 | True | 73.831776 | 0.290168 | 0.290168 | 2.104551 | 3.635298 | 31.047927 | 0.0 | 0.0 | 0.0 | neutral |

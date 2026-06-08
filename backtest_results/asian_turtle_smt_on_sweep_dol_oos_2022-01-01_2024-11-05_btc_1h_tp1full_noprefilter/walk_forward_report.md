@@ -1,0 +1,13 @@
+# ICT Walk-Forward Quality Report
+
+- events: `backtest_results\asian_turtle_smt_on_sweep_dol_oos_2022-01-01_2024-11-05_btc_1h_tp1full_noprefilter\events.csv`
+- threshold: `0.0`
+- passed: `False`
+
+## Phases
+| phase | start_date | end_date | count | activated_trades | managed_expectancy | gross_managed_expectancy | profit_factor | max_drawdown_r | win_rate | avg_execution_cost_r | avg_funding_cost_r | avg_total_cost_r | session_overtrade_count | passed | failed_gates |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| overall | 2022-03-27 | 2024-09-15 | 25 | 25 | 0.214801 | 0.407873 | 1.775204 | 2.125 | 0.72 | 0.193072 | 0.0 | 0.193072 | 0 | False | min_managed_expectancy_r;min_phase_trades;min_profit_factor;min_total_trades |
+| train | 2022-03-27 | 2023-04-12 | 8 | 8 | 0.249957 | 0.389982 | 1.822456 | 1.497885 | 0.75 | 0.140025 | 0.0 | 0.140025 | 0 | False | min_phase_trades;min_managed_expectancy_r |
+| validation | 2023-07-22 | 2024-03-12 | 8 | 8 | 0.34106 | 0.606766 | 3.130147 | 1.140955 | 0.75 | 0.265705 | 0.0 | 0.265705 | 0 | False | min_phase_trades |
+| test | 2024-05-05 | 2024-09-15 | 9 | 9 | 0.071322 | 0.246984 | 1.199654 | 2.125 | 0.666667 | 0.175662 | 0.0 | 0.175662 | 0 | False | min_phase_trades;min_managed_expectancy_r;min_profit_factor |

@@ -1,0 +1,16 @@
+scope,group,filter_name,threshold,filtered_out,trade_count,min_trades,sample_valid,win_rate_pct,avg_realized_rr,avg_win_r,avg_loss_r,expectancy_r,sharpe,profit_factor,max_drawdown_r,max_consecutive_losses,total_pnl_r,avg_execution_cost_r,avg_funding_cost_r,avg_total_cost_r
+all,ALL,none,0,0,121,100,True,38.842975,-0.600945,0.873466,1.537395,-0.600945,-3.477704,0.36085,74.08553,8,-72.714309,0.878097,0.000631,0.878728
+filtered_all,ALL,model_rules,0,203,5,100,False,40.0,-0.558968,0.34742,1.163227,-0.558968,-1.483181,0.199113,3.164835,2,-2.794842,0.158968,0.0,0.158968
+by_symbol,BTCUSDT,model_rules,0,0,1,100,False,0.0,-1.103672,,1.103672,-1.103672,,0.0,1.103672,1,-1.103672,0.103672,0.0,0.103672
+by_symbol,ETHUSDT,model_rules,0,0,4,100,False,50.0,-0.422793,0.34742,1.193005,-0.422792,-0.934397,0.291214,2.38601,2,-1.69117,0.172792,0.0,0.172792
+by_direction,long,model_rules,0,0,2,100,False,50.0,-0.432541,0.324847,1.18993,-0.432541,-0.697302,0.272997,1.18993,1,-0.865083,0.182541,0.0,0.182541
+by_direction,short,model_rules,0,0,3,100,False,33.333333,-0.643253,0.369993,1.149876,-0.643253,-1.25134,0.160884,2.299752,2,-1.929759,0.143253,0.0,0.143253
+by_displacement_grade,strong,model_rules,0,0,1,100,False,100.0,0.369993,0.369993,,0.369993,,inf,0.0,0,0.369993,0.130007,0.0,0.130007
+by_displacement_grade,valid,model_rules,0,0,4,100,False,25.0,-0.791209,0.324847,1.163227,-0.791209,-2.566579,0.093088,3.164835,2,-3.164835,0.166209,0.0,0.166209
+by_dol_target_type,clean_equal_highs,model_rules,0,0,1,100,False,100.0,0.324847,0.324847,,0.324847,,inf,0.0,0,0.324847,0.175153,0.0,0.175153
+by_dol_target_type,clean_equal_lows,model_rules,0,0,2,100,False,50.0,-0.366839,0.369993,1.103672,-0.366839,-0.491345,0.335238,1.103672,1,-0.733679,0.11684,0.0,0.11684
+by_dol_target_type,external_swing_high,model_rules,0,0,1,100,False,0.0,-1.18993,,1.18993,-1.18993,,0.0,1.18993,1,-1.18993,0.18993,0.0,0.18993
+by_dol_target_type,external_swing_low,model_rules,0,0,1,100,False,0.0,-1.19608,,1.19608,-1.19608,,0.0,1.19608,1,-1.19608,0.19608,0.0,0.19608
+by_dol_source,local_eqh,model_rules,0,0,1,100,False,100.0,0.324847,0.324847,,0.324847,,inf,0.0,0,0.324847,0.175153,0.0,0.175153
+by_dol_source,local_eql,model_rules,0,0,2,100,False,50.0,-0.366839,0.369993,1.103672,-0.366839,-0.491345,0.335238,1.103672,1,-0.733679,0.11684,0.0,0.11684
+by_dol_source,local_swing,model_rules,0,0,2,100,False,0.0,-1.193005,,1.193005,-1.193005,-3027.029343,0.0,2.38601,2,-2.38601,0.193005,0.0,0.193005

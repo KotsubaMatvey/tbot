@@ -1,0 +1,16 @@
+# ICT Decision Score Threshold Report
+
+- events: `backtest_results\asian_turtle_full1r_clean_strong_crypto_expansion_funding_oos_2022-01-01_2024-11-05_30m_1h\events.csv`
+- thresholds: 0
+
+## All Models
+| scope | model | threshold | filter_name | filtered_out | count | activated_trades | invalidated_before_entry | avg_decision_score | avg_mfe_r | median_mfe_r | avg_rr | expectancy | gross_managed_expectancy | managed_expectancy | avg_managed_outcome_r | avg_execution_cost_r | avg_funding_cost_r | avg_total_cost_r | profit_factor | target_before_invalidation_rate | hit_1r_before_invalidation_rate | hit_2r_before_invalidation_rate | invalidation_rate | same_bar_ambiguous_count | no_trade_reason_count | top_no_trade_reasons |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| all | ALL | 0 | none |  | 267 | 267 |  | 76.554307 | 4.153411 | 2.37782 | 2.599883 | 0.252282 | 0.280889 | 0.125824 | 0.125824 | 0.154672 | 0.000393 | 0.155065 | 1.360948 | 0.445693 | 0.513109 | 0.191011 | 0.509363 | 35 | 195 | target_rr_below_2:164;target_rr_below_3:31 |
+| filtered_all | ALL | 0 | model_rules | 168 | 99 | 99 |  | 74.242424 | 3.882863 | 2.602292 | 1.721986 | 0.217048 | 0.360203 | 0.220119 | 0.220119 | 0.139978 | 0.000107 | 0.140085 | 1.81275 | 0.545455 | 0.494949 | 0.121212 | 0.373737 | 8 | 84 | target_rr_below_2:72;target_rr_below_3:12 |
+
+## By Model
+| scope | model | threshold | filter_name | filtered_out | count | activated_trades | invalidated_before_entry | avg_decision_score | avg_mfe_r | median_mfe_r | avg_rr | expectancy | gross_managed_expectancy | managed_expectancy | avg_managed_outcome_r | avg_execution_cost_r | avg_funding_cost_r | avg_total_cost_r | profit_factor | target_before_invalidation_rate | hit_1r_before_invalidation_rate | hit_2r_before_invalidation_rate | invalidation_rate | same_bar_ambiguous_count | no_trade_reason_count | top_no_trade_reasons |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| model | turtle_soup | 0 | none |  | 267 | 267 |  | 76.554307 | 4.153411 | 2.37782 | 2.599883 | 0.252282 | 0.280889 | 0.125824 | 0.125824 | 0.154672 | 0.000393 | 0.155065 | 1.360948 | 0.445693 | 0.513109 | 0.191011 | 0.509363 | 35 | 195 | target_rr_below_2:164;target_rr_below_3:31 |
+| filtered_model | turtle_soup | 0 | model_rules | 168 | 99 | 99 |  | 74.242424 | 3.882863 | 2.602292 | 1.721986 | 0.217048 | 0.360203 | 0.220119 | 0.220119 | 0.139978 | 0.000107 | 0.140085 | 1.81275 | 0.545455 | 0.494949 | 0.121212 | 0.373737 | 8 | 84 | target_rr_below_2:72;target_rr_below_3:12 |

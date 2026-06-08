@@ -1,0 +1,3 @@
+symbol,timeframe,side,scan_side_bars,latest_sweep,sweep_session_gate,structure_after_sweep_any,structure_body_close,structure_valid_displacement,structure_strong_displacement,structure_config_displacement,sweep_age_gate,structure_session_gate,same_session_sweep_mss,active_fvg_after_mss,retest_any,retest_within_limit,retest_session_gate,target_open_until_retest,candidate
+BTCUSDT,30m,long,620,620,336,155,155,48,38,38,30,0,0,0,0,0,0,0,0
+BTCUSDT,30m,short,620,620,346,153,153,14,13,13,4,0,0,0,0,0,0,0,0

@@ -1,0 +1,13 @@
+# ICT Walk-Forward Quality Report
+
+- events: `backtest_results\asian_turtle_full1r_clean_strong_btc_sol_tfdir_funding_control_2024-11-06_2026-04-20_30m_1h\events.csv`
+- threshold: `0.0`
+- passed: `False`
+
+## Phases
+| phase | start_date | end_date | count | activated_trades | managed_expectancy | gross_managed_expectancy | profit_factor | max_drawdown_r | win_rate | avg_execution_cost_r | avg_funding_cost_r | avg_total_cost_r | session_overtrade_count | passed | failed_gates |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| overall | 2025-03-04 | 2026-03-30 | 9 | 9 | 0.194978 | 0.37425 | 1.783245 | 2.206281 | 0.666667 | 0.179309 | -3.8e-05 | 0.179272 | 0 | False | min_managed_expectancy_r;min_phase_trades;min_profit_factor;min_total_trades |
+| train | 2025-03-04 | 2025-05-14 | 3 | 3 | 0.55809 | 0.673171 | 50.031277 | 0.034147 | 0.666667 | 0.114876 | 0.000205 | 0.115081 | 0 | False | min_phase_trades |
+| validation | 2025-05-26 | 2025-09-12 | 3 | 3 | 0.028011 | 0.333333 | 1.072187 | 1.164092 | 0.666667 | 0.305323 | 0.0 | 0.305323 | 0 | False | min_phase_trades;min_managed_expectancy_r;min_profit_factor |
+| test | 2025-10-22 | 2026-03-30 | 3 | 3 | -0.001167 | 0.116245 | 0.996642 | 1.042189 | 0.666667 | 0.117729 | -0.000318 | 0.117411 | 0 | False | min_phase_trades;min_managed_expectancy_r;min_profit_factor |

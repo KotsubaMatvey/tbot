@@ -1,0 +1,28 @@
+{
+  "reports": [
+    {
+      "model_name": "turtle_soup",
+      "symbol": "BTCUSDT",
+      "timeframe": "30m",
+      "period": "2022-01-01..2023-06-30",
+      "n_trades": 30,
+      "winrate": 80.0,
+      "avg_rr": 0.324316,
+      "expectancy": 0.324316,
+      "sharpe": 2.450503,
+      "max_dd_r": 1.468707
+    },
+    {
+      "model_name": "turtle_soup",
+      "symbol": "ETHUSDT",
+      "timeframe": "30m",
+      "period": "2022-01-01..2023-06-30",
+      "n_trades": 31,
+      "winrate": 77.419355,
+      "avg_rr": 0.311169,
+      "expectancy": 0.311169,
+      "sharpe": 2.309268,
+      "max_dd_r": 1.421822
+    }
+  ]
+}

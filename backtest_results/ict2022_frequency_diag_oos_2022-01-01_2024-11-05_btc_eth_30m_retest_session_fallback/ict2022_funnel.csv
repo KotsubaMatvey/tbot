@@ -1,0 +1,5 @@
+symbol,timeframe,side,scan_side_bars,latest_sweep,sweep_session_gate,structure_after_sweep_any,structure_body_close,structure_valid_displacement,structure_strong_displacement,structure_config_displacement,sweep_age_gate,structure_session_gate,same_session_sweep_mss,active_fvg_after_mss,retest_any,retest_within_limit,retest_session_gate,target_open_until_retest,candidate,retested_eligible_fvg_any,retested_eligible_fvg_within_limit,retested_eligible_fvg_session_gate,target_open_until_retest_any_fvg,candidate_any_fvg
+BTCUSDT,30m,long,20734,20734,11029,5083,5083,698,526,526,479,291,215,211,5,3,3,3,3,132,114,114,94,94
+BTCUSDT,30m,short,20734,20734,11369,5025,5025,526,351,351,342,130,88,83,23,16,16,9,9,67,57,57,46,46
+ETHUSDT,30m,long,20734,20734,11043,4978,4978,614,391,391,317,222,132,132,7,0,0,0,0,75,74,74,66,66
+ETHUSDT,30m,short,20734,20734,11506,5288,5288,616,438,438,375,139,111,111,19,6,6,6,6,52,32,32,26,26

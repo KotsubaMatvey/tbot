@@ -1,0 +1,4 @@
+model,session_label,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,managed_expectancy,avg_managed_outcome_r,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+turtle_soup,london_open,145,145,145,0,5.541833,4.20768,0.282759,2.945434,61.103448,-0.193226,-0.008976,-0.008976,0.282759,0.455172,0.186207,0.696552,1.0,3.643564,2.454545,4.259259,25,103
+turtle_soup,ny_am,148,148,148,0,3.910281,2.550048,0.452703,1.496696,56.081081,-0.198633,-0.029221,-0.029221,0.452703,0.371622,0.114865,0.547297,1.0,2.518519,1.690909,2.117647,12,128
+turtle_soup,ny_open,141,141,141,0,7.906019,4.825834,0.234043,2.986783,62.056738,-0.370484,-0.146032,-0.146032,0.234043,0.390071,0.212766,0.758865,1.0,3.271028,2.509091,3.5,26,93

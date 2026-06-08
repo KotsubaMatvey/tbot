@@ -1,0 +1,13 @@
+# ICT Walk-Forward Quality Report
+
+- events: `backtest_results\silver_bullet_costed_2025_q1_btc_15m\events.csv`
+- threshold: `70.0`
+- passed: `False`
+
+## Phases
+| phase | start_date | end_date | count | activated_trades | managed_expectancy | gross_managed_expectancy | profit_factor | max_drawdown_r | win_rate | avg_execution_cost_r | session_overtrade_count | passed | failed_gates |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| overall | 2025-01-10 | 2025-03-08 | 4 | 4 | -0.4409 | -0.267208 | 0.285186 | 2.467216 | 0.5 | 0.173693 | 0 | False | min_managed_expectancy_r;min_phase_trades;min_profit_factor;min_total_trades |
+| train | 2025-01-10 | 2025-01-10 | 1 | 1 | 0.438385 | 0.5 | inf | 0.0 | 1.0 | 0.061615 | 0 | False | min_phase_trades |
+| validation | 2025-02-14 | 2025-02-14 | 1 | 1 | -1.102707 | -1.0 | 0.0 | 1.102707 | 0.0 | 0.102707 | 0 | False | min_phase_trades;min_managed_expectancy_r;min_profit_factor |
+| test | 2025-03-08 | 2025-03-08 | 2 | 2 | -0.549639 | -0.284415 | 0.194378 | 1.364509 | 0.5 | 0.265224 | 0 | False | min_phase_trades;min_managed_expectancy_r;min_profit_factor |

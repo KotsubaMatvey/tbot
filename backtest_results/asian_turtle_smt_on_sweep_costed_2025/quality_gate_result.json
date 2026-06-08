@@ -1,0 +1,69 @@
+{
+  "passed": false,
+  "rows": [
+    {
+      "phase": "overall",
+      "start_date": "2025-04-23",
+      "end_date": "2025-11-29",
+      "count": 6,
+      "activated_trades": 6,
+      "managed_expectancy": 0.413177,
+      "gross_managed_expectancy": 0.627367,
+      "profit_factor": 2.576671,
+      "max_drawdown_r": 1.288383,
+      "win_rate": 0.666667,
+      "avg_execution_cost_r": 0.21419,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_managed_expectancy_r;min_phase_trades;min_profit_factor;min_total_trades"
+    },
+    {
+      "phase": "train",
+      "start_date": "2025-04-23",
+      "end_date": "2025-05-16",
+      "count": 2,
+      "activated_trades": 2,
+      "managed_expectancy": 0.527097,
+      "gross_managed_expectancy": 0.632102,
+      "profit_factor": 4.712516,
+      "max_drawdown_r": 0.283957,
+      "win_rate": 0.5,
+      "avg_execution_cost_r": 0.105004,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_phase_trades"
+    },
+    {
+      "phase": "validation",
+      "start_date": "2025-05-26",
+      "end_date": "2025-06-14",
+      "count": 2,
+      "activated_trades": 2,
+      "managed_expectancy": -0.014031,
+      "gross_managed_expectancy": 0.25,
+      "profit_factor": 0.978218,
+      "max_drawdown_r": 1.288383,
+      "win_rate": 0.5,
+      "avg_execution_cost_r": 0.264031,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_phase_trades;min_managed_expectancy_r;min_profit_factor"
+    },
+    {
+      "phase": "test",
+      "start_date": "2025-08-05",
+      "end_date": "2025-11-29",
+      "count": 2,
+      "activated_trades": 2,
+      "managed_expectancy": 0.726465,
+      "gross_managed_expectancy": 1.0,
+      "profit_factor": "inf",
+      "max_drawdown_r": 0.0,
+      "win_rate": 1.0,
+      "avg_execution_cost_r": 0.273535,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_phase_trades"
+    }
+  ]
+}

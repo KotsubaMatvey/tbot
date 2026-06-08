@@ -1,0 +1,4 @@
+model,no_trade_reasons,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,managed_expectancy,avg_managed_outcome_r,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+rejection_block,none,16,16,3,0,4.039832,3.293847,0.0,11.704096,100.0,-1.0,0.0,0.0,0.0,0.125,0.125,0.1875,3.888889,6.666667,3.5,7.0,2,0
+rejection_block,target_rr_below_2,10,10,2,0,2.994325,2.994325,0.2,1.182388,88.5,0.795316,0.787737,0.787737,0.2,0.1,0.0,0.0,6.142857,,2.0,,0,10
+rejection_block,target_rr_below_3,2,2,0,0,,,0.0,2.787014,94.0,,,,0.0,0.0,0.0,0.0,4.0,,,,0,2

@@ -1,0 +1,53 @@
+# ICT Phase Attribution Report
+
+- events: `backtest_results\turtle_soup_btc_eth_external_2023-07-01_2026-04-20_15m_30m_stability_minrisk25\events.csv`
+- realized R uses `net_managed_outcome_r` when available, otherwise `managed_outcome_r`.
+
+| phase | scope | group | filter_name | threshold | dedupe_session | dedupe_selection | trade_count | min_trades | sample_valid | win_rate_pct | expectancy_r | profit_factor | max_drawdown_r | total_pnl_r | avg_decision_score | avg_target_distance_r | avg_risk_bps | avg_execution_cost_r | avg_funding_cost_r | avg_total_cost_r |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| overall | ALL | ALL | model_rules | 0 | True | first | 280 | 30 | True | 77.5 | 0.29147 | 2.032734 | 6.164166 | 81.611563 | 60.535714 | 3.426507 | 49.993788 | 0.249524 | 0.000246 | 0.24977 |
+| train | ALL | ALL | model_rules | 0 | True | first | 93 | 30 | True | 75.268817 | 0.245221 | 1.782527 | 6.164166 | 22.805539 | 59.247312 | 3.169949 | 50.58743 | 0.254748 | 0.000829 | 0.255578 |
+| train | by_timeframe | 15m | model_rules | 0 | True | first | 37 | 30 | True | 72.972973 | 0.20172 | 1.585059 | 5.279838 | 7.46365 | 58.378378 | 3.439849 | 49.752696 | 0.257209 | 0.00053 | 0.257739 |
+| train | by_timeframe | 30m | model_rules | 0 | True | first | 56 | 30 | True | 76.785714 | 0.273962 | 1.936259 | 2.715991 | 15.341889 | 59.821429 | 2.991622 | 51.138951 | 0.253123 | 0.001027 | 0.254149 |
+| train | by_symbol | BTCUSDT | model_rules | 0 | True | first | 56 | 30 | True | 80.357143 | 0.332323 | 2.351174 | 4.526723 | 18.610114 | 58.928571 | 3.248883 | 48.445746 | 0.266866 | 0.00035 | 0.267217 |
+| train | by_symbol | ETHUSDT | model_rules | 0 | True | first | 37 | 30 | True | 67.567568 | 0.11339 | 1.272959 | 4.225487 | 4.195425 | 59.72973 | 3.050481 | 53.828898 | 0.236407 | 0.001554 | 0.237961 |
+| train | by_direction | long | model_rules | 0 | True | first | 47 | 30 | True | 74.468085 | 0.254453 | 1.803337 | 4.282028 | 11.959286 | 59.787234 | 2.912174 | 58.153659 | 0.233268 | 0.001641 | 0.234909 |
+| train | by_direction | short | model_rules | 0 | True | first | 46 | 30 | True | 76.086957 | 0.235788 | 1.760797 | 3.085086 | 10.846253 | 58.695652 | 3.433327 | 42.856719 | 0.276696 | 0.0 | 0.276696 |
+| train | by_session_label | custom | model_rules | 0 | True | first | 20 | 30 | False | 70.0 | 0.173358 | 1.467893 | 3.07729 | 3.46717 | 60.5 | 2.578683 | 57.962166 | 0.226641 | 0.0 | 0.226641 |
+| train | by_session_label | london_open | model_rules | 0 | True | first | 21 | 30 | False | 76.190476 | 0.242013 | 1.778406 | 2.676837 | 5.082264 | 64.761905 | 5.515262 | 47.249397 | 0.281797 | 0.0 | 0.281797 |
+| train | by_session_label | ny_open | model_rules | 0 | True | first | 52 | 30 | True | 76.923077 | 0.274156 | 1.937642 | 4.135667 | 14.256105 | 56.538462 | 2.450213 | 49.099045 | 0.254635 | 0.001483 | 0.256118 |
+| train | by_score_bucket | high | model_rules | 0 | True | first | 34 | 30 | True | 73.529412 | 0.186977 | 1.544488 | 3.723078 | 6.357219 | 70.0 | 5.886487 | 44.39575 | 0.283611 | 0.0 | 0.283611 |
+| train | by_score_bucket | medium | model_rules | 0 | True | first | 59 | 30 | True | 76.271186 | 0.278785 | 1.941633 | 6.84193 | 16.44832 | 53.050847 | 1.604486 | 54.155517 | 0.238115 | 0.001307 | 0.239423 |
+| train | by_no_trade_reasons | none | model_rules | 0 | True | first | 34 | 30 | True | 73.529412 | 0.186977 | 1.544488 | 3.723078 | 6.357219 | 70.0 | 5.886487 | 44.39575 | 0.283611 | 0.0 | 0.283611 |
+| train | by_no_trade_reasons | target_rr_below_2 | model_rules | 0 | True | first | 41 | 30 | True | 70.731707 | 0.183843 | 1.506969 | 6.509252 | 7.537559 | 50.0 | 1.239295 | 59.286126 | 0.219929 | 0.000479 | 0.220407 |
+| train | by_no_trade_reasons | target_rr_below_3 | model_rules | 0 | True | first | 18 | 30 | False | 88.888889 | 0.495042 | 4.427228 | 1.39707 | 8.910761 | 60.0 | 2.436311 | 42.469129 | 0.279541 | 0.003194 | 0.282736 |
+| validation | ALL | ALL | model_rules | 0 | True | first | 93 | 30 | True | 77.419355 | 0.293609 | 2.042262 | 3.75417 | 27.30568 | 60.430108 | 3.850666 | 50.543127 | 0.239491 | 0.0 | 0.239491 |
+| validation | by_timeframe | 15m | model_rules | 0 | True | first | 42 | 30 | True | 66.666667 | 0.089378 | 1.212874 | 5.064797 | 3.753895 | 61.428571 | 3.699848 | 47.35122 | 0.243955 | 0.0 | 0.243955 |
+| validation | by_timeframe | 30m | model_rules | 0 | True | first | 51 | 30 | True | 86.27451 | 0.4618 | 3.750042 | 2.52766 | 23.551785 | 59.607843 | 3.974869 | 53.171756 | 0.235815 | 0.0 | 0.235815 |
+| validation | by_symbol | BTCUSDT | model_rules | 0 | True | first | 33 | 30 | True | 87.878788 | 0.474281 | 4.116912 | 2.537926 | 15.651265 | 57.575758 | 3.294441 | 53.292373 | 0.240214 | 0.0 | 0.240214 |
+| validation | by_symbol | ETHUSDT | model_rules | 0 | True | first | 60 | 30 | True | 71.666667 | 0.19424 | 1.550331 | 3.956486 | 11.654415 | 62.0 | 4.156589 | 49.031041 | 0.239093 | 0.0 | 0.239093 |
+| validation | by_direction | long | model_rules | 0 | True | first | 37 | 30 | True | 75.675676 | 0.252156 | 1.843292 | 2.55677 | 9.329778 | 61.891892 | 3.98884 | 47.995962 | 0.239402 | 0.0 | 0.239402 |
+| validation | by_direction | short | model_rules | 0 | True | first | 56 | 30 | True | 78.571429 | 0.320998 | 2.187707 | 2.685896 | 17.975902 | 59.464286 | 3.759372 | 52.226075 | 0.23955 | 0.0 | 0.23955 |
+| validation | by_session_label | custom | model_rules | 0 | True | first | 13 | 30 | False | 84.615385 | 0.407127 | 3.050362 | 1.675368 | 5.292645 | 57.692308 | 4.64847 | 57.766702 | 0.222693 | 0.0 | 0.222693 |
+| validation | by_session_label | london_open | model_rules | 0 | True | first | 30 | 30 | True | 76.666667 | 0.259871 | 1.902732 | 3.747686 | 7.796136 | 63.666667 | 5.302041 | 41.595485 | 0.273462 | 0.0 | 0.273462 |
+| validation | by_session_label | ny_open | model_rules | 0 | True | first | 50 | 30 | True | 76.0 | 0.284338 | 1.948995 | 2.935588 | 14.216899 | 59.2 | 2.772411 | 54.033582 | 0.223476 | 0.0 | 0.223476 |
+| validation | by_score_bucket | high | model_rules | 0 | True | first | 42 | 30 | True | 71.428571 | 0.151268 | 1.419449 | 4.956516 | 6.353267 | 70.0 | 6.594498 | 39.493151 | 0.277303 | 0.0 | 0.277303 |
+| validation | by_score_bucket | medium | model_rules | 0 | True | first | 51 | 30 | True | 82.352941 | 0.410832 | 2.895837 | 1.959984 | 20.952413 | 52.54902 | 1.591039 | 59.643106 | 0.208351 | 0.0 | 0.208351 |
+| validation | by_no_trade_reasons | none | model_rules | 0 | True | first | 42 | 30 | True | 71.428571 | 0.151268 | 1.419449 | 4.956516 | 6.353267 | 70.0 | 6.594498 | 39.493151 | 0.277303 | 0.0 | 0.277303 |
+| validation | by_no_trade_reasons | target_rr_below_2 | model_rules | 0 | True | first | 38 | 30 | True | 84.210526 | 0.459997 | 3.390644 | 1.396209 | 17.479872 | 50.0 | 1.289062 | 66.32032 | 0.186802 | 0.0 | 0.186802 |
+| validation | by_no_trade_reasons | target_rr_below_3 | model_rules | 0 | True | first | 13 | 30 | False | 76.923077 | 0.267119 | 1.928483 | 1.662527 | 3.472541 | 60.0 | 2.473742 | 40.125096 | 0.271343 | 0.0 | 0.271343 |
+| test | ALL | ALL | model_rules | 0 | True | first | 94 | 30 | True | 79.787234 | 0.33511 | 2.330093 | 4.302191 | 31.500344 | 61.914894 | 3.260689 | 48.862965 | 0.25428 | -8.7e-05 | 0.254193 |
+| test | by_timeframe | 15m | model_rules | 0 | True | first | 51 | 30 | True | 80.392157 | 0.340098 | 2.399928 | 2.546344 | 17.344977 | 60.784314 | 2.965685 | 47.064587 | 0.25955 | 0.0 | 0.25955 |
+| test | by_timeframe | 30m | model_rules | 0 | True | first | 43 | 30 | True | 79.069767 | 0.329195 | 2.253474 | 2.471467 | 14.155367 | 63.255814 | 3.610577 | 50.995926 | 0.248029 | -0.00019 | 0.24784 |
+| test | by_symbol | BTCUSDT | model_rules | 0 | True | first | 30 | 30 | True | 73.333333 | 0.183029 | 1.549055 | 3.722905 | 5.490879 | 60.0 | 2.587993 | 44.217691 | 0.269715 | -9e-06 | 0.269706 |
+| test | by_symbol | ETHUSDT | model_rules | 0 | True | first | 64 | 30 | True | 82.8125 | 0.406398 | 2.90097 | 3.789843 | 26.009465 | 62.8125 | 3.576015 | 51.040437 | 0.247045 | -0.000123 | 0.246922 |
+| test | by_direction | long | model_rules | 0 | True | first | 55 | 30 | True | 74.545455 | 0.230214 | 1.725356 | 3.092738 | 12.661752 | 62.0 | 3.20892 | 47.655974 | 0.253096 | 0.0 | 0.253096 |
+| test | by_direction | short | model_rules | 0 | True | first | 39 | 30 | True | 87.179487 | 0.483041 | 4.025361 | 1.778298 | 18.838592 | 61.794872 | 3.333697 | 50.565132 | 0.25595 | -0.000209 | 0.25574 |
+| test | by_session_label | custom | model_rules | 0 | True | first | 8 | 30 | False | 62.5 | -0.008807 | 0.980777 | 3.665448 | -0.07046 | 62.5 | 3.519004 | 40.330481 | 0.258807 | 0.0 | 0.258807 |
+| test | by_session_label | london_open | model_rules | 0 | True | first | 26 | 30 | False | 80.769231 | 0.317201 | 2.267822 | 2.619947 | 8.247229 | 65.769231 | 4.077654 | 42.234719 | 0.298183 | 0.0 | 0.298183 |
+| test | by_session_label | ny_open | model_rules | 0 | True | first | 60 | 30 | True | 81.666667 | 0.388726 | 2.726096 | 3.285988 | 23.323575 | 60.166667 | 2.872228 | 52.87287 | 0.234652 | -0.000136 | 0.234516 |
+| test | by_score_bucket | high | model_rules | 0 | True | first | 43 | 30 | True | 83.72093 | 0.384405 | 2.831943 | 3.789843 | 16.529403 | 70.0 | 4.84648 | 42.65815 | 0.290197 | -0.000183 | 0.290014 |
+| test | by_score_bucket | medium | model_rules | 0 | True | first | 51 | 30 | True | 76.470588 | 0.293548 | 2.021215 | 3.715895 | 14.970941 | 55.098039 | 1.923649 | 54.094476 | 0.223997 | -6e-06 | 0.223992 |
+| test | by_no_trade_reasons | none | model_rules | 0 | True | first | 43 | 30 | True | 83.72093 | 0.384405 | 2.831943 | 3.789843 | 16.529403 | 70.0 | 4.84648 | 42.65815 | 0.290197 | -0.000183 | 0.290014 |
+| test | by_no_trade_reasons | target_rr_below_2 | model_rules | 0 | True | first | 25 | 30 | False | 76.0 | 0.292066 | 1.986807 | 3.628953 | 7.301644 | 50.0 | 1.335482 | 63.742738 | 0.203726 | -1.1e-05 | 0.203715 |
+| test | by_no_trade_reasons | target_rr_below_3 | model_rules | 0 | True | first | 26 | 30 | False | 76.923077 | 0.294973 | 2.05628 | 4.675011 | 7.669297 | 60.0 | 2.489195 | 44.817301 | 0.243489 | 0.0 | 0.243489 |

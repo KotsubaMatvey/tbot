@@ -1,0 +1,16 @@
+# ICT Decision Score Threshold Report
+
+- events: `backtest_results\ifvg_retest_15m_wide_stop_costed_oos_2022-01-01_2024-11-05_btc_eth\events.csv`
+- thresholds: 0
+
+## All Models
+| scope | model | threshold | filter_name | filtered_out | count | activated_trades | invalidated_before_entry | avg_decision_score | avg_mfe_r | median_mfe_r | avg_rr | expectancy | gross_managed_expectancy | managed_expectancy | avg_managed_outcome_r | avg_execution_cost_r | avg_funding_cost_r | avg_total_cost_r | profit_factor | target_before_invalidation_rate | hit_1r_before_invalidation_rate | hit_2r_before_invalidation_rate | invalidation_rate | same_bar_ambiguous_count | no_trade_reason_count | top_no_trade_reasons |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| all | ALL | 0 | none |  | 513 | 193 |  | 66.079922 | 23.030941 | 8.191278 | 4.755245 | 0.563802 | 0.480875 | -0.514703 | -0.514703 | 0.374526 | 2.9e-05 | 0.374555 | 0.45714 | 0.161793 | 0.216374 | 0.14425 | 0.214425 | 60 | 291 | target_rr_below_2:220;target_rr_below_3:71 |
+| filtered_all | ALL | 0 | model_rules | 321 | 192 | 4 |  | 73.651042 | 12.049602 | 5.956452 | 7.067466 | -1.0 | 0.125 | -0.002255 | -0.002255 | 0.002651 |  | 0.002651 | 0.991643 |  | 0.015625 | 0.005208 | 0.020833 |  | 47 | target_rr_below_3:47 |
+
+## By Model
+| scope | model | threshold | filter_name | filtered_out | count | activated_trades | invalidated_before_entry | avg_decision_score | avg_mfe_r | median_mfe_r | avg_rr | expectancy | gross_managed_expectancy | managed_expectancy | avg_managed_outcome_r | avg_execution_cost_r | avg_funding_cost_r | avg_total_cost_r | profit_factor | target_before_invalidation_rate | hit_1r_before_invalidation_rate | hit_2r_before_invalidation_rate | invalidation_rate | same_bar_ambiguous_count | no_trade_reason_count | top_no_trade_reasons |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| model | ifvg_retest | 0 | none |  | 513 | 193 |  | 66.079922 | 23.030941 | 8.191278 | 4.755245 | 0.563802 | 0.480875 | -0.514703 | -0.514703 | 0.374526 | 2.9e-05 | 0.374555 | 0.45714 | 0.161793 | 0.216374 | 0.14425 | 0.214425 | 60 | 291 | target_rr_below_2:220;target_rr_below_3:71 |
+| filtered_model | ifvg_retest | 0 | model_rules | 321 | 192 | 4 |  | 73.651042 | 12.049602 | 5.956452 | 7.067466 | -1.0 | 0.125 | -0.002255 | -0.002255 | 0.002651 |  | 0.002651 | 0.991643 |  | 0.015625 | 0.005208 | 0.020833 |  | 47 | target_rr_below_3:47 |

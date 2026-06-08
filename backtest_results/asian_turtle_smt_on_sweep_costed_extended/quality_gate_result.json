@@ -1,0 +1,69 @@
+{
+  "passed": false,
+  "rows": [
+    {
+      "phase": "overall",
+      "start_date": "2024-12-10",
+      "end_date": "2025-11-29",
+      "count": 7,
+      "activated_trades": 7,
+      "managed_expectancy": 0.540621,
+      "gross_managed_expectancy": 0.752029,
+      "profit_factor": 3.406826,
+      "max_drawdown_r": 1.288383,
+      "win_rate": 0.714286,
+      "avg_execution_cost_r": 0.211408,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_managed_expectancy_r;min_phase_trades;min_profit_factor;min_total_trades"
+    },
+    {
+      "phase": "train",
+      "start_date": "2024-12-10",
+      "end_date": "2025-04-23",
+      "count": 2,
+      "activated_trades": 2,
+      "managed_expectancy": 0.510664,
+      "gross_managed_expectancy": 0.632102,
+      "profit_factor": 4.596773,
+      "max_drawdown_r": 0.283957,
+      "win_rate": 0.5,
+      "avg_execution_cost_r": 0.121437,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_phase_trades"
+    },
+    {
+      "phase": "validation",
+      "start_date": "2025-05-16",
+      "end_date": "2025-05-26",
+      "count": 2,
+      "activated_trades": 2,
+      "managed_expectancy": 1.299236,
+      "gross_managed_expectancy": 1.5,
+      "profit_factor": "inf",
+      "max_drawdown_r": 0.0,
+      "win_rate": 1.0,
+      "avg_execution_cost_r": 0.200764,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_phase_trades"
+    },
+    {
+      "phase": "test",
+      "start_date": "2025-06-14",
+      "end_date": "2025-11-29",
+      "count": 3,
+      "activated_trades": 3,
+      "managed_expectancy": 0.054849,
+      "gross_managed_expectancy": 0.333333,
+      "profit_factor": 1.127717,
+      "max_drawdown_r": 1.288383,
+      "win_rate": 0.666667,
+      "avg_execution_cost_r": 0.278484,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_phase_trades;min_managed_expectancy_r;min_profit_factor"
+    }
+  ]
+}

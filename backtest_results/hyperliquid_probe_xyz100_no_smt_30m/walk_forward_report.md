@@ -1,0 +1,13 @@
+# ICT Walk-Forward Quality Report
+
+- events: `backtest_results\hyperliquid_probe_xyz100_no_smt_30m\events.csv`
+- threshold: `0.0`
+- passed: `False`
+
+## Phases
+| phase | start_date | end_date | count | activated_trades | managed_expectancy | gross_managed_expectancy | profit_factor | max_drawdown_r | win_rate | avg_execution_cost_r | session_overtrade_count | passed | failed_gates |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| overall | 2026-04-07 | 2026-05-24 | 11 | 11 | -1.351898 | 0.0 | 0.047747 | 14.870873 | 0.272727 | 1.351898 | 0 | False | min_managed_expectancy_r;min_phase_trades;min_profit_factor;min_total_trades |
+| train | 2026-04-07 | 2026-04-19 | 3 | 3 | -1.153578 | -0.166667 | 0.005588 | 3.48018 | 0.333333 | 0.986911 | 0 | False | min_phase_trades;min_managed_expectancy_r;min_profit_factor |
+| validation | 2026-04-21 | 2026-05-09 | 4 | 4 | -1.590956 | 0.375 | 0.101632 | 6.363822 | 0.25 | 1.965956 | 0 | False | min_phase_trades;min_managed_expectancy_r;min_profit_factor |
+| test | 2026-05-11 | 2026-05-24 | 4 | 4 | -1.261579 | -0.25 | 0.001238 | 5.046317 | 0.25 | 1.011579 | 0 | False | min_phase_trades;min_managed_expectancy_r;min_profit_factor |

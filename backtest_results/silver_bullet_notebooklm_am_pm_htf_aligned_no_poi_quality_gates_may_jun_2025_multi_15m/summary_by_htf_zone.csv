@@ -1,0 +1,5 @@
+model,htf_zone_type,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,managed_expectancy,avg_managed_outcome_r,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+silver_bullet,FVG,3,3,3,0,1.171107,0.932926,0.333333,2.0,100.0,0.0,-0.166667,-0.166667,0.333333,0.333333,0.333333,0.666667,1.0,1.5,23.0,30.0,0,0
+silver_bullet,IFVG,1,1,1,0,0.307783,0.307783,0.0,2.0,100.0,-1.0,-1.0,-1.0,0.0,0.0,0.0,1.0,1.0,3.0,,,0,0
+silver_bullet,None,2,2,2,0,0.683383,0.683383,0.0,2.0,100.0,-1.0,-1.0,-1.0,0.0,0.0,0.0,1.0,1.0,2.0,,,0,0
+silver_bullet,PD,3,3,3,0,2.432937,2.524708,0.666667,2.0,100.0,1.0,0.666667,0.666667,0.666667,0.666667,0.666667,0.333333,1.0,3.0,23.5,27.0,0,0

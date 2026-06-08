@@ -1,0 +1,24 @@
+# ICT Decision Score Threshold Report
+
+- events: `backtest_results\reclaimed_ob_sequence_may_oct_2025_1h\events.csv`
+- thresholds: 0, 50, 70
+
+## All Models
+| scope | model | threshold | filter_name | filtered_out | count | activated_trades | invalidated_before_entry | avg_decision_score | avg_mfe_r | median_mfe_r | avg_rr | expectancy | managed_expectancy | avg_managed_outcome_r | target_before_invalidation_rate | hit_1r_before_invalidation_rate | hit_2r_before_invalidation_rate | invalidation_rate | same_bar_ambiguous_count | no_trade_reason_count | top_no_trade_reasons |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| all | ALL | 0 | none |  | 9 | 7 | 1 | 97.777778 | 12.354079 | 3.725986 | 62.421081 | -1.0 | 0.285714 | 0.285714 |  | 0.666667 | 0.444444 | 0.777778 | 5 | 1 | target_rr_below_3:1 |
+| filtered_all | ALL | 0 | model_rules |  | 9 | 7 | 1 | 97.777778 | 12.354079 | 3.725986 | 62.421081 | -1.0 | 0.285714 | 0.285714 |  | 0.666667 | 0.444444 | 0.777778 | 5 | 1 | target_rr_below_3:1 |
+| all | ALL | 50 | none |  | 9 | 7 | 1 | 97.777778 | 12.354079 | 3.725986 | 62.421081 | -1.0 | 0.285714 | 0.285714 |  | 0.666667 | 0.444444 | 0.777778 | 5 | 1 | target_rr_below_3:1 |
+| filtered_all | ALL | 50 | model_rules |  | 9 | 7 | 1 | 97.777778 | 12.354079 | 3.725986 | 62.421081 | -1.0 | 0.285714 | 0.285714 |  | 0.666667 | 0.444444 | 0.777778 | 5 | 1 | target_rr_below_3:1 |
+| all | ALL | 70 | none |  | 9 | 7 | 1 | 97.777778 | 12.354079 | 3.725986 | 62.421081 | -1.0 | 0.285714 | 0.285714 |  | 0.666667 | 0.444444 | 0.777778 | 5 | 1 | target_rr_below_3:1 |
+| filtered_all | ALL | 70 | model_rules |  | 9 | 7 | 1 | 97.777778 | 12.354079 | 3.725986 | 62.421081 | -1.0 | 0.285714 | 0.285714 |  | 0.666667 | 0.444444 | 0.777778 | 5 | 1 | target_rr_below_3:1 |
+
+## By Model
+| scope | model | threshold | filter_name | filtered_out | count | activated_trades | invalidated_before_entry | avg_decision_score | avg_mfe_r | median_mfe_r | avg_rr | expectancy | managed_expectancy | avg_managed_outcome_r | target_before_invalidation_rate | hit_1r_before_invalidation_rate | hit_2r_before_invalidation_rate | invalidation_rate | same_bar_ambiguous_count | no_trade_reason_count | top_no_trade_reasons |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| model | reclaimed_ob | 0 | none |  | 9 | 7 | 1 | 97.777778 | 12.354079 | 3.725986 | 62.421081 | -1.0 | 0.285714 | 0.285714 |  | 0.666667 | 0.444444 | 0.777778 | 5 | 1 | target_rr_below_3:1 |
+| filtered_model | reclaimed_ob | 0 | model_rules |  | 9 | 7 | 1 | 97.777778 | 12.354079 | 3.725986 | 62.421081 | -1.0 | 0.285714 | 0.285714 |  | 0.666667 | 0.444444 | 0.777778 | 5 | 1 | target_rr_below_3:1 |
+| model | reclaimed_ob | 50 | none |  | 9 | 7 | 1 | 97.777778 | 12.354079 | 3.725986 | 62.421081 | -1.0 | 0.285714 | 0.285714 |  | 0.666667 | 0.444444 | 0.777778 | 5 | 1 | target_rr_below_3:1 |
+| filtered_model | reclaimed_ob | 50 | model_rules |  | 9 | 7 | 1 | 97.777778 | 12.354079 | 3.725986 | 62.421081 | -1.0 | 0.285714 | 0.285714 |  | 0.666667 | 0.444444 | 0.777778 | 5 | 1 | target_rr_below_3:1 |
+| model | reclaimed_ob | 70 | none |  | 9 | 7 | 1 | 97.777778 | 12.354079 | 3.725986 | 62.421081 | -1.0 | 0.285714 | 0.285714 |  | 0.666667 | 0.444444 | 0.777778 | 5 | 1 | target_rr_below_3:1 |
+| filtered_model | reclaimed_ob | 70 | model_rules |  | 9 | 7 | 1 | 97.777778 | 12.354079 | 3.725986 | 62.421081 | -1.0 | 0.285714 | 0.285714 |  | 0.666667 | 0.444444 | 0.777778 | 5 | 1 | target_rr_below_3:1 |

@@ -1,0 +1,20 @@
+# Trade P&L Report
+
+- events: `backtest_results\ict2022_first_retested_fvg_session_fallback_late_2024-11-06_2026-04-20_btc_eth_30m\events.csv`
+- realized R uses `net_managed_outcome_r` when available, otherwise `managed_outcome_r`.
+- `sample_valid` is false when activated trade count is below `min_trades`.
+
+| scope | group | filter_name | threshold | filtered_out | trade_count | min_trades | sample_valid | win_rate_pct | avg_realized_rr | avg_win_r | avg_loss_r | expectancy_r | sharpe | profit_factor | max_drawdown_r | max_consecutive_losses | total_pnl_r | avg_execution_cost_r | avg_funding_cost_r | avg_total_cost_r |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| all | ALL | none | 0 | 0 | 47 | 100 | False | 38.297872 | -0.425013 | 0.425825 | 0.953119 | -0.425013 | -3.255505 | 0.277305 | 20.096803 | 11 | -19.975599 | 0.067858 | 0.000212 | 0.06807 |
+| filtered_all | ALL | model_rules | 0 | 35 | 12 | 100 | False | 16.666667 | -0.72952 | 0.866723 | 1.048768 | -0.72952 | -2.835207 | 0.165284 | 10.214399 | 7 | -8.754235 | 0.046721 | 0.000168 | 0.046889 |
+| by_symbol | BTCUSDT | model_rules | 0 | 0 | 9 | 100 | False | 11.111111 | -0.90785 | 0.273282 | 1.055492 | -0.90785 | -5.414268 | 0.032364 | 8.170654 | 7 | -8.170654 | 0.053387 | -0.000155 | 0.053232 |
+| by_symbol | ETHUSDT | model_rules | 0 | 0 | 3 | 100 | False | 33.333333 | -0.194527 | 1.460164 | 1.021873 | -0.194527 | -0.310081 | 0.714455 | 2.043745 | 2 | -0.583581 | 0.026722 | 0.001138 | 0.02786 |
+| by_direction | long | model_rules | 0 | 0 | 6 | 100 | False | 16.666667 | -0.640264 | 1.460164 | 1.060349 | -0.640264 | -1.346166 | 0.275412 | 5.301746 | 5 | -3.841582 | 0.056038 | 0.000892 | 0.05693 |
+| by_direction | short | model_rules | 0 | 0 | 6 | 100 | False | 16.666667 | -0.818776 | 0.273282 | 1.037187 | -0.818776 | -3.890266 | 0.052697 | 4.912653 | 4 | -4.912653 | 0.037403 | -0.000556 | 0.036848 |
+| by_session_label | custom | model_rules | 0 | 0 | 6 | 100 | False | 0.0 | -1.030159 |  | 1.030159 | -1.030159 | -163.007713 | 0.0 | 6.180952 | 6 | -6.180952 | 0.030198 | -4e-05 | 0.030159 |
+| by_session_label | london_open | model_rules | 0 | 0 | 2 | 100 | False | 0.0 | -1.061685 |  | 1.061685 | -1.061685 | -60.094962 | 0.0 | 2.12337 | 2 | -2.12337 | 0.061685 | 0.0 | 0.061685 |
+| by_session_label | ny_open | model_rules | 0 | 0 | 4 | 100 | False | 50.0 | -0.112478 | 0.866723 | 1.09168 | -0.112478 | -0.170811 | 0.793935 | 2.183359 | 2 | -0.449913 | 0.064023 | 0.000563 | 0.064587 |
+| by_target_distance_bucket | none | model_rules | 0 | 0 | 12 | 100 | False | 16.666667 | -0.72952 | 0.866723 | 1.048768 | -0.72952 | -2.835207 | 0.165284 | 10.214399 | 7 | -8.754235 | 0.046721 | 0.000168 | 0.046889 |
+| by_risk_bps_bucket | none | model_rules | 0 | 0 | 12 | 100 | False | 16.666667 | -0.72952 | 0.866723 | 1.048768 | -0.72952 | -2.835207 | 0.165284 | 10.214399 | 7 | -8.754235 | 0.046721 | 0.000168 | 0.046889 |
+| by_no_trade_reasons | target_rr_below_3 | model_rules | 0 | 0 | 12 | 100 | False | 16.666667 | -0.72952 | 0.866723 | 1.048768 | -0.72952 | -2.835207 | 0.165284 | 10.214399 | 7 | -8.754235 | 0.046721 | 0.000168 | 0.046889 |

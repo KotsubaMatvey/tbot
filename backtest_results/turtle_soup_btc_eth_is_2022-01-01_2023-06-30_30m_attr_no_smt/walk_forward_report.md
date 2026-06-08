@@ -1,0 +1,13 @@
+# ICT Walk-Forward Quality Report
+
+- events: `backtest_results\turtle_soup_btc_eth_is_2022-01-01_2023-06-30_30m_attr_no_smt\events.csv`
+- threshold: `0.0`
+- passed: `False`
+
+## Phases
+| phase | start_date | end_date | count | activated_trades | managed_expectancy | gross_managed_expectancy | profit_factor | max_drawdown_r | win_rate | avg_execution_cost_r | avg_funding_cost_r | avg_total_cost_r | session_overtrade_count | passed | failed_gates |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| overall | 2022-01-07 | 2023-06-30 | 346 | 346 | 0.005152 | 0.451393 | 1.012493 | 23.62968 | 0.65896 | 0.445594 | 0.000647 | 0.446241 | 81 | False | max_drawdown_r;max_trades_per_session;min_managed_expectancy_r;min_profit_factor |
+| train | 2022-01-07 | 2022-07-16 | 116 | 116 | 0.086418 | 0.461529 | 1.234517 | 5.617794 | 0.681034 | 0.3735 | 0.001611 | 0.375111 | 25 | False | min_managed_expectancy_r |
+| validation | 2022-07-16 | 2023-02-03 | 117 | 117 | 0.030284 | 0.508084 | 1.077237 | 13.369996 | 0.666667 | 0.478265 | -0.000465 | 0.4778 | 27 | False | min_managed_expectancy_r;min_profit_factor;max_drawdown_r |
+| test | 2023-02-03 | 2023-06-30 | 118 | 118 | -0.111212 | 0.374567 | 0.768785 | 23.62968 | 0.618644 | 0.485005 | 0.000775 | 0.48578 | 30 | False | min_managed_expectancy_r;min_profit_factor;max_drawdown_r |

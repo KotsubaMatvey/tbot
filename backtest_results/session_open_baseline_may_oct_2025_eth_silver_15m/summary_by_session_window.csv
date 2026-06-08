@@ -1,0 +1,4 @@
+model,session_window,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,managed_expectancy,avg_managed_outcome_r,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+silver_bullet,02:00-03:00,129,129,123,0,3.82074,2.185191,0.286822,2.0,78.0,-0.030258,0.108687,0.108687,0.286822,0.496124,0.286822,0.635659,1.139535,6.768293,5.75,7.864865,9,0
+silver_bullet,07:00-08:00,123,123,115,0,3.952357,2.480646,0.195122,2.0,78.0,-0.310836,-0.055885,-0.055885,0.195122,0.430894,0.195122,0.707317,1.170732,5.781609,4.603774,7.0,10,0
+silver_bullet,10:00-11:00,107,107,105,0,3.04226,1.731436,0.28972,2.0,77.626168,0.194356,0.252563,0.252563,0.28972,0.542056,0.28972,0.551402,1.11215,6.101695,6.0,8.516129,3,2

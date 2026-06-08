@@ -1,0 +1,69 @@
+{
+  "passed": false,
+  "rows": [
+    {
+      "phase": "overall",
+      "start_date": "2025-01-10",
+      "end_date": "2025-03-08",
+      "count": 4,
+      "activated_trades": 4,
+      "managed_expectancy": -0.4409,
+      "gross_managed_expectancy": -0.267208,
+      "profit_factor": 0.285186,
+      "max_drawdown_r": 2.467216,
+      "win_rate": 0.5,
+      "avg_execution_cost_r": 0.173693,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_managed_expectancy_r;min_phase_trades;min_profit_factor;min_total_trades"
+    },
+    {
+      "phase": "train",
+      "start_date": "2025-01-10",
+      "end_date": "2025-01-10",
+      "count": 1,
+      "activated_trades": 1,
+      "managed_expectancy": 0.438385,
+      "gross_managed_expectancy": 0.5,
+      "profit_factor": "inf",
+      "max_drawdown_r": 0.0,
+      "win_rate": 1.0,
+      "avg_execution_cost_r": 0.061615,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_phase_trades"
+    },
+    {
+      "phase": "validation",
+      "start_date": "2025-02-14",
+      "end_date": "2025-02-14",
+      "count": 1,
+      "activated_trades": 1,
+      "managed_expectancy": -1.102707,
+      "gross_managed_expectancy": -1.0,
+      "profit_factor": 0.0,
+      "max_drawdown_r": 1.102707,
+      "win_rate": 0.0,
+      "avg_execution_cost_r": 0.102707,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_phase_trades;min_managed_expectancy_r;min_profit_factor"
+    },
+    {
+      "phase": "test",
+      "start_date": "2025-03-08",
+      "end_date": "2025-03-08",
+      "count": 2,
+      "activated_trades": 2,
+      "managed_expectancy": -0.549639,
+      "gross_managed_expectancy": -0.284415,
+      "profit_factor": 0.194378,
+      "max_drawdown_r": 1.364509,
+      "win_rate": 0.5,
+      "avg_execution_cost_r": 0.265224,
+      "session_overtrade_count": 0,
+      "passed": false,
+      "failed_gates": "min_phase_trades;min_managed_expectancy_r;min_profit_factor"
+    }
+  ]
+}

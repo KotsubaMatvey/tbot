@@ -1,0 +1,28 @@
+{
+  "reports": [
+    {
+      "model_name": "ifvg_retest",
+      "symbol": "BTCUSDT",
+      "timeframe": "15m",
+      "period": "2022-01-01..2024-11-05",
+      "n_trades": 1,
+      "winrate": 100.0,
+      "avg_rr": 0.346953,
+      "expectancy": 0.346953,
+      "sharpe": null,
+      "max_dd_r": 0.0
+    },
+    {
+      "model_name": "ifvg_retest",
+      "symbol": "ETHUSDT",
+      "timeframe": "15m",
+      "period": "2022-01-01..2024-11-05",
+      "n_trades": 3,
+      "winrate": 66.666667,
+      "avg_rr": -0.118658,
+      "expectancy": -0.118658,
+      "sharpe": -0.146336,
+      "max_dd_r": 1.07947
+    }
+  ]
+}

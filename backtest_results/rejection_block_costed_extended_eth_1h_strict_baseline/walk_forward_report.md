@@ -1,0 +1,13 @@
+# ICT Walk-Forward Quality Report
+
+- events: `backtest_results\rejection_block_costed_extended_eth_1h_strict_baseline\events.csv`
+- threshold: `0.0`
+- passed: `False`
+
+## Phases
+| phase | start_date | end_date | count | activated_trades | managed_expectancy | gross_managed_expectancy | profit_factor | max_drawdown_r | win_rate | avg_execution_cost_r | session_overtrade_count | passed | failed_gates |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| overall | 2024-12-18 | 2026-04-10 | 39 | 39 | -0.087709 | 0.046171 | 0.816027 | 5.740995 | 0.538462 | 0.13388 | 10 | False | max_trades_per_session;min_managed_expectancy_r;min_profit_factor |
+| train | 2024-12-18 | 2025-10-01 | 15 | 15 | -0.250835 | -0.140864 | 0.475279 | 5.224934 | 0.533333 | 0.109972 | 4 | False | min_managed_expectancy_r;min_profit_factor |
+| validation | 2025-10-01 | 2026-01-01 | 12 | 12 | 0.032144 | 0.218358 | 1.055095 | 3.486489 | 0.416667 | 0.186214 | 3 | False | min_managed_expectancy_r;min_profit_factor |
+| test | 2026-01-02 | 2026-04-10 | 14 | 14 | -0.076955 | 0.042379 | 0.805149 | 3.39771 | 0.642857 | 0.119333 | 4 | False | min_managed_expectancy_r;min_profit_factor |

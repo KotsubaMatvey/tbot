@@ -1,0 +1,13 @@
+# ICT Walk-Forward Quality Report
+
+- events: `backtest_results\turtle_soup_btc_eth_is_2022-01-01_2023-06-30_30m_attr_strict_no_model_rules\events.csv`
+- threshold: `0.0`
+- passed: `False`
+
+## Phases
+| phase | start_date | end_date | count | activated_trades | managed_expectancy | gross_managed_expectancy | profit_factor | max_drawdown_r | win_rate | avg_execution_cost_r | avg_funding_cost_r | avg_total_cost_r | session_overtrade_count | passed | failed_gates |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| overall | 2022-01-09 | 2023-06-02 | 27 | 27 | 0.490399 | 0.925926 | 9.219602 | 1.468707 | 0.888889 | 0.433498 | 0.002028 | 0.435526 | 1 | False | max_trades_per_session;min_phase_trades;min_total_trades |
+| train | 2022-01-09 | 2022-07-16 | 9 | 9 | 0.518504 | 1.0 | 33.823179 | 0.099277 | 0.777778 | 0.48188 | -0.000384 | 0.481496 | 0 | False | min_phase_trades |
+| validation | 2022-08-04 | 2022-12-22 | 9 | 9 | 0.379866 | 0.777778 | 3.327758 | 1.468707 | 0.888889 | 0.398189 | -0.000278 | 0.397912 | 0 | False | min_phase_trades |
+| test | 2023-02-03 | 2023-06-02 | 9 | 9 | 0.572828 | 1.0 | inf | 0.0 | 1.0 | 0.420425 | 0.006747 | 0.427172 | 1 | False | min_phase_trades |

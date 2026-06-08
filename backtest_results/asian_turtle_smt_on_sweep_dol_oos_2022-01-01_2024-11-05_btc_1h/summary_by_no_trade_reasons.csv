@@ -1,0 +1,4 @@
+model,no_trade_reasons,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,gross_managed_expectancy,managed_expectancy,avg_managed_outcome_r,avg_execution_cost_r,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+turtle_soup,none,4,4,4,0,2.666082,2.624423,0.0,4.324826,90.0,-1.0,0.125,-0.136293,-0.136293,0.261293,0.0,0.75,0.25,1.0,1.0,2.0,1.0,1.0,1,0
+turtle_soup,target_rr_below_2,24,24,24,0,3.647962,1.380579,0.666667,0.850535,70.0,0.267315,0.236123,0.100949,0.100949,0.135174,0.666667,0.416667,0.0,0.291667,1.0,4.714286,5.0,,0,24
+turtle_soup,target_rr_below_3,2,2,2,0,1.101179,1.101179,0.0,2.576999,80.0,0.325206,0.043484,-0.021388,-0.021388,0.064871,0.0,0.5,0.0,0.5,1.0,7.0,6.0,,0,2

@@ -1,0 +1,21 @@
+# ICT Decision Score Threshold Report
+
+- events: `backtest_results\probe_costed_2025_4h_ifvg_reclaimed\events.csv`
+- thresholds: 0, 50, 70
+
+## All Models
+| scope | model | threshold | filter_name | filtered_out | count | activated_trades | invalidated_before_entry | avg_decision_score | avg_mfe_r | median_mfe_r | avg_rr | expectancy | gross_managed_expectancy | managed_expectancy | avg_managed_outcome_r | avg_execution_cost_r | profit_factor | target_before_invalidation_rate | hit_1r_before_invalidation_rate | hit_2r_before_invalidation_rate | invalidation_rate | same_bar_ambiguous_count | no_trade_reason_count | top_no_trade_reasons |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| all | ALL | 0 | none |  | 11 | 4 |  | 99.272727 | 10.387332 | 9.004895 | 20.799845 | -1.0 | -0.35 | -0.705348 | -0.705348 | 0.129217 |  |  | 0.181818 | 0.181818 | 0.363636 | 3 | 2 | target_rr_below_3:1;target_rr_below_2:1 |
+| all | ALL | 50 | none |  | 11 | 4 |  | 99.272727 | 10.387332 | 9.004895 | 20.799845 | -1.0 | -0.35 | -0.705348 | -0.705348 | 0.129217 |  |  | 0.181818 | 0.181818 | 0.363636 | 3 | 2 | target_rr_below_3:1;target_rr_below_2:1 |
+| all | ALL | 70 | none |  | 11 | 4 |  | 99.272727 | 10.387332 | 9.004895 | 20.799845 | -1.0 | -0.35 | -0.705348 | -0.705348 | 0.129217 |  |  | 0.181818 | 0.181818 | 0.363636 | 3 | 2 | target_rr_below_3:1;target_rr_below_2:1 |
+
+## By Model
+| scope | model | threshold | filter_name | filtered_out | count | activated_trades | invalidated_before_entry | avg_decision_score | avg_mfe_r | median_mfe_r | avg_rr | expectancy | gross_managed_expectancy | managed_expectancy | avg_managed_outcome_r | avg_execution_cost_r | profit_factor | target_before_invalidation_rate | hit_1r_before_invalidation_rate | hit_2r_before_invalidation_rate | invalidation_rate | same_bar_ambiguous_count | no_trade_reason_count | top_no_trade_reasons |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| model | ifvg_retest | 0 | none |  | 2 | 1 |  | 100.0 | 9.551966 | 9.551966 | 5.907113 | -1.0 | -1.0 | -1.164073 | -1.164073 | 0.082036 |  |  |  |  | 0.5 | 1 |  |  |
+| model | reclaimed_ob | 0 | none |  | 9 | 3 |  | 99.111111 | 10.665788 | 8.457824 | 24.109341 | -1.0 | -0.133333 | -0.552439 | -0.552439 | 0.139702 |  |  | 0.222222 | 0.222222 | 0.333333 | 2 | 2 | target_rr_below_3:1;target_rr_below_2:1 |
+| model | ifvg_retest | 50 | none |  | 2 | 1 |  | 100.0 | 9.551966 | 9.551966 | 5.907113 | -1.0 | -1.0 | -1.164073 | -1.164073 | 0.082036 |  |  |  |  | 0.5 | 1 |  |  |
+| model | reclaimed_ob | 50 | none |  | 9 | 3 |  | 99.111111 | 10.665788 | 8.457824 | 24.109341 | -1.0 | -0.133333 | -0.552439 | -0.552439 | 0.139702 |  |  | 0.222222 | 0.222222 | 0.333333 | 2 | 2 | target_rr_below_3:1;target_rr_below_2:1 |
+| model | ifvg_retest | 70 | none |  | 2 | 1 |  | 100.0 | 9.551966 | 9.551966 | 5.907113 | -1.0 | -1.0 | -1.164073 | -1.164073 | 0.082036 |  |  |  |  | 0.5 | 1 |  |  |
+| model | reclaimed_ob | 70 | none |  | 9 | 3 |  | 99.111111 | 10.665788 | 8.457824 | 24.109341 | -1.0 | -0.133333 | -0.552439 | -0.552439 | 0.139702 |  |  | 0.222222 | 0.222222 | 0.333333 | 2 | 2 | target_rr_below_3:1;target_rr_below_2:1 |

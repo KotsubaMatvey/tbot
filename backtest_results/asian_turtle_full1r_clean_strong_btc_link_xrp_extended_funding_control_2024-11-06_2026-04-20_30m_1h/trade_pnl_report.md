@@ -1,0 +1,21 @@
+# Trade P&L Report
+
+- events: `backtest_results\asian_turtle_full1r_clean_strong_btc_link_xrp_extended_funding_control_2024-11-06_2026-04-20_30m_1h\events.csv`
+- realized R uses `net_managed_outcome_r` when available, otherwise `managed_outcome_r`.
+- `sample_valid` is false when activated trade count is below `min_trades`.
+
+| scope | group | filter_name | threshold | filtered_out | trade_count | min_trades | sample_valid | win_rate_pct | avg_realized_rr | avg_win_r | avg_loss_r | expectancy_r | profit_factor | max_drawdown_r | total_pnl_r | avg_execution_cost_r | avg_funding_cost_r | avg_total_cost_r |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| all | ALL | none | 0 | 0 | 58 | 100 | False | 79.310345 | 0.428676 | 0.751689 | 0.809543 | 0.428676 | 3.559385 | 1.434752 | 24.863183 | 0.161635 | -0.001765 | 0.15987 |
+| filtered_all | ALL | model_rules | 0 | 39 | 19 | 100 | False | 89.473684 | 0.618686 | 0.767601 | 0.647093 | 0.618686 | 10.082949 | 1.26004 | 11.755035 | 0.143225 | -0.002811 | 0.140415 |
+| by_model | turtle_soup | model_rules | 0 | 0 | 19 | 100 | False | 89.473684 | 0.618686 | 0.767601 | 0.647093 | 0.618686 | 10.082949 | 1.26004 | 11.755035 | 0.143225 | -0.002811 | 0.140415 |
+| by_symbol | BTCUSDT | model_rules | 0 | 0 | 6 | 100 | False | 83.333333 | 0.57888 | 0.701485 | 0.034147 | 0.57888 | 102.715524 | 0.034147 | 3.47328 | 0.149059 | 0.000102 | 0.149161 |
+| by_symbol | LINKUSDT | model_rules | 0 | 0 | 4 | 100 | False | 100.0 | 0.854023 | 0.854023 |  | 0.854023 | inf | 0.0 | 3.416093 | 0.145344 | 0.000633 | 0.145977 |
+| by_symbol | XRPUSDT | model_rules | 0 | 0 | 9 | 100 | False | 88.888889 | 0.540629 | 0.765713 | 1.26004 | 0.540629 | 4.861514 | 1.26004 | 4.865662 | 0.138394 | -0.006283 | 0.132111 |
+| by_timeframe | 1h | model_rules | 0 | 0 | 15 | 100 | False | 86.666667 | 0.568626 | 0.75566 | 0.647093 | 0.568626 | 7.590539 | 1.26004 | 8.52939 | 0.129416 | -0.003181 | 0.126235 |
+| by_timeframe | 30m | model_rules | 0 | 0 | 4 | 100 | False | 100.0 | 0.806411 | 0.806411 |  | 0.806411 | inf | 0.0 | 3.225645 | 0.195011 | -0.001422 | 0.193589 |
+| by_direction | long | model_rules | 0 | 0 | 8 | 100 | False | 87.5 | 0.602768 | 0.868884 | 1.26004 | 0.602768 | 4.826979 | 1.26004 | 4.822146 | 0.151208 | -0.003977 | 0.147232 |
+| by_direction | short | model_rules | 0 | 0 | 11 | 100 | False | 90.909091 | 0.630263 | 0.696704 | 0.034147 | 0.630263 | 204.030691 | 0.034147 | 6.932889 | 0.137419 | -0.001962 | 0.135457 |
+| by_htf_bias | none | model_rules | 0 | 0 | 19 | 100 | False | 89.473684 | 0.618686 | 0.767601 | 0.647093 | 0.618686 | 10.082949 | 1.26004 | 11.755035 | 0.143225 | -0.002811 | 0.140415 |
+| by_htf_context_alignment | neutral | model_rules | 0 | 0 | 19 | 100 | False | 89.473684 | 0.618686 | 0.767601 | 0.647093 | 0.618686 | 10.082949 | 1.26004 | 11.755035 | 0.143225 | -0.002811 | 0.140415 |
+| by_htf_draw_direction | none | model_rules | 0 | 0 | 19 | 100 | False | 89.473684 | 0.618686 | 0.767601 | 0.647093 | 0.618686 | 10.082949 | 1.26004 | 11.755035 | 0.143225 | -0.002811 | 0.140415 |

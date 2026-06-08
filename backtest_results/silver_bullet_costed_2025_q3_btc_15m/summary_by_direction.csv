@@ -1,0 +1,3 @@
+model,direction,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,gross_managed_expectancy,managed_expectancy,avg_managed_outcome_r,avg_execution_cost_r,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+silver_bullet,long,4,4,4,0,1.566807,1.326872,0.0,2.0,100.0,-0.286317,-0.625,-0.918621,-0.918621,0.293621,0.0,0.25,0.0,0.75,1.0,5.333333,27.0,,0,0
+silver_bullet,short,1,1,1,0,0.295639,0.295639,0.0,2.0,100.0,-1.0,-1.0,-1.103369,-1.103369,0.103369,0.0,0.0,0.0,1.0,1.0,19.0,,,0,0

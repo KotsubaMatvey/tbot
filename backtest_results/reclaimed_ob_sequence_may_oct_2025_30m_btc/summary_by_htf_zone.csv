@@ -1,0 +1,6 @@
+model,htf_zone_type,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,managed_expectancy,avg_managed_outcome_r,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+reclaimed_ob,FVG,1,1,0,0,,,0.0,16.911786,100.0,,,,0.0,0.0,0.0,0.0,3.0,,,,0,0
+reclaimed_ob,IFVG,1,1,0,0,,,0.0,16.238445,100.0,,,,0.0,0.0,0.0,0.0,3.0,,,,0,0
+reclaimed_ob,Liquidity,2,2,0,0,,,0.0,99.339475,100.0,,,,0.0,0.0,0.0,0.0,2.5,,,,0,0
+reclaimed_ob,OB,1,1,0,0,,,0.0,3.925187,100.0,,,,0.0,0.0,0.0,0.0,2.0,,,,0,0
+reclaimed_ob,PD,5,5,1,1,1.324589,1.324589,0.0,11.697479,95.0,-1.0,0.5,0.5,0.0,0.2,0.0,0.2,2.0,2.0,1.0,,0,3

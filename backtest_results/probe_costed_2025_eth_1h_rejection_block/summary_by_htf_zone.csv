@@ -1,0 +1,5 @@
+model,htf_zone_type,count,total_setups,activated_trades,invalidated_before_entry,avg_mfe_r,median_mfe_r,win_rate,avg_rr,avg_decision_score,expectancy,gross_managed_expectancy,managed_expectancy,avg_managed_outcome_r,avg_execution_cost_r,target_before_invalidation_rate,hit_1r_before_invalidation_rate,hit_2r_before_invalidation_rate,invalidation_rate,avg_time_to_entry,avg_time_to_invalidation,avg_time_to_1r,avg_time_to_2r,same_bar_ambiguous_count,no_trade_reason_count
+rejection_block,Breaker,6,6,3,0,3.504654,2.891235,0.166667,19.893007,97.5,-0.113207,0.254088,0.135256,0.135256,0.059416,0.166667,0.333333,0.0,0.333333,4.166667,2.0,3.5,,1,1
+rejection_block,FVG,32,32,11,0,3.152255,2.113345,0.03125,85.810111,99.8125,0.484509,0.398605,0.215213,0.215213,0.063041,0.03125,0.1875,0.125,0.25,4.655172,4.75,2.166667,2.75,3,1
+rejection_block,IFVG,1,1,0,0,,,0.0,0.372948,77.0,,,,,0.0,0.0,0.0,0.0,0.0,,,,,0,1
+rejection_block,PD,17,17,7,0,1.522651,1.470714,0.0,16.067586,96.470588,-0.814746,-0.362796,-0.449169,-0.449169,0.035565,0.0,0.176471,0.0,0.352941,5.25,6.0,3.666667,,0,2
